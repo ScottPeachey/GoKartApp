@@ -1,9 +1,12 @@
 # Electric Go-Kart Software — Implementation Plan
 
-Version: 1.0
+Version: 1.1
 Date: 2026-08-09
 Companion document: `docs/ARCHITECTURE.md` (read it first — it defines the
 design; this document defines the build order).
+Revision notes (v1.1): seed modes Chill/Default/Track/Drift/RAW; signal-level
+fault injection acceptance; physics algebraic-loop + force-based traction
+tests; DisplayDriver stub; firmware concurrency notes.
 
 ---
 
@@ -79,6 +82,10 @@ Tasks:
    `schemas/vehicle.py`, `schemas/modes.py`, `schemas/calibration.py`.
    Vehicle config references components by `(component_id, content_hash)`.
    Include the vehicle parameters from spec 4.1 and limit blocks per layer.
+   Drive-mode schema includes behaviour fields from `ARCHITECTURE.md`
+   Section 6.1 (`throttle_curve`, `throttle_ramp_per_s`, `traction_limiter`,
+   `regen_strength`) and optional/nullable mode speed (unrestricted for
+   Track/RAW).
 3. **Canonical hashing + store** — `config/store.py`. Canonical JSON
    (sorted keys, fixed float format) → SHA-256. Load/save/list components
    and vehicle configs under `data/`. Immutability rule: refuse to overwrite
@@ -98,10 +105,13 @@ Tasks:
    summary, validation outcome.
 7. **Seed data** — `data/` entries for a plausible V1 kart (48 V / 40 Ah
    pack, ~5 kW motor, VESC-class controller, 12T/52T drivetrain) and a V2
-   variant (72 V / 50 Ah, ~8–10 kW), three drive modes (e.g. Training: 20
-   km/h; Normal: 40 km/h; Track: unrestricted-to-vehicle-limit) and two
+   variant (72 V / 50 Ah, ~8–10 kW), the five drive modes from
+   `ARCHITECTURE.md` Section 6.1 (**Chill**, **Default**, **Track**,
+   **Drift**, **RAW**) with behaviour fields (`throttle_curve`,
+   `throttle_ramp_per_s`, `traction_limiter`, `regen_strength`), and two
    driver profiles (Owner, Junior). Values may be representative; they are
-   placeholders the user will replace with real component data.
+   placeholders the user will replace with real component data. Validation
+   must confirm Junior+RAW still caps speed at the Junior profile limit.
 8. **CLI** — `src/gokart/cli.py` (exposed as `gokart` script):
    `gokart config validate <file>`, `gokart config list`,
    `gokart config show <name> <version>`, `gokart component import/export`.
@@ -151,18 +161,23 @@ Tasks:
    [--out file.csv]` producing a CSV of all telemetry channels.
 
 **Tests (minimum):** motor map interpolation vs hand-computed points;
-kinematic/force path consistency (RPM-implied speed == integrated speed in
-steady state); coast-down decelerates and stops (drag + rolling resistance);
+kinematic consistency under rigid coupling (motor ω = v·i/r at every step);
+coast-down decelerates and stops (drag + rolling resistance);
 top speed within tolerance of analytic force-balance solution for a simple
 config; battery sags under load and SOC decreases monotonically under
-discharge; energy conservation sanity (battery energy out ≥ kinetic + losses,
-within tolerance); traction limiter caps torque on a low-µ surface scenario;
-accelerated time produces identical traces to real-time (determinism).
+discharge; energy conservation sanity on a **discharge-only** scenario
+(battery energy out ≥ ΔKE + aero/roll/heat losses, within tolerance);
+force-based traction limiter (Chill/Track) caps requested force at µ·N on a
+low-µ surface; Drift/RAW with limiter off still saturates *delivered* force
+at µ·N in physics; previous-step voltage lag for motor↔battery does not
+destabilise the loop; accelerated time produces identical traces to
+real-time (determinism).
 
 **Acceptance:** `gokart sim run` on seed V1 with the standing-start scenario
-produces a plausible trace (reaches a top speed in the 30–45 km/h band,
-currents within configured limits at every sample) and the same command with
-`--speedup 100` gives byte-identical results.
+produces a plausible trace (reaches a top speed in the 30–45 km/h band under
+Default/Track with Owner profile, currents within configured limits at every
+sample) and the same command with `--speedup 100` gives byte-identical
+results.
 
 ---
 
@@ -185,27 +200,38 @@ Tasks:
 3. **Wire into control** — replace the Phase 2 permissive stub: `sim/engine.py`
    now runs `detect_faults → safety_step → resolve_limits → control_step`
    every tick; derating factors from safety outputs feed the resolver.
-4. **Fault injection** — `sim/fault_injection.py`: schedule sensor-value
-   overrides or direct fault flags at time/condition triggers; injectable
-   from scenario files.
+4. **Fault injection** — `sim/fault_injection.py`: schedule **signal/value
+   overrides** (temperatures, voltages, currents, ADC levels, wheel-speed
+   pulse rate, contactor feedback) and **bus-level** effects (drop/delay CAN
+   frames) at time/condition triggers; injectable from scenario files.
+   Direct `FaultId` planting is allowed only in unit tests of the state
+   machine, not in Phase 3 acceptance scenarios (see `ARCHITECTURE.md`
+   Section 8.5).
 5. **Mode/profile runtime switching** — mode changes only in READY or below
    `mode_change_max_speed_mps` (configurable, default 0 — stationary);
-   profile switching only in READY.
+   profile switching only in READY. Mode switch applies the corresponding
+   behaviour fields (ramp, curve, traction policy) immediately after the
+   change is accepted.
 
-**Tests (minimum):** full happy-path traversal OFF→…→DRIVING; every
-FAULT/CRITICAL fault in the registry has an injection test asserting the
-resulting state, torque-permitted flag, and contactor command; throttle+brake
-plausibility zeroes torque; CAN-timeout fault fires at the configured
-timeout; precharge feedback failure → CRITICAL; recoverable fault clears only
-after condition gone + acknowledgement; latched critical persists until
-power-cycle event; property-style test: for random input sequences, torque
-is never permitted outside DRIVING, and commanded values never exceed
-resolved limits.
+**Tests (minimum):** full happy-path traversal OFF→…→ARMED→DRIVING (throttle
+above deadband enters DRIVING); every FAULT/CRITICAL fault in the registry
+has a **signal- or bus-level** injection test asserting that `detect_faults`
+fires and the resulting state, torque-permitted flag, and contactor command
+are correct; throttle+brake plausibility zeroes torque when ADC pair is
+implausible; CAN-timeout fault fires after frames are dropped for the
+configured timeout; precharge feedback failure → CRITICAL; recoverable fault
+clears only after condition gone + acknowledgement; latched critical persists
+until power-cycle event; Chill applies ramp + aggressive traction limit;
+Drift/RAW do not engage software traction limiter; Junior profile caps speed
+in Track and RAW; property-style test: for random input sequences, torque is
+never permitted outside DRIVING, and commanded values never exceed resolved
+limits.
 
-**Acceptance:** a scenario that injects a battery over-temperature mid-run
-shows (in the output CSV) derating, then FAULT on the higher threshold, zero
-torque, and SAFE_SHUTDOWN contactor opening — with the state trace matching
-the transition table in `ARCHITECTURE.md` 8.1.
+**Acceptance:** a scenario that **ramps the battery temperature signal**
+through DERATE then FAULT thresholds mid-run shows (in the output CSV) that
+detection (not a planted flag) drives derating, then FAULT, zero torque, and
+SAFE_SHUTDOWN contactor opening — with the state trace matching the
+transition table in `ARCHITECTURE.md` 8.1.
 
 ---
 
@@ -304,18 +330,20 @@ Tasks:
 2. **C core** — `firmware/core_c/`: C99 ports of `resolve_limits`,
    `detect_faults`, `safety_step`, `control_step` (single-precision, no
    heap, no OS). Host-compiled test runner (plain C or Unity) replays every
-   golden vector; tolerance 1e-5 relative.
+   golden vector; tolerance max(1e-5 relative, 1e-6 absolute).
 3. **ESP32 project** — `firmware/esp32/` (PlatformIO, ESP-IDF): task layout
-   per `ARCHITECTURE.md` 12.2; compile-time hard limits header generated
-   from the hardware component records (`tools/generate_hard_limits.py`);
-   NVS/SD config + calibration loading with hash verification; task
-   watchdog on `control_task`; reset-reason detection; contactor/precharge
-   GPIO driver with feedback check; OTA-capable partition table (slot
-   reserved, OTA itself out of scope); mock sensor mode (build flag) so the
-   firmware runs on a bare devkit.
-4. **Display + telemetry stubs** — `display_task` writing to serial console
-   (real display driver later); `telemetry_task` streaming the shared
-   channel schema as JSON lines over serial, ingestible by the Phase 4
+   and concurrency rules per `ARCHITECTURE.md` 12.2 (double-buffered sensor
+   snapshot; command slot consumed only by `can_task`); hardware-limits
+   record + compile-time ceiling (`tools/generate_hard_limits.py`); NVS/SD
+   config + calibration loading with hash verification; task watchdog on
+   `control_task`; reset-reason detection; contactor/precharge GPIO driver
+   with feedback check; OTA-capable partition table (slot reserved, OTA
+   itself out of scope); mock sensor mode (build flag) so the firmware runs
+   on a bare devkit. Prefer ESP32-S3 when choosing a board.
+4. **Display + telemetry stubs** — `DisplayDriver` interface with a serial
+   console implementation (real SPI/UART/CAN wheel or dash panel driver
+   later — see `ARCHITECTURE.md` Section 13); `telemetry_task` streaming the
+   shared channel schema as JSON lines over serial, ingestible by the Phase 4
    recorder (`gokart telemetry ingest --serial <port>`).
 
 **Acceptance:** C golden runner passes all vectors; firmware builds; on a
@@ -383,9 +411,11 @@ Tasks:
    frames), PC-side firmware-free validation of the bus contract.
 2. HIL level 1: real ESP32 + USB-CAN adapter against the simulator playing
    VESC/BMS; run the full fault-injection suite against real firmware.
-3. Tyre model upgrade: slip-ratio-based longitudinal force, wheelspin and
-   lock-up detection; extend the traction limiter accordingly (golden
-   vectors regenerated).
+3. Tyre model upgrade: wheel rotational inertia + slip-ratio longitudinal
+   force, genuine wheelspin/lock-up (motor RPM may diverge from v·i/r);
+   extend traction limiter to optional slip-ratio mode; regenerate golden
+   vectors. Regress against MVP: when slip is small, behaviour matches the
+   rigid model within tolerance.
 4. Optional: PDF report export, accessory model refinement, additional
    analysis views — pick up remaining spec items as needed.
 
@@ -412,3 +442,15 @@ simple model's behaviour when slip is small (regression tests).
 
 (Appended by the implementing agent as ambiguities are resolved — keep each
 entry to: date, question, decision, reason.)
+
+- 2026-08-09 — Modes vs profiles validation: modes and profiles are
+  independent; each ≤ vehicle ≤ hardware; runtime effective = min of all.
+  Reason: Owner must be able to select Chill without shrinking the Owner
+  profile's stored limits; Junior must still cap Track/RAW.
+- 2026-08-09 — RAW meaning: no mode soft limits / no throttle ramp / no
+  software traction limiter; hardware absolute + vehicle + active driver
+  profile still apply. Reason: safety and profile hierarchy must not be
+  bypassable by a mode name.
+- 2026-08-09 — MVP traction: force-based (`µ·N`) under rigid coupling; true
+  RPM slip deferred to Phase 9 with wheel inertia. Reason: RPM-slip is
+  physically meaningless while motor speed is kinematically locked to v.

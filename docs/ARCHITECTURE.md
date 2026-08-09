@@ -1,9 +1,14 @@
 # Electric Go-Kart Software — Architecture
 
-Version: 1.0
+Version: 1.1
 Date: 2026-08-09
 Source requirements: `Electric Go-Kart Software — Requirements Specification.docx` (v1.1)
 Companion document: `docs/IMPLEMENTATION_PLAN.md`
+Revision notes (v1.1): clarified physical/steering-wheel display as a pluggable
+driver; strengthened fault injection to require signal-level stimulation;
+defined Chill/Track/Drift/Default/RAW drive modes; fixed physics algebraic
+loop + wheel-slip model notes; firmware concurrency, display driver, and
+limit-validation clarifications from design review.
 
 This document defines **what to build and how the pieces fit together**. The
 implementation plan defines **the order to build it in**. If the two ever
@@ -147,7 +152,7 @@ GoKartApp/
 erDiagram
     COMPONENT ||--o{ VEHICLE_CONFIG : "referenced by"
     VEHICLE_CONFIG ||--o{ DRIVE_MODE : "constrains"
-    DRIVE_MODE ||--o{ DRIVER_PROFILE : "constrains"
+    VEHICLE_CONFIG ||--o{ DRIVER_PROFILE : "constrains"
     VEHICLE_CONFIG ||--o{ TELEMETRY_SESSION : "identified in"
     CALIBRATION_SET ||--o{ TELEMETRY_SESSION : "identified in"
     VEHICLE_CONFIG ||--o{ AUDIT_ENTRY : "changes logged"
@@ -162,9 +167,12 @@ erDiagram
   parameters (masses, geometry, aero, rolling resistance, speed/accel limits)
   plus references to component records **by id + content hash**, plus
   vehicle-level configurable limits.
-- **Drive mode** and **driver profile**: named limit sets (max speed, battery
-  current, motor current, acceleration, throttle response curve, regen
-  strength, power, RPM, gradient). Profiles add authentication metadata
+- **Drive mode** and **driver profile**: named limit sets, both independently
+  constrained by the vehicle (and thus by hardware). Any profile may be used
+  with any mode; the runtime effective limit is `min(hardware, vehicle, mode,
+  profile)` (Section 6). Mode definitions also carry **behaviour parameters**
+  that are not simple min-limits: throttle response curve, throttle ramp rate,
+  traction-limiter policy (Section 6.1). Profiles add authentication metadata
   (PIN/RFID/key — mechanism is an extension point, PIN first).
 - **Calibration set**: sensor calibration values (throttle/brake ADC endpoints
   and deadbands, wheel-speed pulses per revolution, voltage/current/temperature
@@ -188,7 +196,11 @@ Validation layers, all of which must pass before a config is accepted:
    voltage; motor max RPM vs gearing vs vehicle max speed consistency; BMS
    discharge limit vs controller battery-current setting.
 4. **Limit hierarchy** (Section 6) — vehicle limits ≤ hardware absolute
-   limits; mode limits ≤ vehicle limits; profile limits ≤ mode limits.
+   limits; mode limits ≤ vehicle limits; profile limits ≤ vehicle limits.
+   Modes and profiles are **independent** limit sets (any profile may be
+   used with any mode). Config-time validation does **not** require
+   profile ≤ mode. At runtime the effective limit is the element-wise
+   minimum of all active layers.
 
 Rejected changes return a machine-readable list of violations, each with the
 offending field, the constraint, and the limiting value — the spec requires
@@ -209,14 +221,19 @@ rejections to "clearly state the reason".
 
 ## 6. Limit Hierarchy Resolver
 
-The strictly enforced hierarchy (spec Section 9):
+The strictly enforced hierarchy (spec Section 9), evaluated as an
+element-wise **minimum** at runtime:
 
 ```
-hardware absolute limits   (from component records — immutable by software)
-  ≥ vehicle configuration limits
-    ≥ drive-mode limits
-      ≥ driver-profile limits
+                  ┌─ drive-mode limits + behaviour
+hardware absolute ─┴─ vehicle configuration limits ─┬─→ EffectiveLimits
+                  └─ driver-profile limits ─────────┘
+                         (× derating ≤ 1)
 ```
+
+Modes and profiles are siblings under vehicle/hardware — not nested. A
+Junior profile still caps Track or RAW top speed because `min()` includes
+the profile layer.
 
 `src/gokart/limits/resolver.py` provides one pure function used by both the
 validator (at config time) and the control loop (at run time):
@@ -253,6 +270,38 @@ Rules:
 - This function is part of the **portable core** (Section 12): it is
   reimplemented in C and covered by golden vectors.
 
+### 6.1 Seed drive modes (behaviour + limits)
+
+Modes are data, not hard-coded behaviour trees. Seed definitions for Phase 1
+(representative numbers; user replaces with real values):
+
+| Mode | Top speed (mode layer) | Throttle response | Traction limiter |
+|---|---|---|---|
+| **Chill** | Lowered (e.g. ~20 km/h class) | Very smooth; slow initial ramp (`throttle_ramp_per_s` low, progressive curve) | On, aggressive (low slip threshold) — effectively no wheelspin |
+| **Default** | Mid (between Chill and Track) | Moderate ramp and curve | On, moderate |
+| **Track** | Unrestricted at mode layer (`null` → vehicle/profile/hardware bind) | Race-car response (faster ramp, near-linear curve) | On, tuned to minimise wheelspin without killing drive |
+| **Drift** | Limited (mode sets a cap) | Drift-car response (fast ramp, allows snap) | **Off** — no software wheelspin limit |
+| **RAW** | Unrestricted at mode layer | Instant (no software ramp; curve = identity) | **Off** |
+
+**Always still enforced for every mode, including RAW:**
+
+1. Hardware absolute limits (immutable).
+2. Vehicle configuration limits.
+3. Active driver-profile limits — so a Junior profile still caps top speed
+   even in Track or RAW (`effective_speed = min(mode, profile, vehicle,
+   hardware)`). RAW means “no *mode-imposed* soft limits / traction /
+   throttle shaping”, not “bypass safety or profiles”.
+
+Mode schema fields beyond numeric limits:
+
+```python
+class DriveModeBehaviour:
+    throttle_curve: Literal["linear", "progressive", "aggressive"]
+    throttle_ramp_per_s: float | None   # None = instant (RAW)
+    traction_limiter: Literal["off", "gentle", "moderate", "aggressive"]
+    regen_strength: float               # 0–1 scale on permitted regen
+```
+
 ---
 
 ## 7. Control Pipeline
@@ -273,15 +322,18 @@ def control_step(
 Pipeline inside the step:
 
 1. **Input conditioning** — apply calibration, clamp, rate-limit throttle per
-   mode's throttle-response setting.
+   mode's `throttle_ramp_per_s` / curve (`None` ramp = instant for RAW).
 2. **Safety gate** — if the safety state machine says torque is not permitted,
    output zero torque request (and regen only if permitted).
-3. **Throttle → torque request** — configurable curve (linear / progressive),
-   scaled to the mode's power/torque budget.
-4. **Traction limiter** — compare motor-RPM-implied speed against measured
-   vehicle speed; if slip ratio exceeds threshold, temporarily scale torque
-   down, recover with hysteresis. (Spec calls this a "high-value early
-   feature".)
+3. **Throttle → torque request** — configurable curve (linear / progressive /
+   aggressive), scaled to the mode's power/torque budget.
+4. **Traction limiter** (mode-dependent; skipped when mode sets `off`, e.g.
+   Drift/RAW) — compare estimated available traction (`µ · N`) against the
+   tractive force implied by the torque request; if demand exceeds available
+   traction, scale torque down and recover with hysteresis. Prefer
+   force-based limiting over RPM-slip for the MVP rigid-coupling model
+   (Section 9); when Phase 9 adds wheel inertia / slip, the limiter may also
+   use measured slip ratio. (Spec calls this a "high-value early feature".)
 5. **Limit clamp** — clamp resulting torque/current so motor current, battery
    current, power, RPM, and speed limits in `EffectiveLimits` are all
    respected (speed limit implemented as torque taper approaching max speed,
@@ -315,7 +367,7 @@ OFF → BOOT → SELF_TEST → READY → ARMED → DRIVING
 | SELF_TEST | Power-on self-test: sensors in range, CAN alive, VESC/BMS responding, brake/throttle plausibility | Open | No |
 | READY | Tests passed, waiting for arm request (driver authenticated, brake pressed) | Open | No |
 | ARMED | Precharge sequence complete, contactor closed | Closed | No (zero torque) |
-| DRIVING | Normal operation | Closed | Yes |
+| DRIVING | Normal operation; entered from ARMED when the driver applies throttle above a deadband (or an explicit "go" input) while brake is released | Closed | Yes |
 | FAULT | A fault requiring stop; torque zeroed; recoverable faults allow return to READY after clear | Depends on severity | No |
 | SAFE_SHUTDOWN | Controlled ramp-down, contactor opened, state persisted | Opening → Open | No |
 
@@ -365,12 +417,33 @@ firmware treats these as facts it must tolerate (e.g. contactor opened
 externally → detect via feedback, enter FAULT), never as functions it owns
 exclusively.
 
-### 8.5 Fault injection
+### 8.5 Fault injection (signal-level first)
 
-The simulator can inject any registered fault at a scheduled time or
-condition (Section 10.3 of the plan). Every FAULT/CRITICAL entry in the
-registry must have at least one injection test that proves the correct state
-transition and output. This is mandatory per the spec.
+Fault verification must exercise the **same detection path** the real kart
+uses. Prefer corrupting the signals that detectors read; do not skip
+detection by planting a finished `FaultId`.
+
+Injection modes (in priority order for acceptance tests):
+
+1. **Signal / value injection (required for every FAULT/CRITICAL):** override
+   or synthesise physical quantities the detectors consume — ADC throttle/
+   brake voltages, pack voltage, pack/motor/controller currents,
+   temperatures, wheel-speed pulse rate, CAN silence (drop frames), contactor
+   feedback GPIO, VESC/BMS reported fault bits / out-of-range fields. The
+   simulation loop still runs `detect_faults(inputs) → safety_step(...)`.
+   Example: battery over-temp is tested by ramping the battery temperature
+   signal through the DERATE then FAULT thresholds, not by calling
+   `raise_fault(BATTERY_OVERTEMP)`.
+2. **Bus-level injection:** drop, delay, or corrupt CAN frames (timeouts,
+   stale data, CRC-style garbage treated as invalid). Used for CAN-timeout
+   and sensor-disagreement cases.
+3. **Direct fault-flag injection (optional, unit tests only):** plant a
+   `FaultId` to unit-test state-machine transitions in isolation. **Not**
+   sufficient for Phase 3 acceptance of that fault.
+
+Every FAULT/CRITICAL registry entry must have at least one Type-1 (or Type-2
+where the fault is inherently bus-level) scenario that proves detection →
+correct severity → correct state/outputs. This is mandatory per the spec.
 
 ---
 
@@ -379,41 +452,131 @@ transition and output. This is mandatory per the spec.
 Fixed-timestep (default 10 ms), longitudinal point-mass model. Each component
 model is a small class with `step(dt, inputs) -> outputs` and explicit state.
 No component talks to another directly; `vehicle.py` composes them so the
-data flow is auditable:
+data flow is auditable.
+
+### 9.1 Core equations (MVP)
+
+Drivetrain ratio (single constant used everywhere):
+
+\[
+i = \frac{N_{\mathrm{axle}}}{N_{\mathrm{motor}}} \qquad
+\tau_{\mathrm{wheel}} = \tau_{\mathrm{motor}} \cdot i \cdot \eta_{\mathrm{chain}} \cdot \eta_{\mathrm{axle}}
+\]
+
+Kinematic link (MVP = **rigid coupling**, no independent wheel inertia):
+
+\[
+\omega_{\mathrm{wheel}} = \frac{v}{r} \qquad
+\omega_{\mathrm{motor}} = \omega_{\mathrm{wheel}} \cdot i
+\]
+
+Forces:
+
+\[
+F_{\mathrm{trac,req}} = \frac{\tau_{\mathrm{wheel}}}{r} \qquad
+F_{\mathrm{trac}} = \mathrm{clip}\bigl(F_{\mathrm{trac,req}},\, -\mu N,\, +\mu N\bigr)
+\]
+
+\[
+F_{\mathrm{aero}} = \tfrac{1}{2}\, C_d\, A\, \rho\, v\, |v| \qquad
+F_{\mathrm{roll}} = C_{rr}\, m\, g\, \cos\theta \qquad
+F_{\mathrm{grad}} = m\, g\, \sin\theta
+\]
+
+\[
+F_{\mathrm{net}} = F_{\mathrm{trac}} - F_{\mathrm{aero}} - F_{\mathrm{roll}} - F_{\mathrm{grad}} - F_{\mathrm{brake,mech}}
+\]
+
+\[
+a = F_{\mathrm{net}} / m_{\mathrm{total}}
+\]
+
+Semi-implicit Euler:
+
+\[
+v_{n+1} = v_n + a\, \Delta t \qquad
+x_{n+1} = x_n + v_{n+1}\, \Delta t
+\]
+
+Battery (equivalent circuit):
+
+\[
+V_{\mathrm{pack}} = V_{\mathrm{oc}}(\mathrm{SOC}) - I_{\mathrm{pack}}\, R_{\mathrm{int}}(\mathrm{SOC}, T)
+\]
+
+\[
+\mathrm{SOC}_{n+1} = \mathrm{SOC}_n - \frac{I_{\mathrm{pack}}\, \Delta t}{Q_{\mathrm{nom}}}
+\]
+
+(sign convention: \(I_{\mathrm{pack}} > 0\) discharging.) Motor electrical power
+and accessory LV loads set \(I_{\mathrm{pack}}\) given the previous-step pack
+voltage (Section 9.3).
+
+Thermal mass (per component):
+
+\[
+C_{\mathrm{th}}\, \dot{T} = P_{\mathrm{heat}} - \frac{T - T_{\mathrm{amb}}}{R_{\mathrm{th}}}
+\]
+
+### 9.2 Composition order
 
 ```
 torque request (from control pipeline)
   → MotorModel: available torque at current RPM & voltage (map or nameplate
     fallback), electrical power draw, efficiency, heat
   → DrivetrainModel: gear ratio + chain/axle efficiency → wheel torque;
-    also kinematic path: motor RPM ↔ wheel RPM ↔ vehicle speed (must stay
-    consistent — one ratio constant used by both paths)
-  → TyreModel: tractive force limited by µ·load (simple friction circle,
-    longitudinal only for MVP)
-  → Force balance: F_tractive − F_aero − F_rolling − F_gradient − F_brake
-  → a = F_net / m_total ; integrate v, x  (semi-implicit Euler)
-  → BatteryModel: equivalent circuit — OCV(SOC) lookup + R_internal(SOC, T);
-    computes pack voltage under load (sag), current, SOC integration
-    (coulomb counting), heat generation, remaining energy, range estimate
-  → ThermalModel (motor, controller, battery): single thermal mass each,
-    P_heat in, convective loss out, temperature state
-  → AccessoryModel: constant + switchable low-voltage loads via DC-DC
-    efficiency → adds to battery current draw; flags brown-out risk if pack
-    voltage under load < DC-DC minimum input
+    kinematic path uses the same ratio constant as the force path
+  → TyreModel: longitudinal grip limit F ≤ µ·N (not a 2-D friction circle
+    until lateral dynamics exist)
+  → Force balance → a → integrate v, x (semi-implicit Euler)
+  → BatteryModel: OCV(SOC) + R_int(SOC,T); sag, current, SOC, heat, range
+  → ThermalModel (motor, controller, battery)
+  → AccessoryModel: LV loads via DC-DC → battery current; brown-out flag
 ```
 
-Notes:
+### 9.3 Algebraic loop (motor ↔ battery)
+
+Motor available torque and efficiency depend on pack voltage; pack voltage
+depends on current; current depends on motor electrical power. Within one
+timestep resolve this by **using the previous step's pack voltage** for the
+motor calculation, then updating the battery with the resulting current.
+Document this lag (one control period ≈ 10 ms) in code comments; do not
+iterate to convergence in the MVP. Tests must still pass force-balance and
+energy-sanity checks under this scheme.
+
+### 9.4 Rigid coupling vs wheelspin (important)
+
+MVP physics **cannot** have motor RPM diverge from \(v \cdot i / r\) because
+there is no wheel rotational inertia state. Therefore:
+
+- **Traction limiting in control** is force-based (`µ·N` vs requested
+  tractive force), not RPM-slip-based.
+- Tyre model **saturates** delivered force at `±µ·N` (physical wheelspin is
+  approximated as "torque that did not become longitudinal force").
+- Drift / RAW modes turn the **software** traction limiter off so the
+  controller will request force beyond `µ·N`; physics still saturates at the
+  tyre limit (kart accelerates at the grip limit, excess torque is "lost").
+- **Phase 9** adds wheel rotational inertia and slip ratio so motor RPM and
+  vehicle speed can genuinely diverge; only then does RPM-based slip control
+  and visible wheelspin become meaningful.
+
+### 9.5 Notes
 
 - **Motor model preference order** (spec 5.1): CSV torque/efficiency map if
   provided, else nameplate continuous/peak + constant efficiency.
 - **Limits are enforced by the control pipeline**, not the physics. Physics
   models what the hardware *would* do; control decides what is *requested*.
-  The one exception: physical saturation (e.g. motor can't exceed its
-  torque-speed envelope) lives in physics.
-- Battery model is equivalent-circuit + thermal mass **only** — the spec
-  explicitly rules out electrochemical models for early releases.
-- Brakes: mechanical braking force and regen are separate paths, combined in
-  the force balance; regen respects battery charge-current limit.
+  Physical saturation (motor torque-speed envelope, tyre µ·N) lives in
+  physics.
+- Battery model is equivalent-circuit + thermal mass **only** — no
+  electrochemical models in early releases.
+- Brakes: mechanical and regen are separate paths; regen respects battery
+  charge-current limit.
+- **Motor speed units:** store and compute as rad/s internally; convert to
+  RPM only at telemetry/display/VESC boundaries (same rule as km/h). Field
+  names use `_rad_s` / `_rpm` accordingly. `EffectiveLimits.max_motor_rpm`
+  is a presentation/config convenience mirrored as rad/s inside the
+  resolver.
 
 ---
 
@@ -424,8 +587,9 @@ Notes:
 ```
 for each tick (dt = 10 ms):
     scenario → driver inputs (throttle, brake) + environment (gradient, surface, ambient temp)
-    fault injector → override sensor values / inject fault flags
-    safety_step(...)            # shared logic
+    fault injector → override/corrupt sensor & plant signals (Section 8.5);
+                     do not plant FaultIds in acceptance scenarios
+    safety_step(...)            # shared logic (after detect_faults on signals)
     resolve_limits(...)         # shared logic (with current derating)
     control_step(...)           # shared logic
     vehicle.step(...)           # physics
@@ -480,7 +644,8 @@ mapping are written twice but **defined once**:
    output) cases including boundary and fault conditions.
 3. **C99 port** in `firmware/core_c/` — no heap, no floating-point doubles,
    no OS calls; a host-compiled test runner must reproduce every golden
-   vector bit-for-bit within stated float tolerance (1e-5 relative).
+   vector within float tolerance: **max(1e-5 relative, 1e-6 absolute)** so
+   near-zero values do not spuriously fail.
 
 CI order is therefore: Python tests → regenerate vectors → C tests. A change
 to control logic that isn't reflected in both implementations fails the
@@ -491,18 +656,31 @@ faithfully implemented on the ESP32" without cross-compilation tricks.
 
 | Task | Rate / trigger | Priority | Responsibility |
 |---|---|---|---|
-| `control_task` | 100 Hz timer | Highest | Read latest sensor snapshot → `safety_step` → `resolve_limits` → `control_step` → command VESC. Feeds hardware watchdog. |
-| `can_task` | On CAN RX + 50 Hz TX | High | VESC/BMS frames in/out via TWAI; updates sensor snapshot; detects timeouts. |
-| `sensor_task` | 200 Hz | High | ADC throttle/brake, wheel-speed pulse counting, applies calibration. |
+| `control_task` | 100 Hz timer | Highest | Read latest sensor snapshot → `detect_faults` → `safety_step` → `resolve_limits` → `control_step` → publish motor command to the command slot. Feeds hardware watchdog. |
+| `can_task` | On CAN RX + 50 Hz TX | High | VESC/BMS frames in/out via TWAI; updates sensor snapshot; transmits the latest command slot; detects timeouts. |
+| `sensor_task` | 200 Hz | High | ADC throttle/brake, wheel-speed pulse counting, applies calibration; writes sensor snapshot. |
 | `telemetry_task` | 50 Hz | Low | Serialise tick records; write to SD/flash ring buffer; stream if link available. |
-| `display_task` | 10 Hz | Low | Push speed/mode/SOC/fault to the driver display. |
+| `display_task` | 10 Hz | Low | Push speed/mode/SOC/fault/power to the active `DisplayDriver` (console stub, SPI panel, or steering-wheel screen). |
 | `config_task` | On demand | Low | Load vehicle config + calibration from NVS/SD at boot; accept updates only when stationary and in READY/OFF. |
+
+**Concurrency rules (mandatory):**
+
+- Sensor and CAN producers write into a **double-buffered snapshot**;
+  `control_task` always reads a complete, consistent frame (no torn reads).
+  Prefer atomics / FreeRTOS task notifications over long critical sections.
+- Motor commands are written by `control_task` into a single **command slot**
+  (`set_current` / limits); only `can_task` talks to TWAI. Control never
+  blocks on the CAN peripheral.
+- Telemetry and display are best-effort consumers of a copy of the last
+  tick; they must never block control.
 
 Rules baked into the firmware design:
 
-- **Hard upper bounds** (compile-time constants mirroring hardware absolute
-  limits) clamp everything as a final backstop, regardless of configuration
-  content.
+- **Hard upper bounds** are a final backstop clamp. Prefer loading them from
+  a signed/hashed hardware-limits record flashed with the config (so one
+  firmware binary can serve V1 and V2), with a compile-time ceiling set to
+  the maximum any supported kart may ever use. User configuration cannot
+  raise either layer.
 - Control/safety never blocks on telemetry, display, or Wi-Fi (determinism +
   recoverability requirements).
 - Watchdog: hardware task watchdog on `control_task`; a missed deadline →
@@ -510,6 +688,8 @@ Rules baked into the firmware design:
 - Contactor/precharge sequencing is owned by the safety outputs
   (`SafetyOutputs.contactor_command`), executed by a GPIO driver with
   feedback verification.
+- Target MCU recommendation: **ESP32-S3** (better ADC for throttle/brake)
+  unless an existing board forces classic ESP32; architecture stays the same.
 
 ### 12.3 Driver abstraction
 
@@ -535,20 +715,45 @@ that round-trips example frames).
 
 ---
 
-## 13. Dashboard
+## 13. Dashboard and Driver Displays
 
-Two distinct consumers, one data source:
+Three consumers, one information contract (priority order while moving:
+**large speed → drive mode → battery SOC → fault/warning → power**):
 
 1. **Development/virtual dashboard** (MVP): FastAPI app serving a static
-   HTML/JS page. WebSocket pushes live telemetry records. Driving view
-   renders, in priority order: large speed (km/h), drive mode, SOC bar, fault
-   banner, power. Additional tabs (available when the vehicle/sim is
-   stationary): configuration browser, diagnostics/live channels, trip
+   HTML/JS page. WebSocket pushes live telemetry records. Additional tabs
+   (stationary only): configuration browser, diagnostics/live channels, trip
    history. All unit conversion happens here.
-2. **Physical driver display**: driven directly by the ESP32 `display_task`
-   over serial/SPI to a hardware display. Same five priority items. Never
-   depends on the FastAPI app existing — the kart is fully functional with
-   only the hardware display (offline-operation requirement).
+2. **Physical driver display** (firmware `display_task`): any on-kart screen
+   — dash-mounted panel, or a **steering-wheel-integrated display**. Driven
+   by a `DisplayDriver` interface (SPI/I²C panel, UART to a wheel module,
+   CAN display node, etc.). The kart must remain fully functional with only
+   this path (offline-operation requirement); it never depends on the FastAPI
+   app.
+3. **Optional later clients** (phone browser, etc.): same telemetry bus.
+
+### Steering-wheel screen — in this project or separate?
+
+**Already covered in principle** by requirements Section 12 (dashboard
+priorities) and Section 13 (firmware "display communication"), and by this
+architecture's `display_task` + `DisplayDriver` abstraction.
+
+**Recommendation:** keep it in this project's architecture, but **do not buy
+or build the wheel hardware in the MVP**. What belongs here now:
+
+- The display **information contract** (which fields, update rate, units,
+  fault banner behaviour, "no complex menus while moving").
+- A `DisplayDriver` interface + a console/stub implementation (Phase 6).
+
+What can wait until you choose a product or DIY wheel:
+
+- The specific panel/SoC, mounting, buttons on the wheel, and the concrete
+  driver (SPI vs UART vs CAN). Swapping that in is a new `DisplayDriver`
+  implementation — no change to control, safety, or physics.
+
+Buying a ready-made wheel with a screen is fine later; treat it as a display
+peripheral that speaks whatever protocol its manufacturer uses, wrapped by
+one driver file.
 
 The web dashboard reads from the telemetry bus, so it works identically
 whether the producer is the simulator or the real kart streaming over Wi-Fi.
@@ -605,7 +810,8 @@ client — a phone browser works), BLE/Wi-Fi provisioning, OTA updates
 (firmware partition scheme should reserve an OTA slot from day one — cheap
 now, painful later), lap timing, cloud sync (telemetry store is
 export-friendly), multi-vehicle (config store is already keyed by vehicle
-name), advanced cell-level battery health.
+name), advanced cell-level battery health, concrete steering-wheel display
+hardware behind `DisplayDriver`.
 
 ---
 
@@ -619,4 +825,7 @@ name), advanced cell-level battery health.
 | 4 | ESP-IDF (via PlatformIO) over Arduino framework | Arduino-ESP32 | Need FreeRTOS task control, TWAI driver, task watchdog, OTA partitioning — first-class in IDF |
 | 5 | Semi-implicit Euler @ 100 Hz for physics | RK4, variable step | Adequate accuracy for longitudinal dynamics at this timestep; trivially portable; deterministic |
 | 6 | Limits enforced in control layer, saturation in physics | Enforce in physics | Keeps "what hardware does" separate from "what software requests", which is exactly the sim/firmware split |
-| 7 | °C for temperatures, otherwise strict SI | Kelvin | Every datasheet and human uses °C; conversion risk outweighs purity |
+| 7 | °C for temperatures, otherwise strict SI (motor speed as rad/s internally) | Kelvin; RPM everywhere | Datasheets use °C; RPM only at VESC/display boundaries |
+| 8 | MVP rigid drivetrain + force-based traction limit; wheel inertia in Phase 9 | Full slip model from day one | Spec prioritises closed loop early; true wheelspin needs inertia state the MVP deliberately omits |
+| 9 | Signal-level fault injection for acceptance | Flag-only injection | Genuine test of `detect_faults`; matches how the kart fails in reality |
+| 10 | Modes and profiles independent; runtime `min()` | Profile nested under mode | Any profile with any mode; Junior still caps Track/RAW speed |
