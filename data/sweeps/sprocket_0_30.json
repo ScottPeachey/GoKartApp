@@ -1,0 +1,16 @@
+{
+  "vehicle_name": "Scott Kart V1",
+  "vehicle_version": "V1.0",
+  "scenario": "standing_start_30s",
+  "parameters": {
+    "drivetrain.motor_sprocket_teeth": [10, 11, 12, 13, 14]
+  },
+  "objective": {
+    "metric": "accel_20_kmh_s",
+    "direction": "minimize"
+  },
+  "constraints": [
+    {"metric": "top_speed_kmh", "op": ">=", "value": 25.0},
+    {"metric": "peak_battery_current_a", "op": "<=", "value": 150.0}
+  ]
+}

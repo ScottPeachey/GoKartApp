@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from gokart.analysis.overlays import CalibrationOverlay, apply_overlay
 from gokart.config.schemas.modes import DriveMode, DriverProfile
+from gokart.config.schemas.vehicle import VehicleConfig
 from gokart.config.store import data_root, load_component, load_drive_mode, load_driver_profile
 from gokart.config.validation import hardware_limits_from_components, validate_vehicle_config
 from gokart.control.pipeline import (
@@ -172,9 +174,19 @@ def run_simulation(
     controls: RuntimeControls | None = None,
     on_tick: Callable[[SimTickRecord], None] | None = None,
     recorder: SessionRecorder | None = None,
+    overlay: CalibrationOverlay | None = None,
+    vehicle_config: VehicleConfig | None = None,
 ) -> SimulationResult:
     root = data_root_path or data_root()
-    vehicle_model = load_validated_vehicle_model(vehicle_name, vehicle_version, data_root=root)
+    if vehicle_config is not None:
+        validation = validate_vehicle_config(vehicle_config, data_root=root)
+        if not validation.ok:
+            raise ValueError("; ".join(v.message for v in validation.violations))
+        vehicle_model = VehicleModel.from_config(vehicle_config, data_root=root)
+    else:
+        vehicle_model = load_validated_vehicle_model(vehicle_name, vehicle_version, data_root=root)
+    if overlay is not None:
+        apply_overlay(vehicle_model, overlay)
     mode = load_drive_mode(scenario.mode_name, root=root)
     profile = load_driver_profile(scenario.profile_name, root=root)
 

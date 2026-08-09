@@ -96,6 +96,7 @@ class VehicleModel:
     motor_thermal_params: ThermalParams
     battery_thermal_params: ThermalParams
     nominal_voltage_v: float
+    motor_efficiency_scale: float = 1.0
 
     @classmethod
     def from_config(cls, config: VehicleConfig, data_root: Path | None = None) -> VehicleModel:
@@ -188,6 +189,17 @@ class VehicleModel:
             self.motor_params,
             dt,
         )
+        if self.motor_efficiency_scale != 1.0 and motor_out.motor_current_a != 0:
+            scale = max(self.motor_efficiency_scale, 0.05)
+            adjusted_current = motor_out.motor_current_a / scale
+            motor_out = type(motor_out)(
+                torque_nm=motor_out.torque_nm,
+                motor_current_a=adjusted_current,
+                electrical_power_w=adjusted_current * state.pack_voltage_v,
+                mechanical_power_w=motor_out.mechanical_power_w,
+                efficiency=min(1.0, motor_out.efficiency * scale),
+                heat_w=motor_out.heat_w,
+            )
         drivetrain_out = step_drivetrain(
             motor_out.torque_nm,
             state.speed_mps,

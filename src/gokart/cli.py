@@ -151,6 +151,68 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_analyze_session(args: argparse.Namespace) -> int:
+    from gokart.analysis.metrics import compute_metrics
+    from gokart.telemetry.storage import TelemetryStore
+
+    store = TelemetryStore()
+    session = store.get_session(args.session_id)
+    if session is None:
+        print(f"Session not found: {args.session_id}", file=sys.stderr)
+        return 1
+    samples = store.load_samples(args.session_id)
+    metrics = compute_metrics(samples)
+    print(f"Session {args.session_id}")
+    print(f"  Vehicle: {session.vehicle_name} {session.vehicle_version}")
+    print(f"  Samples: {session.sample_count}")
+    for name, value in metrics.as_dict().items():
+        if value is not None:
+            print(f"  {name}: {value:.4g}" if isinstance(value, float) else f"  {name}: {value}")
+    return 0
+
+
+def cmd_analyze_compare(args: argparse.Namespace) -> int:
+    from gokart.analysis.compare import compare_configs
+
+    rows = compare_configs(
+        [(args.vehicle, args.version_a), (args.vehicle, args.version_b)],
+        args.scenario,
+    )
+    labels = [f"{args.vehicle} {args.version_a}", f"{args.vehicle} {args.version_b}"]
+    print(f"{'Metric':<28} {labels[0]:>16} {labels[1]:>16} {'Delta':>12}")
+    for row in rows:
+        left = row.values[labels[0]]
+        right = row.values[labels[1]]
+        delta = row.delta
+        left_s = f"{left:.4g}" if left is not None else "—"
+        right_s = f"{right:.4g}" if right is not None else "—"
+        delta_s = f"{delta:+.4g}" if delta is not None else "—"
+        print(f"{row.metric:<28} {left_s:>16} {right_s:>16} {delta_s:>12}")
+    return 0
+
+
+def cmd_sweep_run(args: argparse.Namespace) -> int:
+    from gokart.analysis.sweep import load_sweep_spec, run_sweep
+
+    spec = load_sweep_spec(Path(args.spec))
+    results = run_sweep(spec)
+    print(f"{'Feasible':<10} {'Objective':>12} Parameters")
+    for row in results:
+        params = ", ".join(f"{k}={v}" for k, v in row.parameters.items())
+        objective = f"{row.objective_value:.4g}" if row.objective_value is not None else "—"
+        print(f"{str(row.feasible):<10} {objective:>12} {params}")
+    return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    from gokart.analysis.report import write_session_report
+
+    out = Path(args.out) if args.out else Path(f"telemetry/reports/{args.session_id}.html")
+    write_session_report(args.session_id, out)
+    print(f"Wrote report to {out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gokart", description="Go-kart configuration tools")
     parser.add_argument("--actor", default="cli", help="Actor name for audit log entries")
@@ -204,6 +266,31 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--host", default="127.0.0.1", help="Bind host")
     dashboard.add_argument("--port", type=int, default=8000, help="Bind port")
     dashboard.set_defaults(func=cmd_dashboard)
+
+    analyze = sub.add_parser("analyze", help="Session analysis commands")
+    analyze_sub = analyze.add_subparsers(dest="analyze_command", required=True)
+
+    session = analyze_sub.add_parser("session", help="Print metrics for a stored session")
+    session.add_argument("session_id", help="Telemetry session UUID")
+    session.set_defaults(func=cmd_analyze_session)
+
+    compare = analyze_sub.add_parser("compare", help="Compare two config versions on a scenario")
+    compare.add_argument("vehicle", help="Vehicle name")
+    compare.add_argument("version_a", help="First version")
+    compare.add_argument("version_b", help="Second version")
+    compare.add_argument("scenario", help="Scenario name or path")
+    compare.set_defaults(func=cmd_analyze_compare)
+
+    sweep = sub.add_parser("sweep", help="Parameter sweep commands")
+    sweep_sub = sweep.add_subparsers(dest="sweep_command", required=True)
+    sweep_run = sweep_sub.add_parser("run", help="Run a sweep spec JSON file")
+    sweep_run.add_argument("spec", help="Path to sweep spec JSON")
+    sweep_run.set_defaults(func=cmd_sweep_run)
+
+    report = sub.add_parser("report", help="Generate HTML session report")
+    report.add_argument("session_id", help="Telemetry session UUID")
+    report.add_argument("--out", help="Output HTML path")
+    report.set_defaults(func=cmd_report)
 
     return parser
 
