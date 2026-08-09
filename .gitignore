@@ -8,8 +8,8 @@ __pycache__/
 dist/
 build/
 
-# Runtime output
-telemetry/
+# Runtime output (repo-root only — not src/gokart/telemetry package)
+/telemetry/
 *.sqlite
 *.sqlite-journal
 
