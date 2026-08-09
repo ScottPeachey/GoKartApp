@@ -1,0 +1,4085 @@
+{
+  "cases": [
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 5.453929901123047,
+        "max_battery_current_a": 67.3192367553711,
+        "max_decel_mps2": 6.01131010055542,
+        "max_gradient_rad": 0.1455647498369217,
+        "max_motor_current_a": 84.23395538330078,
+        "max_motor_rpm": 4479.86328125,
+        "max_power_w": 6416.60107421875,
+        "max_regen_current_a": 32.21228790283203,
+        "max_speed_mps": 12.773731231689453
+      },
+      "hardware": {
+        "max_accel_mps2": 6.9412309624916295,
+        "max_battery_current_a": 163.8021109225766,
+        "max_decel_mps2": 6.678204264414132,
+        "max_gradient_rad": 0.19375374557482164,
+        "max_motor_current_a": 162.00086041781336,
+        "max_motor_rpm": 6424.078769814987,
+        "max_power_w": 8756.70788532484,
+        "max_regen_current_a": 35.571371810381166,
+        "max_speed_mps": 31.673121581494602
+      },
+      "mode": {
+        "max_accel_mps2": 5.922983529972206,
+        "max_battery_current_a": 94.17457755498424,
+        "max_decel_mps2": 6.407826908270304,
+        "max_gradient_rad": 0.14556475060280888,
+        "max_motor_current_a": 84.23395534841019,
+        "max_motor_rpm": 4479.863099661206,
+        "max_power_w": 6416.60123964318,
+        "max_regen_current_a": 36.377672739858724,
+        "max_speed_mps": 20.742241014073656
+      },
+      "profile": {
+        "max_accel_mps2": 5.93547783355049,
+        "max_battery_current_a": 67.31923300374051,
+        "max_decel_mps2": 6.011310007066731,
+        "max_gradient_rad": 0.16416325050185818,
+        "max_motor_current_a": 93.89977465389839,
+        "max_motor_rpm": 4886.947419491282,
+        "max_power_w": 7135.141717420216,
+        "max_regen_current_a": 36.91405237239009,
+        "max_speed_mps": 12.77373101466771
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.45392977672386,
+        "max_battery_current_a": 108.1285269144807,
+        "max_decel_mps2": 6.752704995265115,
+        "max_gradient_rad": 0.18357062735503638,
+        "max_motor_current_a": 126.55913924410811,
+        "max_motor_rpm": 5579.861325335428,
+        "max_power_w": 6718.1402410986375,
+        "max_regen_current_a": 32.21228775747091,
+        "max_speed_mps": 20.148986097190352
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.242578029632568,
+        "max_battery_current_a": 72.83200073242188,
+        "max_decel_mps2": 5.475144863128662,
+        "max_gradient_rad": 0.16638335585594177,
+        "max_motor_current_a": 93.71407318115234,
+        "max_motor_rpm": 4357.08740234375,
+        "max_power_w": 4902.720703125,
+        "max_regen_current_a": 27.66476821899414,
+        "max_speed_mps": 17.476913452148438
+      },
+      "hardware": {
+        "max_accel_mps2": 5.346955861563712,
+        "max_battery_current_a": 206.04289682237595,
+        "max_decel_mps2": 7.326041483526743,
+        "max_gradient_rad": 0.16638335815389022,
+        "max_motor_current_a": 209.4815801891397,
+        "max_motor_rpm": 4909.9785207735895,
+        "max_power_w": 8654.629875887755,
+        "max_regen_current_a": 41.23763432410819,
+        "max_speed_mps": 33.95285597103594
+      },
+      "mode": {
+        "max_accel_mps2": 5.981142031145872,
+        "max_battery_current_a": 75.1341594459429,
+        "max_decel_mps2": 7.135999423649823,
+        "max_gradient_rad": 0.17341698462647878,
+        "max_motor_current_a": 105.92871620401156,
+        "max_motor_rpm": 4883.019795163766,
+        "max_power_w": 5992.165985028628,
+        "max_regen_current_a": 36.74952157540419,
+        "max_speed_mps": 19.677033542627516
+      },
+      "profile": {
+        "max_accel_mps2": 4.242578102341686,
+        "max_battery_current_a": 72.83199716947983,
+        "max_decel_mps2": 5.4751450994762445,
+        "max_gradient_rad": 0.19543277714680438,
+        "max_motor_current_a": 93.71407680759238,
+        "max_motor_rpm": 4357.087315341797,
+        "max_power_w": 4902.72078049292,
+        "max_regen_current_a": 27.66476915142567,
+        "max_speed_mps": 17.476914007919
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.051408436925785,
+        "max_battery_current_a": 102.67136647464221,
+        "max_decel_mps2": 6.827164515278581,
+        "max_gradient_rad": 0.19746618350849976,
+        "max_motor_current_a": 123.03004288229188,
+        "max_motor_rpm": 5244.217160540259,
+        "max_power_w": 6983.731486352135,
+        "max_regen_current_a": 37.0854755541152,
+        "max_speed_mps": 21.163954431805152
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 5.138308525085449,
+        "max_battery_current_a": 71.06309509277344,
+        "max_decel_mps2": 5.1569671630859375,
+        "max_gradient_rad": 0.15478122234344482,
+        "max_motor_current_a": 60.4592399597168,
+        "max_motor_rpm": 4240.38037109375,
+        "max_power_w": 5752.46630859375,
+        "max_regen_current_a": 33.06591796875,
+        "max_speed_mps": 16.12368392944336
+      },
+      "hardware": {
+        "max_accel_mps2": 5.435712399595326,
+        "max_battery_current_a": 191.19158390123138,
+        "max_decel_mps2": 7.189208024620747,
+        "max_gradient_rad": 0.20490945073305206,
+        "max_motor_current_a": 185.17423046387825,
+        "max_motor_rpm": 5901.2444462097565,
+        "max_power_w": 9326.55228716974,
+        "max_regen_current_a": 38.330110416970626,
+        "max_speed_mps": 34.516411517672026
+      },
+      "mode": {
+        "max_accel_mps2": 5.9930184844321746,
+        "max_battery_current_a": 93.76238093088892,
+        "max_decel_mps2": 6.869874428237929,
+        "max_gradient_rad": 0.1982647026568171,
+        "max_motor_current_a": 106.58805750131124,
+        "max_motor_rpm": 4886.914715711766,
+        "max_power_w": 5752.466494764697,
+        "max_regen_current_a": 33.06591960159621,
+        "max_speed_mps": 16.123684260314352
+      },
+      "profile": {
+        "max_accel_mps2": 5.138308316591539,
+        "max_battery_current_a": 71.06309821952622,
+        "max_decel_mps2": 5.156966955506804,
+        "max_gradient_rad": 0.1547812200535284,
+        "max_motor_current_a": 60.45924087771278,
+        "max_motor_rpm": 4240.380455886103,
+        "max_power_w": 6518.305057308145,
+        "max_regen_current_a": 34.9073659044252,
+        "max_speed_mps": 18.886237617875985
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.4114315524117576,
+        "max_battery_current_a": 117.54774920645946,
+        "max_decel_mps2": 6.545455059478071,
+        "max_gradient_rad": 0.1618846550169894,
+        "max_motor_current_a": 137.53757970670623,
+        "max_motor_rpm": 5997.045127794133,
+        "max_power_w": 6750.913214651653,
+        "max_regen_current_a": 35.195204041123176,
+        "max_speed_mps": 21.313708042614678
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.919528484344482,
+        "max_battery_current_a": 72.33927154541016,
+        "max_decel_mps2": 5.648181438446045,
+        "max_gradient_rad": 0.1451392024755478,
+        "max_motor_current_a": 62.76850128173828,
+        "max_motor_rpm": 4304.26513671875,
+        "max_power_w": 5210.8525390625,
+        "max_regen_current_a": 36.21422576904297,
+        "max_speed_mps": 15.528546333312988
+      },
+      "hardware": {
+        "max_accel_mps2": 6.990306814427568,
+        "max_battery_current_a": 207.06141170722998,
+        "max_decel_mps2": 9.185659423477654,
+        "max_gradient_rad": 0.18387558331589063,
+        "max_motor_current_a": 236.30527420168642,
+        "max_motor_rpm": 5228.7645132723155,
+        "max_power_w": 8001.875561760954,
+        "max_regen_current_a": 36.214224812017456,
+        "max_speed_mps": 29.444684475950478
+      },
+      "mode": {
+        "max_accel_mps2": 5.780417278567273,
+        "max_battery_current_a": 96.36165633469554,
+        "max_decel_mps2": 7.872678668715186,
+        "max_gradient_rad": 0.14513920712407272,
+        "max_motor_current_a": 117.44755018552621,
+        "max_motor_rpm": 4304.265299689538,
+        "max_power_w": 6338.033900966387,
+        "max_regen_current_a": 37.97998635233415,
+        "max_speed_mps": 15.528546499746492
+      },
+      "profile": {
+        "max_accel_mps2": 4.9195286243878655,
+        "max_battery_current_a": 72.3392692882314,
+        "max_decel_mps2": 5.648181212608189,
+        "max_gradient_rad": 0.1897946432868206,
+        "max_motor_current_a": 62.76850073873534,
+        "max_motor_rpm": 4740.677707436956,
+        "max_power_w": 5210.85268639924,
+        "max_regen_current_a": 36.2533508689118,
+        "max_speed_mps": 15.88792370653291
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.436424406634213,
+        "max_battery_current_a": 99.66814244519125,
+        "max_decel_mps2": 6.40091503380471,
+        "max_gradient_rad": 0.17296624228018695,
+        "max_motor_current_a": 138.26910634314518,
+        "max_motor_rpm": 5734.35177435667,
+        "max_power_w": 7263.006448191401,
+        "max_regen_current_a": 38.100086400601214,
+        "max_speed_mps": 23.194747474330025
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.585626125335693,
+        "max_battery_current_a": 73.10781860351562,
+        "max_decel_mps2": 5.917548656463623,
+        "max_gradient_rad": 0.1573619693517685,
+        "max_motor_current_a": 78.9068374633789,
+        "max_motor_rpm": 3832.634033203125,
+        "max_power_w": 5409.3115234375,
+        "max_regen_current_a": 28.85028839111328,
+        "max_speed_mps": 16.568344116210938
+      },
+      "hardware": {
+        "max_accel_mps2": 7.188358455986147,
+        "max_battery_current_a": 182.82931839212102,
+        "max_decel_mps2": 8.47960978444625,
+        "max_gradient_rad": 0.19504800671316033,
+        "max_motor_current_a": 176.94385643536657,
+        "max_motor_rpm": 5548.119099122147,
+        "max_power_w": 7043.6834028470275,
+        "max_regen_current_a": 43.67889710543962,
+        "max_speed_mps": 29.077655282410642
+      },
+      "mode": {
+        "max_accel_mps2": 4.585626253266789,
+        "max_battery_current_a": 95.78906200761239,
+        "max_decel_mps2": 5.917548436940059,
+        "max_gradient_rad": 0.19613085443484027,
+        "max_motor_current_a": 116.59512046822061,
+        "max_motor_rpm": 5404.160000933305,
+        "max_power_w": 6171.211122485588,
+        "max_regen_current_a": 28.85028819866384,
+        "max_speed_mps": 16.91101577315362
+      },
+      "profile": {
+        "max_accel_mps2": 4.634522837775306,
+        "max_battery_current_a": 73.10782157730411,
+        "max_decel_mps2": 6.155451593663747,
+        "max_gradient_rad": 0.157361973442934,
+        "max_motor_current_a": 78.90684105247176,
+        "max_motor_rpm": 3832.6339541491757,
+        "max_power_w": 5409.311725958009,
+        "max_regen_current_a": 36.919951964266296,
+        "max_speed_mps": 16.568344746602275
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.064260861341872,
+        "max_battery_current_a": 101.39273608875739,
+        "max_decel_mps2": 6.513588937614452,
+        "max_gradient_rad": 0.18524411829080398,
+        "max_motor_current_a": 123.63012587604797,
+        "max_motor_rpm": 5076.137679115893,
+        "max_power_w": 7341.293949531574,
+        "max_regen_current_a": 34.70468449717964,
+        "max_speed_mps": 22.587879205177956
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.615218162536621,
+        "max_battery_current_a": 79.5298843383789,
+        "max_decel_mps2": 6.1129937171936035,
+        "max_gradient_rad": 0.16202352941036224,
+        "max_motor_current_a": 75.15892791748047,
+        "max_motor_rpm": 4499.35986328125,
+        "max_power_w": 7309.02587890625,
+        "max_regen_current_a": 28.243247985839844,
+        "max_speed_mps": 12.469082832336426
+      },
+      "hardware": {
+        "max_accel_mps2": 6.868014087246699,
+        "max_battery_current_a": 214.85989521834955,
+        "max_decel_mps2": 7.195700268544914,
+        "max_gradient_rad": 0.17521671267526495,
+        "max_motor_current_a": 213.86916378346413,
+        "max_motor_rpm": 5614.326252947912,
+        "max_power_w": 7688.38810272726,
+        "max_regen_current_a": 33.574685938431344,
+        "max_speed_mps": 32.748910193518206
+      },
+      "mode": {
+        "max_accel_mps2": 5.074154025811293,
+        "max_battery_current_a": 99.06988771854253,
+        "max_decel_mps2": 6.112993518078036,
+        "max_gradient_rad": 0.16406241755296716,
+        "max_motor_current_a": 114.09699306287825,
+        "max_motor_rpm": 4499.359999087044,
+        "max_power_w": 7636.869762594333,
+        "max_regen_current_a": 39.11640379609753,
+        "max_speed_mps": 21.995264291524
+      },
+      "profile": {
+        "max_accel_mps2": 4.615217966376392,
+        "max_battery_current_a": 79.52988300095123,
+        "max_decel_mps2": 7.863416450750954,
+        "max_gradient_rad": 0.19963381515941714,
+        "max_motor_current_a": 75.15892475907664,
+        "max_motor_rpm": 4692.020081613944,
+        "max_power_w": 7309.025926235422,
+        "max_regen_current_a": 28.243248930754433,
+        "max_speed_mps": 12.469083199777431
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.833618925714196,
+        "max_battery_current_a": 102.68508347200658,
+        "max_decel_mps2": 7.280520499919757,
+        "max_gradient_rad": 0.16202353318099527,
+        "max_motor_current_a": 132.6564491950321,
+        "max_motor_rpm": 5331.756894064149,
+        "max_power_w": 7877.224958841621,
+        "max_regen_current_a": 33.998451583056806,
+        "max_speed_mps": 22.24306773916566
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.319993019104004,
+        "max_battery_current_a": 70.91813659667969,
+        "max_decel_mps2": 5.811767101287842,
+        "max_gradient_rad": 0.16457322239875793,
+        "max_motor_current_a": 68.17036437988281,
+        "max_motor_rpm": 4896.1337890625,
+        "max_power_w": 6066.5146484375,
+        "max_regen_current_a": 27.8189754486084,
+        "max_speed_mps": 16.95234489440918
+      },
+      "hardware": {
+        "max_accel_mps2": 6.101268483298258,
+        "max_battery_current_a": 155.14537141973264,
+        "max_decel_mps2": 8.793521793213005,
+        "max_gradient_rad": 0.16457322183259868,
+        "max_motor_current_a": 217.47266202370605,
+        "max_motor_rpm": 6190.032697959015,
+        "max_power_w": 9499.869967901308,
+        "max_regen_current_a": 36.74732520791303,
+        "max_speed_mps": 30.66921988086742
+      },
+      "mode": {
+        "max_accel_mps2": 4.95460484760457,
+        "max_battery_current_a": 96.70861942388312,
+        "max_decel_mps2": 7.0008134942989395,
+        "max_gradient_rad": 0.17136696293191755,
+        "max_motor_current_a": 88.31591810209646,
+        "max_motor_rpm": 5314.886718597785,
+        "max_power_w": 7026.845968480258,
+        "max_regen_current_a": 30.9545841734635,
+        "max_speed_mps": 16.952345707006145
+      },
+      "profile": {
+        "max_accel_mps2": 4.319992991517029,
+        "max_battery_current_a": 70.91813762526128,
+        "max_decel_mps2": 5.811767028069933,
+        "max_gradient_rad": 0.18014915939315218,
+        "max_motor_current_a": 68.17036797694146,
+        "max_motor_rpm": 5212.05653510393,
+        "max_power_w": 6066.514709732014,
+        "max_regen_current_a": 27.818975241853536,
+        "max_speed_mps": 19.477650061891417
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.022989953176868,
+        "max_battery_current_a": 116.46527740915886,
+        "max_decel_mps2": 7.352056170320044,
+        "max_gradient_rad": 0.18700850214416362,
+        "max_motor_current_a": 135.08551148758542,
+        "max_motor_rpm": 4896.1337582887045,
+        "max_power_w": 7937.246245239121,
+        "max_regen_current_a": 33.25946182351587,
+        "max_speed_mps": 22.920887972294857
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.392664909362793,
+        "max_battery_current_a": 54.515113830566406,
+        "max_decel_mps2": 6.927736759185791,
+        "max_gradient_rad": 0.12738387286663055,
+        "max_motor_current_a": 88.7044906616211,
+        "max_motor_rpm": 4407.771484375,
+        "max_power_w": 5644.74853515625,
+        "max_regen_current_a": 34.14780807495117,
+        "max_speed_mps": 16.838638305664062
+      },
+      "hardware": {
+        "max_accel_mps2": 5.436480995400964,
+        "max_battery_current_a": 215.88871974151985,
+        "max_decel_mps2": 9.386430009579868,
+        "max_gradient_rad": 0.23046913389491516,
+        "max_motor_current_a": 196.6628418094869,
+        "max_motor_rpm": 5311.570349440897,
+        "max_power_w": 6634.434307518826,
+        "max_regen_current_a": 47.93754316568151,
+        "max_speed_mps": 24.870517373917888
+      },
+      "mode": {
+        "max_accel_mps2": 4.3926647598769515,
+        "max_battery_current_a": 89.90166144898232,
+        "max_decel_mps2": 6.927736738123558,
+        "max_gradient_rad": 0.156340892738889,
+        "max_motor_current_a": 94.7776350791992,
+        "max_motor_rpm": 4407.771606754383,
+        "max_power_w": 5922.298674544082,
+        "max_regen_current_a": 39.267160047125245,
+        "max_speed_mps": 20.792887291762046
+      },
+      "profile": {
+        "max_accel_mps2": 5.772807578590376,
+        "max_battery_current_a": 54.51511399447849,
+        "max_decel_mps2": 7.507531882543537,
+        "max_gradient_rad": 0.12738387741701868,
+        "max_motor_current_a": 88.70448748555191,
+        "max_motor_rpm": 4772.476445158504,
+        "max_power_w": 5644.74848521731,
+        "max_regen_current_a": 34.14780734216127,
+        "max_speed_mps": 16.83863861624179
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.984679676357805,
+        "max_battery_current_a": 99.78592397657357,
+        "max_decel_mps2": 7.446362108337173,
+        "max_gradient_rad": 0.16031292428608634,
+        "max_motor_current_a": 131.08581266216652,
+        "max_motor_rpm": 5534.01331887114,
+        "max_power_w": 7525.663880139794,
+        "max_regen_current_a": 38.66995963711845,
+        "max_speed_mps": 24.396351212422715
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.649153709411621,
+        "max_battery_current_a": 67.86116790771484,
+        "max_decel_mps2": 5.846704483032227,
+        "max_gradient_rad": 0.16509781777858734,
+        "max_motor_current_a": 76.25509643554688,
+        "max_motor_rpm": 4578.1376953125,
+        "max_power_w": 7272.9443359375,
+        "max_regen_current_a": 26.47285270690918,
+        "max_speed_mps": 17.434505462646484
+      },
+      "hardware": {
+        "max_accel_mps2": 6.5789541800350335,
+        "max_battery_current_a": 144.25528961432033,
+        "max_decel_mps2": 8.165377347604451,
+        "max_gradient_rad": 0.19421495351845436,
+        "max_motor_current_a": 182.13441791778013,
+        "max_motor_rpm": 5428.692629842436,
+        "max_power_w": 8438.762807364414,
+        "max_regen_current_a": 44.33790756831403,
+        "max_speed_mps": 29.082909270764716
+      },
+      "mode": {
+        "max_accel_mps2": 4.649153530601264,
+        "max_battery_current_a": 93.88366914664125,
+        "max_decel_mps2": 5.846704692012286,
+        "max_gradient_rad": 0.18680697451228656,
+        "max_motor_current_a": 116.36333359473325,
+        "max_motor_rpm": 4578.137769011557,
+        "max_power_w": 7757.419127663539,
+        "max_regen_current_a": 38.328430984010836,
+        "max_speed_mps": 17.43450510953888
+      },
+      "profile": {
+        "max_accel_mps2": 5.942894479034311,
+        "max_battery_current_a": 67.86116832482281,
+        "max_decel_mps2": 7.39446950380927,
+        "max_gradient_rad": 0.19051329637306597,
+        "max_motor_current_a": 76.25509559328466,
+        "max_motor_rpm": 5675.053670927914,
+        "max_power_w": 7775.619250219758,
+        "max_regen_current_a": 26.47285341331527,
+        "max_speed_mps": 19.07307761160807
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.499011479787753,
+        "max_battery_current_a": 117.19455343920343,
+        "max_decel_mps2": 6.636950056907972,
+        "max_gradient_rad": 0.16509782077128557,
+        "max_motor_current_a": 122.25731580221301,
+        "max_motor_rpm": 5801.51402386322,
+        "max_power_w": 7272.944462728836,
+        "max_regen_current_a": 39.231428572479146,
+        "max_speed_mps": 20.0483484980417
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.237119197845459,
+        "max_battery_current_a": 51.69093704223633,
+        "max_decel_mps2": 5.146888256072998,
+        "max_gradient_rad": 0.15476509928703308,
+        "max_motor_current_a": 90.95267486572266,
+        "max_motor_rpm": 4702.4248046875,
+        "max_power_w": 5371.4169921875,
+        "max_regen_current_a": 33.77946853637695,
+        "max_speed_mps": 15.556185722351074
+      },
+      "hardware": {
+        "max_accel_mps2": 6.745798359778534,
+        "max_battery_current_a": 167.91735369214288,
+        "max_decel_mps2": 7.253778270702311,
+        "max_gradient_rad": 0.2229899607308377,
+        "max_motor_current_a": 218.92515774040655,
+        "max_motor_rpm": 6873.75366810067,
+        "max_power_w": 8967.152444598845,
+        "max_regen_current_a": 46.89305417677321,
+        "max_speed_mps": 24.297436342778266
+      },
+      "mode": {
+        "max_accel_mps2": 5.35466712949373,
+        "max_battery_current_a": 79.8478585359312,
+        "max_decel_mps2": 6.5592281224641455,
+        "max_gradient_rad": 0.19886898123189561,
+        "max_motor_current_a": 90.9526723797975,
+        "max_motor_rpm": 4702.424986899368,
+        "max_power_w": 7920.533849716067,
+        "max_regen_current_a": 38.372235304363436,
+        "max_speed_mps": 15.556185269029578
+      },
+      "profile": {
+        "max_accel_mps2": 4.237119270055125,
+        "max_battery_current_a": 51.690936059245686,
+        "max_decel_mps2": 5.146888151087075,
+        "max_gradient_rad": 0.15476510068517157,
+        "max_motor_current_a": 97.56948561298863,
+        "max_motor_rpm": 5910.082357827733,
+        "max_power_w": 5371.417011751883,
+        "max_regen_current_a": 39.52640977635565,
+        "max_speed_mps": 16.289725859829776
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.166229040806321,
+        "max_battery_current_a": 116.60623803210676,
+        "max_decel_mps2": 7.672552798644579,
+        "max_gradient_rad": 0.16910381949631081,
+        "max_motor_current_a": 146.1650034871827,
+        "max_motor_rpm": 5352.36388161473,
+        "max_power_w": 7706.538568955087,
+        "max_regen_current_a": 33.779469740365315,
+        "max_speed_mps": 20.540478132014787
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.883968353271484,
+        "max_battery_current_a": 69.6741714477539,
+        "max_decel_mps2": 4.801299095153809,
+        "max_gradient_rad": 0.14295309782028198,
+        "max_motor_current_a": 97.61454772949219,
+        "max_motor_rpm": 4322.27978515625,
+        "max_power_w": 6342.283203125,
+        "max_regen_current_a": 31.603866577148438,
+        "max_speed_mps": 15.363570213317871
+      },
+      "hardware": {
+        "max_accel_mps2": 5.411334014732597,
+        "max_battery_current_a": 187.64703743804233,
+        "max_decel_mps2": 8.668112908269347,
+        "max_gradient_rad": 0.1601353022574904,
+        "max_motor_current_a": 185.0941851355993,
+        "max_motor_rpm": 6183.811304391838,
+        "max_power_w": 7632.625386703127,
+        "max_regen_current_a": 40.18276895471165,
+        "max_speed_mps": 32.74254072783245
+      },
+      "mode": {
+        "max_accel_mps2": 4.924320696703904,
+        "max_battery_current_a": 91.59262789041851,
+        "max_decel_mps2": 6.309572486062272,
+        "max_gradient_rad": 0.1476372679435492,
+        "max_motor_current_a": 114.52855006222808,
+        "max_motor_rpm": 4935.10723551459,
+        "max_power_w": 6342.283189300767,
+        "max_regen_current_a": 31.603867218535168,
+        "max_speed_mps": 17.471843257385174
+      },
+      "profile": {
+        "max_accel_mps2": 4.915049311525676,
+        "max_battery_current_a": 69.67417424872745,
+        "max_decel_mps2": 4.80129900703132,
+        "max_gradient_rad": 0.1429530973495142,
+        "max_motor_current_a": 97.61454682920731,
+        "max_motor_rpm": 4322.279698957356,
+        "max_power_w": 6769.647731044418,
+        "max_regen_current_a": 38.44488873172132,
+        "max_speed_mps": 15.363570670183266
+      },
+      "vehicle": {
+        "max_accel_mps2": 4.883968573351573,
+        "max_battery_current_a": 113.2663199794763,
+        "max_decel_mps2": 7.462780295858035,
+        "max_gradient_rad": 0.17320800144170387,
+        "max_motor_current_a": 136.15355991278378,
+        "max_motor_rpm": 5237.065766137517,
+        "max_power_w": 7473.005607092799,
+        "max_regen_current_a": 37.93560062271581,
+        "max_speed_mps": 24.627875827495412
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.945993900299072,
+        "max_battery_current_a": 55.80750274658203,
+        "max_decel_mps2": 5.141079425811768,
+        "max_gradient_rad": 0.15166611969470978,
+        "max_motor_current_a": 79.77508544921875,
+        "max_motor_rpm": 4331.0908203125,
+        "max_power_w": 4817.74365234375,
+        "max_regen_current_a": 33.701637268066406,
+        "max_speed_mps": 16.714258193969727
+      },
+      "hardware": {
+        "max_accel_mps2": 5.935646846182383,
+        "max_battery_current_a": 191.13880490662115,
+        "max_decel_mps2": 9.283778642650413,
+        "max_gradient_rad": 0.22368198081014243,
+        "max_motor_current_a": 206.3987824956546,
+        "max_motor_rpm": 5312.883362373841,
+        "max_power_w": 7814.911357775384,
+        "max_regen_current_a": 39.439811043952226,
+        "max_speed_mps": 29.158657799878014
+      },
+      "mode": {
+        "max_accel_mps2": 4.945993819795895,
+        "max_battery_current_a": 77.3452763223505,
+        "max_decel_mps2": 7.111436913770513,
+        "max_gradient_rad": 0.15166611420438258,
+        "max_motor_current_a": 84.87931395816574,
+        "max_motor_rpm": 4331.090812532224,
+        "max_power_w": 7639.370467099356,
+        "max_regen_current_a": 33.70163613062566,
+        "max_speed_mps": 16.714257555995406
+      },
+      "profile": {
+        "max_accel_mps2": 5.44811085257766,
+        "max_battery_current_a": 55.80750206651004,
+        "max_decel_mps2": 5.141079349003324,
+        "max_gradient_rad": 0.15401169551541874,
+        "max_motor_current_a": 79.77508676041748,
+        "max_motor_rpm": 5402.314743884334,
+        "max_power_w": 4817.743418041702,
+        "max_regen_current_a": 34.49692817778854,
+        "max_speed_mps": 17.570834003924038
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.7013657650488785,
+        "max_battery_current_a": 108.3708482379652,
+        "max_decel_mps2": 7.4764730728914675,
+        "max_gradient_rad": 0.16898562663989156,
+        "max_motor_current_a": 122.54386610175366,
+        "max_motor_rpm": 5782.108157443997,
+        "max_power_w": 6936.301208655682,
+        "max_regen_current_a": 37.063526846126365,
+        "max_speed_mps": 20.848456980990274
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 3.9320976734161377,
+        "max_battery_current_a": 57.1432991027832,
+        "max_decel_mps2": 5.540036678314209,
+        "max_gradient_rad": 0.17551597952842712,
+        "max_motor_current_a": 63.099334716796875,
+        "max_motor_rpm": 4896.365234375,
+        "max_power_w": 5823.07080078125,
+        "max_regen_current_a": 28.347442626953125,
+        "max_speed_mps": 14.196779251098633
+      },
+      "hardware": {
+        "max_accel_mps2": 5.895508381128414,
+        "max_battery_current_a": 181.29295803194933,
+        "max_decel_mps2": 8.964533125511245,
+        "max_gradient_rad": 0.21340621860690825,
+        "max_motor_current_a": 236.63728338236317,
+        "max_motor_rpm": 6836.007233643983,
+        "max_power_w": 7197.4344949119095,
+        "max_regen_current_a": 32.80349416225026,
+        "max_speed_mps": 26.11064018047838
+      },
+      "mode": {
+        "max_accel_mps2": 5.578464631734898,
+        "max_battery_current_a": 84.2402331046916,
+        "max_decel_mps2": 6.851119550787157,
+        "max_gradient_rad": 0.1776049062189069,
+        "max_motor_current_a": 110.77159591774506,
+        "max_motor_rpm": 5347.790586197081,
+        "max_power_w": 6193.375370023183,
+        "max_regen_current_a": 31.11029858158023,
+        "max_speed_mps": 21.32157348133953
+      },
+      "profile": {
+        "max_accel_mps2": 3.9320977476387737,
+        "max_battery_current_a": 57.143300827620884,
+        "max_decel_mps2": 5.540036735130197,
+        "max_gradient_rad": 0.17551598498392418,
+        "max_motor_current_a": 63.09933415458943,
+        "max_motor_rpm": 4896.365334044295,
+        "max_power_w": 5823.070618940039,
+        "max_regen_current_a": 28.347441713314954,
+        "max_speed_mps": 14.196779575340306
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.405733797789283,
+        "max_battery_current_a": 118.80095060263574,
+        "max_decel_mps2": 7.728910671554264,
+        "max_gradient_rad": 0.18191487802443315,
+        "max_motor_current_a": 137.86356955408257,
+        "max_motor_rpm": 5663.12875353116,
+        "max_power_w": 7380.24371641882,
+        "max_regen_current_a": 39.1314074064835,
+        "max_speed_mps": 24.939462265332242
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 3.664719581604004,
+        "max_battery_current_a": 53.28143310546875,
+        "max_decel_mps2": 5.669659614562988,
+        "max_gradient_rad": 0.16016776859760284,
+        "max_motor_current_a": 76.17266845703125,
+        "max_motor_rpm": 4594.958984375,
+        "max_power_w": 5208.4091796875,
+        "max_regen_current_a": 31.478242874145508,
+        "max_speed_mps": 17.433135986328125
+      },
+      "hardware": {
+        "max_accel_mps2": 5.808344442656222,
+        "max_battery_current_a": 173.34715461599424,
+        "max_decel_mps2": 9.295483130688567,
+        "max_gradient_rad": 0.20672635313633803,
+        "max_motor_current_a": 165.13830805711024,
+        "max_motor_rpm": 5296.402534834584,
+        "max_power_w": 7730.477549130099,
+        "max_regen_current_a": 40.68177824806264,
+        "max_speed_mps": 32.477029700334626
+      },
+      "mode": {
+        "max_accel_mps2": 4.984504756883946,
+        "max_battery_current_a": 86.38396929201517,
+        "max_decel_mps2": 5.669659567872117,
+        "max_gradient_rad": 0.16016777262190296,
+        "max_motor_current_a": 110.91056408320982,
+        "max_motor_rpm": 4594.958942318584,
+        "max_power_w": 6129.292866377165,
+        "max_regen_current_a": 35.239031067294896,
+        "max_speed_mps": 18.165540465356823
+      },
+      "profile": {
+        "max_accel_mps2": 3.6647194845723305,
+        "max_battery_current_a": 53.28143139851228,
+        "max_decel_mps2": 6.060864820287055,
+        "max_gradient_rad": 0.16515135864198194,
+        "max_motor_current_a": 76.17266676550548,
+        "max_motor_rpm": 5093.416706337755,
+        "max_power_w": 5208.408951299714,
+        "max_regen_current_a": 31.47824238771696,
+        "max_speed_mps": 17.433135080226798
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.704170150071263,
+        "max_battery_current_a": 114.37426982683367,
+        "max_decel_mps2": 7.7655167209105675,
+        "max_gradient_rad": 0.19813721353880426,
+        "max_motor_current_a": 145.70196096911803,
+        "max_motor_rpm": 5222.11056320619,
+        "max_power_w": 6409.4337337343895,
+        "max_regen_current_a": 35.04304823142169,
+        "max_speed_mps": 23.47761493248984
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.2366838455200195,
+        "max_battery_current_a": 54.9748649597168,
+        "max_decel_mps2": 5.965717792510986,
+        "max_gradient_rad": 0.12916262447834015,
+        "max_motor_current_a": 82.55878448486328,
+        "max_motor_rpm": 4002.69384765625,
+        "max_power_w": 6531.0498046875,
+        "max_regen_current_a": 34.01817321777344,
+        "max_speed_mps": 17.355670928955078
+      },
+      "hardware": {
+        "max_accel_mps2": 5.307984682107556,
+        "max_battery_current_a": 153.77036308060062,
+        "max_decel_mps2": 7.445906575620187,
+        "max_gradient_rad": 0.2208983766315222,
+        "max_motor_current_a": 211.41997184074688,
+        "max_motor_rpm": 5709.849274051535,
+        "max_power_w": 6560.910827163609,
+        "max_regen_current_a": 39.38717510482419,
+        "max_speed_mps": 24.32522455608375
+      },
+      "mode": {
+        "max_accel_mps2": 4.236684031176598,
+        "max_battery_current_a": 89.55263965731667,
+        "max_decel_mps2": 5.965717629883496,
+        "max_gradient_rad": 0.14757325849245237,
+        "max_motor_current_a": 112.12438978599222,
+        "max_motor_rpm": 4558.849228252559,
+        "max_power_w": 7879.068158518374,
+        "max_regen_current_a": 37.05079844871432,
+        "max_speed_mps": 19.690951015449176
+      },
+      "profile": {
+        "max_accel_mps2": 5.057393985338236,
+        "max_battery_current_a": 54.974865309008116,
+        "max_decel_mps2": 7.193362086256915,
+        "max_gradient_rad": 0.1291626297103118,
+        "max_motor_current_a": 82.55878327720076,
+        "max_motor_rpm": 4002.693944082725,
+        "max_power_w": 7254.073914739971,
+        "max_regen_current_a": 35.19143953993841,
+        "max_speed_mps": 17.355670756959285
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.44730285750704,
+        "max_battery_current_a": 115.96618284372654,
+        "max_decel_mps2": 7.999852525614735,
+        "max_gradient_rad": 0.17399841374880737,
+        "max_motor_current_a": 142.56029470664353,
+        "max_motor_rpm": 4823.259944460013,
+        "max_power_w": 6531.049972418628,
+        "max_regen_current_a": 34.01817225425904,
+        "max_speed_mps": 21.89563107782068
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 5.520493984222412,
+        "max_battery_current_a": 74.51863098144531,
+        "max_decel_mps2": 5.664263725280762,
+        "max_gradient_rad": 0.14633233845233917,
+        "max_motor_current_a": 85.42340087890625,
+        "max_motor_rpm": 4814.21630859375,
+        "max_power_w": 6193.55908203125,
+        "max_regen_current_a": 32.41085433959961,
+        "max_speed_mps": 19.68630027770996
+      },
+      "hardware": {
+        "max_accel_mps2": 7.09961481169415,
+        "max_battery_current_a": 151.78310997534768,
+        "max_decel_mps2": 7.669294212853208,
+        "max_gradient_rad": 0.21720117640395747,
+        "max_motor_current_a": 237.177661842727,
+        "max_motor_rpm": 6425.633488440982,
+        "max_power_w": 7398.263182063024,
+        "max_regen_current_a": 32.41085480795946,
+        "max_speed_mps": 33.83161409173302
+      },
+      "mode": {
+        "max_accel_mps2": 5.72923612859924,
+        "max_battery_current_a": 82.85134039704232,
+        "max_decel_mps2": 7.573594203416139,
+        "max_gradient_rad": 0.14633233223863992,
+        "max_motor_current_a": 96.49933555110415,
+        "max_motor_rpm": 4814.216114750309,
+        "max_power_w": 6814.305895224987,
+        "max_regen_current_a": 32.44685051461667,
+        "max_speed_mps": 20.56539328598273
+      },
+      "profile": {
+        "max_accel_mps2": 5.917136954971387,
+        "max_battery_current_a": 74.51863395207866,
+        "max_decel_mps2": 5.664263668439682,
+        "max_gradient_rad": 0.18465593750454048,
+        "max_motor_current_a": 85.42340424405783,
+        "max_motor_rpm": 5361.10872963214,
+        "max_power_w": 6193.558864024567,
+        "max_regen_current_a": 35.31693829929723,
+        "max_speed_mps": 19.686300537716626
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.520493937780213,
+        "max_battery_current_a": 111.05381749442506,
+        "max_decel_mps2": 6.593688104107705,
+        "max_gradient_rad": 0.19935377406058685,
+        "max_motor_current_a": 140.7184324779894,
+        "max_motor_rpm": 5820.351886906556,
+        "max_power_w": 7635.969415921958,
+        "max_regen_current_a": 32.815210443567814,
+        "max_speed_mps": 20.3799823892153
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.131831169128418,
+        "max_battery_current_a": 68.66889190673828,
+        "max_decel_mps2": 6.677321434020996,
+        "max_gradient_rad": 0.14449648559093475,
+        "max_motor_current_a": 87.62437438964844,
+        "max_motor_rpm": 3823.328125,
+        "max_power_w": 5624.36279296875,
+        "max_regen_current_a": 31.315223693847656,
+        "max_speed_mps": 17.646236419677734
+      },
+      "hardware": {
+        "max_accel_mps2": 6.793754445337448,
+        "max_battery_current_a": 175.36136349628038,
+        "max_decel_mps2": 6.677321273778158,
+        "max_gradient_rad": 0.23053049472022177,
+        "max_motor_current_a": 198.67980031065568,
+        "max_motor_rpm": 6844.111584046396,
+        "max_power_w": 7258.865721757521,
+        "max_regen_current_a": 43.69641942888195,
+        "max_speed_mps": 30.458074877379065
+      },
+      "mode": {
+        "max_accel_mps2": 4.3541033315244375,
+        "max_battery_current_a": 91.03551250996604,
+        "max_decel_mps2": 7.328179193850066,
+        "max_gradient_rad": 0.16931467081092724,
+        "max_motor_current_a": 115.69151927129612,
+        "max_motor_rpm": 5906.512639998656,
+        "max_power_w": 5624.362674652824,
+        "max_regen_current_a": 31.315222909074215,
+        "max_speed_mps": 17.64623636488427
+      },
+      "profile": {
+        "max_accel_mps2": 4.131831361134072,
+        "max_battery_current_a": 68.66889279171048,
+        "max_decel_mps2": 7.013718896944646,
+        "max_gradient_rad": 0.14449648241040708,
+        "max_motor_current_a": 87.62437357786092,
+        "max_motor_rpm": 3823.328041331212,
+        "max_power_w": 7337.385178023415,
+        "max_regen_current_a": 31.85314136125738,
+        "max_speed_mps": 18.065317227859733
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.01820782858923,
+        "max_battery_current_a": 110.6479609015325,
+        "max_decel_mps2": 6.739391760287583,
+        "max_gradient_rad": 0.19191329427312387,
+        "max_motor_current_a": 133.94125399809695,
+        "max_motor_rpm": 5821.143403574951,
+        "max_power_w": 6445.919996432144,
+        "max_regen_current_a": 35.03191443302611,
+        "max_speed_mps": 21.219317195954783
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.5229949951171875,
+        "max_battery_current_a": 65.70748901367188,
+        "max_decel_mps2": 5.633955955505371,
+        "max_gradient_rad": 0.16592513024806976,
+        "max_motor_current_a": 98.97179412841797,
+        "max_motor_rpm": 4609.4697265625,
+        "max_power_w": 5204.09423828125,
+        "max_regen_current_a": 29.206314086914062,
+        "max_speed_mps": 14.194490432739258
+      },
+      "hardware": {
+        "max_accel_mps2": 6.486851861245846,
+        "max_battery_current_a": 182.22637904249527,
+        "max_decel_mps2": 7.2669325663238284,
+        "max_gradient_rad": 0.18011229409607532,
+        "max_motor_current_a": 197.86083910076198,
+        "max_motor_rpm": 5593.899113270232,
+        "max_power_w": 8786.993397483551,
+        "max_regen_current_a": 38.808061003283434,
+        "max_speed_mps": 30.978667023988407
+      },
+      "mode": {
+        "max_accel_mps2": 4.522994778633726,
+        "max_battery_current_a": 78.48996109824866,
+        "max_decel_mps2": 5.633956081414553,
+        "max_gradient_rad": 0.1720481053560598,
+        "max_motor_current_a": 102.88692728790988,
+        "max_motor_rpm": 4609.469694268598,
+        "max_power_w": 6065.882187418576,
+        "max_regen_current_a": 29.206313297089487,
+        "max_speed_mps": 21.845606351028174
+      },
+      "profile": {
+        "max_accel_mps2": 4.778108866857069,
+        "max_battery_current_a": 65.70748693755546,
+        "max_decel_mps2": 7.592703151995311,
+        "max_gradient_rad": 0.1659251375701066,
+        "max_motor_current_a": 98.97179724410951,
+        "max_motor_rpm": 5684.3068734310655,
+        "max_power_w": 5204.094377466908,
+        "max_regen_current_a": 35.15867828656311,
+        "max_speed_mps": 14.194490614266137
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.059661567854327,
+        "max_battery_current_a": 98.86931379012128,
+        "max_decel_mps2": 7.174717739540334,
+        "max_gradient_rad": 0.18898340004372208,
+        "max_motor_current_a": 125.77752880354554,
+        "max_motor_rpm": 5022.179810925195,
+        "max_power_w": 7619.503375174565,
+        "max_regen_current_a": 36.28691172307,
+        "max_speed_mps": 20.60327942376153
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 3.9769370555877686,
+        "max_battery_current_a": 78.32288360595703,
+        "max_decel_mps2": 5.356203556060791,
+        "max_gradient_rad": 0.12600518763065338,
+        "max_motor_current_a": 89.60356903076172,
+        "max_motor_rpm": 5185.02734375,
+        "max_power_w": 5475.28076171875,
+        "max_regen_current_a": 27.32460594177246,
+        "max_speed_mps": 16.877046585083008
+      },
+      "hardware": {
+        "max_accel_mps2": 6.773077548718632,
+        "max_battery_current_a": 157.2741842680859,
+        "max_decel_mps2": 7.682263815206207,
+        "max_gradient_rad": 0.1659265736204512,
+        "max_motor_current_a": 195.2375038508808,
+        "max_motor_rpm": 5946.55004943765,
+        "max_power_w": 9411.40350965793,
+        "max_regen_current_a": 32.822027474937244,
+        "max_speed_mps": 29.632763339166125
+      },
+      "mode": {
+        "max_accel_mps2": 5.9820562688402354,
+        "max_battery_current_a": 85.67717605390654,
+        "max_decel_mps2": 6.332912586366465,
+        "max_gradient_rad": 0.17726163926432892,
+        "max_motor_current_a": 92.12473693434123,
+        "max_motor_rpm": 5748.299998487124,
+        "max_power_w": 6662.530409646388,
+        "max_regen_current_a": 33.406173578665054,
+        "max_speed_mps": 20.618889476966565
+      },
+      "profile": {
+        "max_accel_mps2": 3.976937024114105,
+        "max_battery_current_a": 78.3228864104121,
+        "max_decel_mps2": 5.35620335464459,
+        "max_gradient_rad": 0.12600518951209344,
+        "max_motor_current_a": 89.6035722193818,
+        "max_motor_rpm": 5185.027529260888,
+        "max_power_w": 5475.2806249772575,
+        "max_regen_current_a": 27.32460649317682,
+        "max_speed_mps": 16.87704729796104
+      },
+      "vehicle": {
+        "max_accel_mps2": 4.942141874653754,
+        "max_battery_current_a": 99.58074202736773,
+        "max_decel_mps2": 7.623109512521911,
+        "max_gradient_rad": 0.18425270604971852,
+        "max_motor_current_a": 121.608272228776,
+        "max_motor_rpm": 5992.701747252265,
+        "max_power_w": 6886.136818947564,
+        "max_regen_current_a": 36.502716776676515,
+        "max_speed_mps": 23.147228534759993
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 1.0
+      },
+      "expected": {
+        "max_accel_mps2": 4.636868953704834,
+        "max_battery_current_a": 64.01510620117188,
+        "max_decel_mps2": 5.8314290046691895,
+        "max_gradient_rad": 0.1400294303894043,
+        "max_motor_current_a": 86.57075500488281,
+        "max_motor_rpm": 3695.665771484375,
+        "max_power_w": 5057.4140625,
+        "max_regen_current_a": 31.691341400146484,
+        "max_speed_mps": 17.597869873046875
+      },
+      "hardware": {
+        "max_accel_mps2": 6.48717013942492,
+        "max_battery_current_a": 186.75440604860853,
+        "max_decel_mps2": 7.852900244502538,
+        "max_gradient_rad": 0.21499079360569945,
+        "max_motor_current_a": 196.0402963694162,
+        "max_motor_rpm": 6496.69399170968,
+        "max_power_w": 7140.723950579283,
+        "max_regen_current_a": 36.66014862449644,
+        "max_speed_mps": 24.032108671234628
+      },
+      "mode": {
+        "max_accel_mps2": 4.719499058950515,
+        "max_battery_current_a": 74.97768367662174,
+        "max_decel_mps2": 5.898448779619299,
+        "max_gradient_rad": 0.18132067947272562,
+        "max_motor_current_a": 86.5707541268093,
+        "max_motor_rpm": 5224.572688774367,
+        "max_power_w": 7397.498532967096,
+        "max_regen_current_a": 31.691341751370786,
+        "max_speed_mps": 20.855765653690394
+      },
+      "profile": {
+        "max_accel_mps2": 4.636868793985855,
+        "max_battery_current_a": 64.01510966777363,
+        "max_decel_mps2": 5.83142906674656,
+        "max_gradient_rad": 0.14002943219296032,
+        "max_motor_current_a": 97.70704962976163,
+        "max_motor_rpm": 3695.665882040671,
+        "max_power_w": 5057.413926077763,
+        "max_regen_current_a": 31.90072350952135,
+        "max_speed_mps": 17.597869479805738
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.453474854452694,
+        "max_battery_current_a": 111.00139217194133,
+        "max_decel_mps2": 7.436215557443969,
+        "max_gradient_rad": 0.19633645780850426,
+        "max_motor_current_a": 143.63484079940196,
+        "max_motor_rpm": 5310.166759325054,
+        "max_power_w": 7893.869533512821,
+        "max_regen_current_a": 37.289464342826946,
+        "max_speed_mps": 24.619555222412743
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.718791961669922,
+        "max_battery_current_a": 58.06454849243164,
+        "max_decel_mps2": 7.186761379241943,
+        "max_gradient_rad": 0.16321852803230286,
+        "max_motor_current_a": 78.19303894042969,
+        "max_motor_rpm": 4570.02001953125,
+        "max_power_w": 6391.52880859375,
+        "max_regen_current_a": 29.172380447387695,
+        "max_speed_mps": 8.200386047363281
+      },
+      "hardware": {
+        "max_accel_mps2": 6.413475802327774,
+        "max_battery_current_a": 204.18902020124503,
+        "max_decel_mps2": 7.262435283094573,
+        "max_gradient_rad": 0.16321853385156931,
+        "max_motor_current_a": 236.95288817542695,
+        "max_motor_rpm": 7198.9738005058825,
+        "max_power_w": 9442.516088980326,
+        "max_regen_current_a": 41.20318574751889,
+        "max_speed_mps": 25.095922639571825
+      },
+      "mode": {
+        "max_accel_mps2": 4.7187920316506204,
+        "max_battery_current_a": 90.10400528563555,
+        "max_decel_mps2": 7.868464494951706,
+        "max_gradient_rad": 0.18881396208427836,
+        "max_motor_current_a": 95.9991021719433,
+        "max_motor_rpm": 5448.6126131701785,
+        "max_power_w": 6391.528792589516,
+        "max_regen_current_a": 38.292797132804225,
+        "max_speed_mps": 17.69654297154469
+      },
+      "profile": {
+        "max_accel_mps2": 4.835031005589852,
+        "max_battery_current_a": 58.064549029445374,
+        "max_decel_mps2": 7.961981487301613,
+        "max_gradient_rad": 0.17261283091865032,
+        "max_motor_current_a": 78.19303634406918,
+        "max_motor_rpm": 4570.02013680179,
+        "max_power_w": 7904.591125787447,
+        "max_regen_current_a": 29.17238058041591,
+        "max_speed_mps": 16.40077287177426
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.561741663344904,
+        "max_battery_current_a": 111.63622774640847,
+        "max_decel_mps2": 7.186761283505621,
+        "max_gradient_rad": 0.1636496962517531,
+        "max_motor_current_a": 134.11502469754902,
+        "max_motor_rpm": 5502.3955503334255,
+        "max_power_w": 6690.382635557002,
+        "max_regen_current_a": 39.32858230341414,
+        "max_speed_mps": 23.781344152062786
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.520606517791748,
+        "max_battery_current_a": 74.71116638183594,
+        "max_decel_mps2": 6.65340518951416,
+        "max_gradient_rad": 0.16065926849842072,
+        "max_motor_current_a": 70.93699645996094,
+        "max_motor_rpm": 4411.43896484375,
+        "max_power_w": 5579.93896484375,
+        "max_regen_current_a": 32.97140884399414,
+        "max_speed_mps": 8.03548812866211
+      },
+      "hardware": {
+        "max_accel_mps2": 6.62397728654644,
+        "max_battery_current_a": 157.50594298040596,
+        "max_decel_mps2": 7.051386362720876,
+        "max_gradient_rad": 0.20393757112682653,
+        "max_motor_current_a": 193.05980566394572,
+        "max_motor_rpm": 6300.980981148022,
+        "max_power_w": 8820.618092977835,
+        "max_regen_current_a": 37.788469746426806,
+        "max_speed_mps": 30.511123132286336
+      },
+      "mode": {
+        "max_accel_mps2": 5.697857712784023,
+        "max_battery_current_a": 99.76771418185659,
+        "max_decel_mps2": 6.796101211297269,
+        "max_gradient_rad": 0.1829961995595075,
+        "max_motor_current_a": 87.3555312461348,
+        "max_motor_rpm": 4411.439068361204,
+        "max_power_w": 6707.4749460290805,
+        "max_regen_current_a": 38.955158541810015,
+        "max_speed_mps": 19.044859299754638
+      },
+      "profile": {
+        "max_accel_mps2": 4.52060643179316,
+        "max_battery_current_a": 74.71116625845423,
+        "max_decel_mps2": 7.749978079780998,
+        "max_gradient_rad": 0.16065927132743152,
+        "max_motor_current_a": 70.93699586853097,
+        "max_motor_rpm": 4923.036184513127,
+        "max_power_w": 5579.938899440443,
+        "max_regen_current_a": 39.68391412165401,
+        "max_speed_mps": 16.070976120556093
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.08715695479318,
+        "max_battery_current_a": 112.75800069893214,
+        "max_decel_mps2": 6.653405062088372,
+        "max_gradient_rad": 0.1820335602801068,
+        "max_motor_current_a": 133.14348285217136,
+        "max_motor_rpm": 5530.646000498358,
+        "max_power_w": 7957.03490531471,
+        "max_regen_current_a": 32.971408666900956,
+        "max_speed_mps": 24.638363804222237
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.788788795471191,
+        "max_battery_current_a": 60.35451889038086,
+        "max_decel_mps2": 4.918462753295898,
+        "max_gradient_rad": 0.16018329560756683,
+        "max_motor_current_a": 92.45635986328125,
+        "max_motor_rpm": 4620.41259765625,
+        "max_power_w": 6637.75244140625,
+        "max_regen_current_a": 34.619022369384766,
+        "max_speed_mps": 8.820911407470703
+      },
+      "hardware": {
+        "max_accel_mps2": 6.018570421943176,
+        "max_battery_current_a": 163.88981300318696,
+        "max_decel_mps2": 9.025758314193851,
+        "max_gradient_rad": 0.18262711866262615,
+        "max_motor_current_a": 229.12215475428704,
+        "max_motor_rpm": 7042.196144838049,
+        "max_power_w": 7727.815755364304,
+        "max_regen_current_a": 44.640098912049815,
+        "max_speed_mps": 34.55191506175771
+      },
+      "mode": {
+        "max_accel_mps2": 5.595980055178666,
+        "max_battery_current_a": 75.65957121121316,
+        "max_decel_mps2": 5.704753517833525,
+        "max_gradient_rad": 0.18468230909391176,
+        "max_motor_current_a": 95.58398460824534,
+        "max_motor_rpm": 4620.412402904208,
+        "max_power_w": 6972.314340763763,
+        "max_regen_current_a": 36.369981131446856,
+        "max_speed_mps": 18.405274471318908
+      },
+      "profile": {
+        "max_accel_mps2": 4.7887887590794165,
+        "max_battery_current_a": 60.354520079711435,
+        "max_decel_mps2": 4.918462756305844,
+        "max_gradient_rad": 0.1601832920106373,
+        "max_motor_current_a": 92.45635610259507,
+        "max_motor_rpm": 5953.963532783484,
+        "max_power_w": 7426.3921654705755,
+        "max_regen_current_a": 34.61902127175256,
+        "max_speed_mps": 17.64182304820002
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.214148730031609,
+        "max_battery_current_a": 119.97365599750412,
+        "max_decel_mps2": 7.283067867313298,
+        "max_gradient_rad": 0.18173720251834694,
+        "max_motor_current_a": 137.60813167242483,
+        "max_motor_rpm": 5446.296693244649,
+        "max_power_w": 6637.752669412464,
+        "max_regen_current_a": 35.91712277324561,
+        "max_speed_mps": 21.492779248858838
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.32315731048584,
+        "max_battery_current_a": 61.887088775634766,
+        "max_decel_mps2": 7.020803928375244,
+        "max_gradient_rad": 0.19227392971515656,
+        "max_motor_current_a": 89.87065124511719,
+        "max_motor_rpm": 4264.6181640625,
+        "max_power_w": 6827.9931640625,
+        "max_regen_current_a": 25.575090408325195,
+        "max_speed_mps": 8.954030990600586
+      },
+      "hardware": {
+        "max_accel_mps2": 6.5338651861695425,
+        "max_battery_current_a": 206.9417069319102,
+        "max_decel_mps2": 7.711931583188366,
+        "max_gradient_rad": 0.21238250611421872,
+        "max_motor_current_a": 229.57602506897726,
+        "max_motor_rpm": 5896.6273787381815,
+        "max_power_w": 8083.0434777841965,
+        "max_regen_current_a": 39.04489935633083,
+        "max_speed_mps": 31.082165151714804
+      },
+      "mode": {
+        "max_accel_mps2": 4.323157344926793,
+        "max_battery_current_a": 91.5615227566895,
+        "max_decel_mps2": 7.114786440451137,
+        "max_gradient_rad": 0.19525574592681783,
+        "max_motor_current_a": 95.39980154160239,
+        "max_motor_rpm": 4264.618379707836,
+        "max_power_w": 7693.719241756487,
+        "max_regen_current_a": 37.11282171201236,
+        "max_speed_mps": 17.908062023649524
+      },
+      "profile": {
+        "max_accel_mps2": 4.664828523988094,
+        "max_battery_current_a": 61.887087101540025,
+        "max_decel_mps2": 7.02080372093835,
+        "max_gradient_rad": 0.1922739249640389,
+        "max_motor_current_a": 89.87065466951707,
+        "max_motor_rpm": 5694.190158257018,
+        "max_power_w": 6827.993052098532,
+        "max_regen_current_a": 25.575090022131167,
+        "max_speed_mps": 19.979407383649722
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.82211835082083,
+        "max_battery_current_a": 119.26088713378121,
+        "max_decel_mps2": 7.763746138505429,
+        "max_gradient_rad": 0.19437368736673066,
+        "max_motor_current_a": 134.08471802954196,
+        "max_motor_rpm": 5579.8039830951275,
+        "max_power_w": 7508.327357739011,
+        "max_regen_current_a": 34.708489872411455,
+        "max_speed_mps": 20.771806093857744
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.1692938804626465,
+        "max_battery_current_a": 75.04972839355469,
+        "max_decel_mps2": 6.630152702331543,
+        "max_gradient_rad": 0.16598495841026306,
+        "max_motor_current_a": 70.0039291381836,
+        "max_motor_rpm": 4759.69921875,
+        "max_power_w": 5979.1416015625,
+        "max_regen_current_a": 27.187471389770508,
+        "max_speed_mps": 7.697235584259033
+      },
+      "hardware": {
+        "max_accel_mps2": 6.158227348598249,
+        "max_battery_current_a": 165.12247986949504,
+        "max_decel_mps2": 8.93606231641905,
+        "max_gradient_rad": 0.1735986919254478,
+        "max_motor_current_a": 223.69147721297696,
+        "max_motor_rpm": 6074.799163557023,
+        "max_power_w": 6865.823346238075,
+        "max_regen_current_a": 37.997457436405035,
+        "max_speed_mps": 24.551891624126554
+      },
+      "mode": {
+        "max_accel_mps2": 4.822018123997547,
+        "max_battery_current_a": 97.03628270796649,
+        "max_decel_mps2": 7.010172092303411,
+        "max_gradient_rad": 0.17833632214160075,
+        "max_motor_current_a": 112.96679077110527,
+        "max_motor_rpm": 4995.113610486866,
+        "max_power_w": 5979.141492972288,
+        "max_regen_current_a": 36.13133062838895,
+        "max_speed_mps": 15.462023047602148
+      },
+      "profile": {
+        "max_accel_mps2": 4.169293684626179,
+        "max_battery_current_a": 75.04972560456315,
+        "max_decel_mps2": 6.6301526155223645,
+        "max_gradient_rad": 0.16598495441429162,
+        "max_motor_current_a": 70.00392897630805,
+        "max_motor_rpm": 4759.699346542119,
+        "max_power_w": 6031.0183966955055,
+        "max_regen_current_a": 27.187471985742278,
+        "max_speed_mps": 15.394471507687182
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.353379896025997,
+        "max_battery_current_a": 110.87304884489797,
+        "max_decel_mps2": 6.806363743061668,
+        "max_gradient_rad": 0.17021306832636618,
+        "max_motor_current_a": 146.12518795934565,
+        "max_motor_rpm": 4971.741264154211,
+        "max_power_w": 7860.526425637688,
+        "max_regen_current_a": 33.92663833485051,
+        "max_speed_mps": 20.394841753299975
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 3.9171833992004395,
+        "max_battery_current_a": 50.88426971435547,
+        "max_decel_mps2": 6.3414387702941895,
+        "max_gradient_rad": 0.16392354667186737,
+        "max_motor_current_a": 89.29438781738281,
+        "max_motor_rpm": 4021.5361328125,
+        "max_power_w": 7107.79541015625,
+        "max_regen_current_a": 28.72176742553711,
+        "max_speed_mps": 8.3182954788208
+      },
+      "hardware": {
+        "max_accel_mps2": 6.4459187825616295,
+        "max_battery_current_a": 214.4120028895341,
+        "max_decel_mps2": 8.782940291729041,
+        "max_gradient_rad": 0.16392354006208001,
+        "max_motor_current_a": 183.61846031066156,
+        "max_motor_rpm": 6158.229640693678,
+        "max_power_w": 7278.3372165703295,
+        "max_regen_current_a": 42.53167705485889,
+        "max_speed_mps": 35.91230452352277
+      },
+      "mode": {
+        "max_accel_mps2": 5.363413096002941,
+        "max_battery_current_a": 89.7754462095026,
+        "max_decel_mps2": 6.3414389214863265,
+        "max_gradient_rad": 0.1664493914097687,
+        "max_motor_current_a": 109.95342156014551,
+        "max_motor_rpm": 5826.126667331342,
+        "max_power_w": 7107.795448848556,
+        "max_regen_current_a": 38.0600454035502,
+        "max_speed_mps": 19.873245426914174
+      },
+      "profile": {
+        "max_accel_mps2": 3.9171835145922804,
+        "max_battery_current_a": 50.884268023879,
+        "max_decel_mps2": 6.526104828750148,
+        "max_gradient_rad": 0.1977191664969072,
+        "max_motor_current_a": 89.29439071756953,
+        "max_motor_rpm": 4021.5361690663362,
+        "max_power_w": 7191.938767802789,
+        "max_regen_current_a": 28.721767226066483,
+        "max_speed_mps": 16.63659044294722
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.22278514700238,
+        "max_battery_current_a": 117.6997269814494,
+        "max_decel_mps2": 7.418588604809427,
+        "max_gradient_rad": 0.18483564652521217,
+        "max_motor_current_a": 134.90181859571612,
+        "max_motor_rpm": 5528.477997797119,
+        "max_power_w": 7678.176191212157,
+        "max_regen_current_a": 34.28955321167356,
+        "max_speed_mps": 23.032032465382375
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 5.410213470458984,
+        "max_battery_current_a": 55.4822998046875,
+        "max_decel_mps2": 5.50837516784668,
+        "max_gradient_rad": 0.1250573694705963,
+        "max_motor_current_a": 64.33384704589844,
+        "max_motor_rpm": 4947.3779296875,
+        "max_power_w": 6691.486328125,
+        "max_regen_current_a": 24.400394439697266,
+        "max_speed_mps": 8.907057762145996
+      },
+      "hardware": {
+        "max_accel_mps2": 6.735572385105039,
+        "max_battery_current_a": 203.7940286088526,
+        "max_decel_mps2": 8.788989922294544,
+        "max_gradient_rad": 0.1870972203041509,
+        "max_motor_current_a": 233.07895795853577,
+        "max_motor_rpm": 5956.434791696979,
+        "max_power_w": 9039.007400135702,
+        "max_regen_current_a": 36.11152135301219,
+        "max_speed_mps": 30.37022848443342
+      },
+      "mode": {
+        "max_accel_mps2": 5.410213435231824,
+        "max_battery_current_a": 70.41755965302703,
+        "max_decel_mps2": 7.002944219965198,
+        "max_gradient_rad": 0.18934503807360648,
+        "max_motor_current_a": 112.46455086920176,
+        "max_motor_rpm": 5411.091087372756,
+        "max_power_w": 6691.4864665612995,
+        "max_regen_current_a": 34.43886769922871,
+        "max_speed_mps": 17.814115326076738
+      },
+      "profile": {
+        "max_accel_mps2": 5.796614180983583,
+        "max_battery_current_a": 55.48230087077066,
+        "max_decel_mps2": 5.508375040236768,
+        "max_gradient_rad": 0.12505736329281564,
+        "max_motor_current_a": 64.33384408796923,
+        "max_motor_rpm": 4947.377717399709,
+        "max_power_w": 7629.551504687526,
+        "max_regen_current_a": 24.400394394343717,
+        "max_speed_mps": 19.52233513423643
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.975930691338284,
+        "max_battery_current_a": 99.37816836014119,
+        "max_decel_mps2": 7.947631595680052,
+        "max_gradient_rad": 0.1921835057608225,
+        "max_motor_current_a": 148.88679878606632,
+        "max_motor_rpm": 5669.060054490622,
+        "max_power_w": 7776.224955038116,
+        "max_regen_current_a": 39.732001675702016,
+        "max_speed_mps": 20.5758485372488
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.555535316467285,
+        "max_battery_current_a": 69.94176483154297,
+        "max_decel_mps2": 5.4073872566223145,
+        "max_gradient_rad": 0.12977278232574463,
+        "max_motor_current_a": 63.974185943603516,
+        "max_motor_rpm": 4258.88916015625,
+        "max_power_w": 6847.28662109375,
+        "max_regen_current_a": 32.71145248413086,
+        "max_speed_mps": 9.06911849975586
+      },
+      "hardware": {
+        "max_accel_mps2": 5.530475002454413,
+        "max_battery_current_a": 165.75769256610602,
+        "max_decel_mps2": 7.976398780730259,
+        "max_gradient_rad": 0.16777535988974576,
+        "max_motor_current_a": 232.75101107423137,
+        "max_motor_rpm": 7071.027678916671,
+        "max_power_w": 6847.286440023108,
+        "max_regen_current_a": 38.5327336927266,
+        "max_speed_mps": 33.88626421668537
+      },
+      "mode": {
+        "max_accel_mps2": 4.866953925721983,
+        "max_battery_current_a": 84.68041113368842,
+        "max_decel_mps2": 6.664119406545684,
+        "max_gradient_rad": 0.19703331019108564,
+        "max_motor_current_a": 87.56477884957901,
+        "max_motor_rpm": 4258.889316339084,
+        "max_power_w": 7883.651660914543,
+        "max_regen_current_a": 32.897390628372406,
+        "max_speed_mps": 18.138237881082926
+      },
+      "profile": {
+        "max_accel_mps2": 4.555535142586495,
+        "max_battery_current_a": 69.94176849540112,
+        "max_decel_mps2": 5.407387398915454,
+        "max_gradient_rad": 0.1297727775269811,
+        "max_motor_current_a": 63.974184984245205,
+        "max_motor_rpm": 4460.817218909563,
+        "max_power_w": 7929.09609424655,
+        "max_regen_current_a": 32.71145378371432,
+        "max_speed_mps": 18.843601546447637
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.302952104097667,
+        "max_battery_current_a": 106.88745016533342,
+        "max_decel_mps2": 7.587630423624505,
+        "max_gradient_rad": 0.1661809160963934,
+        "max_motor_current_a": 124.0699214611901,
+        "max_motor_rpm": 5935.168902935318,
+        "max_power_w": 7589.024194437075,
+        "max_regen_current_a": 37.36388975080137,
+        "max_speed_mps": 24.43629654264251
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.862605094909668,
+        "max_battery_current_a": 58.360687255859375,
+        "max_decel_mps2": 5.661872386932373,
+        "max_gradient_rad": 0.14089162647724152,
+        "max_motor_current_a": 69.51726531982422,
+        "max_motor_rpm": 4514.0947265625,
+        "max_power_w": 4967.6767578125,
+        "max_regen_current_a": 26.787939071655273,
+        "max_speed_mps": 7.709357261657715
+      },
+      "hardware": {
+        "max_accel_mps2": 6.68830701709108,
+        "max_battery_current_a": 191.7193491404624,
+        "max_decel_mps2": 7.1794204709248755,
+        "max_gradient_rad": 0.17007391082464346,
+        "max_motor_current_a": 196.37738948564137,
+        "max_motor_rpm": 4851.25789136729,
+        "max_power_w": 8310.867070462544,
+        "max_regen_current_a": 42.26727147573148,
+        "max_speed_mps": 34.176398261564174
+      },
+      "mode": {
+        "max_accel_mps2": 5.38990375667517,
+        "max_battery_current_a": 74.34063940961524,
+        "max_decel_mps2": 5.661872359486876,
+        "max_gradient_rad": 0.14089161963384253,
+        "max_motor_current_a": 114.90262054968635,
+        "max_motor_rpm": 4514.094817622508,
+        "max_power_w": 6201.570072147497,
+        "max_regen_current_a": 29.55990557732124,
+        "max_speed_mps": 15.418714639768107
+      },
+      "profile": {
+        "max_accel_mps2": 4.862605263834881,
+        "max_battery_current_a": 58.36068678278472,
+        "max_decel_mps2": 7.186128880108786,
+        "max_gradient_rad": 0.15809967723386004,
+        "max_motor_current_a": 69.51726424361853,
+        "max_motor_rpm": 5380.123336689959,
+        "max_power_w": 4967.676857155765,
+        "max_regen_current_a": 26.787939222498835,
+        "max_speed_mps": 18.31987731387803
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.1942714641186765,
+        "max_battery_current_a": 114.36377702132603,
+        "max_decel_mps2": 6.63608668790631,
+        "max_gradient_rad": 0.19602124142527033,
+        "max_motor_current_a": 122.05830458473069,
+        "max_motor_rpm": 5843.6345121234535,
+        "max_power_w": 6745.52216306988,
+        "max_regen_current_a": 33.65725896277327,
+        "max_speed_mps": 22.82288987953982
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.785333633422852,
+        "max_battery_current_a": 51.173709869384766,
+        "max_decel_mps2": 7.106687545776367,
+        "max_gradient_rad": 0.13720184564590454,
+        "max_motor_current_a": 84.21707153320312,
+        "max_motor_rpm": 4904.076171875,
+        "max_power_w": 7042.58740234375,
+        "max_regen_current_a": 31.30019187927246,
+        "max_speed_mps": 7.81486177444458
+      },
+      "hardware": {
+        "max_accel_mps2": 6.6797447903529115,
+        "max_battery_current_a": 151.8518887202769,
+        "max_decel_mps2": 9.174338904831483,
+        "max_gradient_rad": 0.20171609717704675,
+        "max_motor_current_a": 201.05903660873534,
+        "max_motor_rpm": 4904.076088558012,
+        "max_power_w": 9425.33005750434,
+        "max_regen_current_a": 40.06141903657314,
+        "max_speed_mps": 33.336204471770436
+      },
+      "mode": {
+        "max_accel_mps2": 4.785333797973602,
+        "max_battery_current_a": 71.97046699960342,
+        "max_decel_mps2": 7.987106614066216,
+        "max_gradient_rad": 0.1718334102458795,
+        "max_motor_current_a": 105.89870725080384,
+        "max_motor_rpm": 5187.041581287049,
+        "max_power_w": 7119.384138322437,
+        "max_regen_current_a": 31.30019199469544,
+        "max_speed_mps": 15.933217150911226
+      },
+      "profile": {
+        "max_accel_mps2": 5.445510552251372,
+        "max_battery_current_a": 51.17371077372934,
+        "max_decel_mps2": 7.106687733304318,
+        "max_gradient_rad": 0.13720184530619975,
+        "max_motor_current_a": 84.21707166141252,
+        "max_motor_rpm": 5162.199995715133,
+        "max_power_w": 7528.93675934584,
+        "max_regen_current_a": 35.228470696737055,
+        "max_speed_mps": 15.629723340603775
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.38832262497307,
+        "max_battery_current_a": 97.45980977986815,
+        "max_decel_mps2": 7.855521326584367,
+        "max_gradient_rad": 0.16293962863065803,
+        "max_motor_current_a": 148.92078549366087,
+        "max_motor_rpm": 5623.316995274679,
+        "max_power_w": 7042.587607220097,
+        "max_regen_current_a": 35.83185528798691,
+        "max_speed_mps": 22.29021261048841
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.138187885284424,
+        "max_battery_current_a": 59.25267791748047,
+        "max_decel_mps2": 5.146298885345459,
+        "max_gradient_rad": 0.1822548359632492,
+        "max_motor_current_a": 84.01640319824219,
+        "max_motor_rpm": 4915.87744140625,
+        "max_power_w": 5480.76416015625,
+        "max_regen_current_a": 29.46677589416504,
+        "max_speed_mps": 9.635334968566895
+      },
+      "hardware": {
+        "max_accel_mps2": 5.8242336150263,
+        "max_battery_current_a": 168.40307655613262,
+        "max_decel_mps2": 8.528345161792988,
+        "max_gradient_rad": 0.18994408187484296,
+        "max_motor_current_a": 178.27948594916677,
+        "max_motor_rpm": 5028.206014261515,
+        "max_power_w": 7731.166880836785,
+        "max_regen_current_a": 39.255982446519155,
+        "max_speed_mps": 29.418658991583378
+      },
+      "mode": {
+        "max_accel_mps2": 5.550511650452661,
+        "max_battery_current_a": 79.88937944248616,
+        "max_decel_mps2": 7.683421157285755,
+        "max_gradient_rad": 0.18326364072476897,
+        "max_motor_current_a": 104.2171109037146,
+        "max_motor_rpm": 5397.612936005248,
+        "max_power_w": 6448.635391121043,
+        "max_regen_current_a": 29.46677542425471,
+        "max_speed_mps": 19.270669546080548
+      },
+      "profile": {
+        "max_accel_mps2": 4.138187685858158,
+        "max_battery_current_a": 59.25267794218077,
+        "max_decel_mps2": 5.146298822167253,
+        "max_gradient_rad": 0.1876298734881076,
+        "max_motor_current_a": 84.01640364898708,
+        "max_motor_rpm": 5176.167127171565,
+        "max_power_w": 5480.76417815042,
+        "max_regen_current_a": 33.24669629423768,
+        "max_speed_mps": 19.747189002491798
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.686555198186459,
+        "max_battery_current_a": 97.61119939527956,
+        "max_decel_mps2": 7.698830856443828,
+        "max_gradient_rad": 0.18225482942461402,
+        "max_motor_current_a": 147.68955107203155,
+        "max_motor_rpm": 4915.8773190789425,
+        "max_power_w": 6549.168162725884,
+        "max_regen_current_a": 38.654175107798835,
+        "max_speed_mps": 20.76319462384362
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 3.7262611389160156,
+        "max_battery_current_a": 71.09107208251953,
+        "max_decel_mps2": 5.303711891174316,
+        "max_gradient_rad": 0.16024422645568848,
+        "max_motor_current_a": 74.8021240234375,
+        "max_motor_rpm": 3803.89697265625,
+        "max_power_w": 6616.29931640625,
+        "max_regen_current_a": 29.702495574951172,
+        "max_speed_mps": 7.363584041595459
+      },
+      "hardware": {
+        "max_accel_mps2": 6.764224462897607,
+        "max_battery_current_a": 185.33520031186532,
+        "max_decel_mps2": 8.363434497713488,
+        "max_gradient_rad": 0.2114159331063865,
+        "max_motor_current_a": 221.00845055494798,
+        "max_motor_rpm": 7138.9118451017,
+        "max_power_w": 9104.496516250747,
+        "max_regen_current_a": 44.91554193843751,
+        "max_speed_mps": 28.4107326073842
+      },
+      "mode": {
+        "max_accel_mps2": 5.543001171610272,
+        "max_battery_current_a": 82.02353031998545,
+        "max_decel_mps2": 6.116318912080426,
+        "max_gradient_rad": 0.1651899496258702,
+        "max_motor_current_a": 104.38755941140955,
+        "max_motor_rpm": 4255.182777085631,
+        "max_power_w": 7119.612830373233,
+        "max_regen_current_a": 29.70249584981522,
+        "max_speed_mps": 21.14109386314049
+      },
+      "profile": {
+        "max_accel_mps2": 3.726261183421252,
+        "max_battery_current_a": 71.09107096776555,
+        "max_decel_mps2": 5.3037116707428895,
+        "max_gradient_rad": 0.16942705455408247,
+        "max_motor_current_a": 74.80212369908016,
+        "max_motor_rpm": 3803.89689594523,
+        "max_power_w": 6616.299381166071,
+        "max_regen_current_a": 36.42936991946786,
+        "max_speed_mps": 14.727167854154661
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.170781626595892,
+        "max_battery_current_a": 115.90705895903191,
+        "max_decel_mps2": 6.943719450843614,
+        "max_gradient_rad": 0.16024423157614637,
+        "max_motor_current_a": 147.87252872984809,
+        "max_motor_rpm": 5643.238527438725,
+        "max_power_w": 6688.665715137367,
+        "max_regen_current_a": 34.139581801232886,
+        "max_speed_mps": 20.131269157267916
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 3.64497971534729,
+        "max_battery_current_a": 73.79840850830078,
+        "max_decel_mps2": 6.412299156188965,
+        "max_gradient_rad": 0.17205677926540375,
+        "max_motor_current_a": 88.9404525756836,
+        "max_motor_rpm": 3701.525390625,
+        "max_power_w": 5618.5517578125,
+        "max_regen_current_a": 25.153207778930664,
+        "max_speed_mps": 8.001049041748047
+      },
+      "hardware": {
+        "max_accel_mps2": 6.611863544804089,
+        "max_battery_current_a": 191.6595858821948,
+        "max_decel_mps2": 6.764216025952646,
+        "max_gradient_rad": 0.19439309067183125,
+        "max_motor_current_a": 181.76822748369753,
+        "max_motor_rpm": 5455.6004264754465,
+        "max_power_w": 7814.541397432893,
+        "max_regen_current_a": 39.77058727825594,
+        "max_speed_mps": 32.08762452735735
+      },
+      "mode": {
+        "max_accel_mps2": 4.516250643376516,
+        "max_battery_current_a": 77.66558512064378,
+        "max_decel_mps2": 6.512497869716567,
+        "max_gradient_rad": 0.18222027580295982,
+        "max_motor_current_a": 88.94045298926376,
+        "max_motor_rpm": 5544.625422173582,
+        "max_power_w": 5618.551775766348,
+        "max_regen_current_a": 31.93746827125409,
+        "max_speed_mps": 16.794144262854058
+      },
+      "profile": {
+        "max_accel_mps2": 3.6449796878055496,
+        "max_battery_current_a": 73.79840597013644,
+        "max_decel_mps2": 7.74771979040772,
+        "max_gradient_rad": 0.18896880108896533,
+        "max_motor_current_a": 93.33416809679514,
+        "max_motor_rpm": 3701.5254277506992,
+        "max_power_w": 7557.645958472283,
+        "max_regen_current_a": 25.153207945474524,
+        "max_speed_mps": 16.002098772449706
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.519189948333341,
+        "max_battery_current_a": 107.67918608074201,
+        "max_decel_mps2": 6.412299337439813,
+        "max_gradient_rad": 0.1720567744807375,
+        "max_motor_current_a": 140.35458764280398,
+        "max_motor_rpm": 5274.316075305155,
+        "max_power_w": 6472.667780167084,
+        "max_regen_current_a": 37.3370604698908,
+        "max_speed_mps": 21.416232350402247
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 5.424516677856445,
+        "max_battery_current_a": 55.560604095458984,
+        "max_decel_mps2": 6.43850040435791,
+        "max_gradient_rad": 0.13417169451713562,
+        "max_motor_current_a": 92.60147857666016,
+        "max_motor_rpm": 4850.0556640625,
+        "max_power_w": 5431.26953125,
+        "max_regen_current_a": 26.343107223510742,
+        "max_speed_mps": 8.820393562316895
+      },
+      "hardware": {
+        "max_accel_mps2": 5.579443630669234,
+        "max_battery_current_a": 195.08392523296325,
+        "max_decel_mps2": 8.964230893793447,
+        "max_gradient_rad": 0.20945002106433921,
+        "max_motor_current_a": 205.87197447086743,
+        "max_motor_rpm": 4850.055741659397,
+        "max_power_w": 6768.554792524154,
+        "max_regen_current_a": 38.68310335749569,
+        "max_speed_mps": 30.909109928841975
+      },
+      "mode": {
+        "max_accel_mps2": 5.83066091684409,
+        "max_battery_current_a": 75.04398124137059,
+        "max_decel_mps2": 6.438500637133712,
+        "max_gradient_rad": 0.18364274634043426,
+        "max_motor_current_a": 95.99047040975275,
+        "max_motor_rpm": 5117.913712181349,
+        "max_power_w": 5873.663935612526,
+        "max_regen_current_a": 34.12579941450578,
+        "max_speed_mps": 17.64078765557986
+      },
+      "profile": {
+        "max_accel_mps2": 5.424516709312541,
+        "max_battery_current_a": 55.56060316629518,
+        "max_decel_mps2": 6.897628833659965,
+        "max_gradient_rad": 0.13417169031577833,
+        "max_motor_current_a": 92.60148023000056,
+        "max_motor_rpm": 5045.757564655598,
+        "max_power_w": 5431.269769036747,
+        "max_regen_current_a": 26.343107492443107,
+        "max_speed_mps": 18.551588812198816
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.428755051600758,
+        "max_battery_current_a": 98.11511715114924,
+        "max_decel_mps2": 7.0332267149749335,
+        "max_gradient_rad": 0.17241098247343448,
+        "max_motor_current_a": 147.59309255224153,
+        "max_motor_rpm": 5506.645545963494,
+        "max_power_w": 6789.306359716374,
+        "max_regen_current_a": 38.755874878517574,
+        "max_speed_mps": 24.160129565358535
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 5.129608631134033,
+        "max_battery_current_a": 71.70670318603516,
+        "max_decel_mps2": 5.828885555267334,
+        "max_gradient_rad": 0.1580503284931183,
+        "max_motor_current_a": 82.17265319824219,
+        "max_motor_rpm": 5163.384765625,
+        "max_power_w": 5784.154296875,
+        "max_regen_current_a": 32.54629135131836,
+        "max_speed_mps": 7.850846767425537
+      },
+      "hardware": {
+        "max_accel_mps2": 6.154780280166718,
+        "max_battery_current_a": 198.32009941778296,
+        "max_decel_mps2": 8.432954620993899,
+        "max_gradient_rad": 0.2099617423553516,
+        "max_motor_current_a": 199.5293620013911,
+        "max_motor_rpm": 7017.970220125582,
+        "max_power_w": 7836.496822384202,
+        "max_regen_current_a": 44.15803439372397,
+        "max_speed_mps": 33.27417707097072
+      },
+      "mode": {
+        "max_accel_mps2": 5.739528068620962,
+        "max_battery_current_a": 71.70670152501857,
+        "max_decel_mps2": 7.076020132197376,
+        "max_gradient_rad": 0.17042406904003732,
+        "max_motor_current_a": 100.26889909322455,
+        "max_motor_rpm": 5755.65006106543,
+        "max_power_w": 5784.154402816292,
+        "max_regen_current_a": 37.98035957995746,
+        "max_speed_mps": 17.448691814001652
+      },
+      "profile": {
+        "max_accel_mps2": 5.164409891156663,
+        "max_battery_current_a": 73.33816951249148,
+        "max_decel_mps2": 5.82888564121737,
+        "max_gradient_rad": 0.15805032223544557,
+        "max_motor_current_a": 82.17265485353215,
+        "max_motor_rpm": 5543.55820247513,
+        "max_power_w": 6239.1478516829,
+        "max_regen_current_a": 38.33402824890884,
+        "max_speed_mps": 15.701693271418177
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.1296084009833915,
+        "max_battery_current_a": 99.62297763343385,
+        "max_decel_mps2": 6.489875392340926,
+        "max_gradient_rad": 0.18029347541159113,
+        "max_motor_current_a": 138.81652220699314,
+        "max_motor_rpm": 5163.384522166816,
+        "max_power_w": 7107.532902138056,
+        "max_regen_current_a": 32.54629006796605,
+        "max_speed_mps": 24.32123437415708
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 5.2763519287109375,
+        "max_battery_current_a": 66.64766693115234,
+        "max_decel_mps2": 6.05426549911499,
+        "max_gradient_rad": 0.1676032990217209,
+        "max_motor_current_a": 73.33448028564453,
+        "max_motor_rpm": 4711.46435546875,
+        "max_power_w": 5919.4267578125,
+        "max_regen_current_a": 26.262853622436523,
+        "max_speed_mps": 9.493118286132812
+      },
+      "hardware": {
+        "max_accel_mps2": 6.010917603602298,
+        "max_battery_current_a": 151.4521351634682,
+        "max_decel_mps2": 6.952188516596368,
+        "max_gradient_rad": 0.17981949788786275,
+        "max_motor_current_a": 164.94989600808807,
+        "max_motor_rpm": 6514.35731800191,
+        "max_power_w": 7499.000882682457,
+        "max_regen_current_a": 46.38602934329238,
+        "max_speed_mps": 25.810332920347665
+      },
+      "mode": {
+        "max_accel_mps2": 5.502720579004431,
+        "max_battery_current_a": 71.97735562839152,
+        "max_decel_mps2": 7.175753807385147,
+        "max_gradient_rad": 0.19438056182982064,
+        "max_motor_current_a": 107.30299285089504,
+        "max_motor_rpm": 4711.464552980604,
+        "max_power_w": 7228.110427616194,
+        "max_regen_current_a": 29.134071370181132,
+        "max_speed_mps": 20.608897748320185
+      },
+      "profile": {
+        "max_accel_mps2": 5.276351910748514,
+        "max_battery_current_a": 66.64766446676543,
+        "max_decel_mps2": 6.054265549873153,
+        "max_gradient_rad": 0.167603298252126,
+        "max_motor_current_a": 73.33448144242226,
+        "max_motor_rpm": 5922.471618462587,
+        "max_power_w": 5919.426520114701,
+        "max_regen_current_a": 26.262854089349084,
+        "max_speed_mps": 18.986237296484312
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.290523276696784,
+        "max_battery_current_a": 108.5459528463731,
+        "max_decel_mps2": 6.941387434946272,
+        "max_gradient_rad": 0.18391543449531958,
+        "max_motor_current_a": 133.18265375287874,
+        "max_motor_rpm": 5139.472294337302,
+        "max_power_w": 6996.563171362123,
+        "max_regen_current_a": 33.269969663852336,
+        "max_speed_mps": 22.188791371546166
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 5.057031154632568,
+        "max_battery_current_a": 52.19356918334961,
+        "max_decel_mps2": 7.38893985748291,
+        "max_gradient_rad": 0.133243128657341,
+        "max_motor_current_a": 88.95235443115234,
+        "max_motor_rpm": 5016.3154296875,
+        "max_power_w": 5319.19091796875,
+        "max_regen_current_a": 30.027517318725586,
+        "max_speed_mps": 7.347057342529297
+      },
+      "hardware": {
+        "max_accel_mps2": 6.789501534946714,
+        "max_battery_current_a": 171.1209100360536,
+        "max_decel_mps2": 8.764078950814344,
+        "max_gradient_rad": 0.21483315522220608,
+        "max_motor_current_a": 184.76655099327687,
+        "max_motor_rpm": 6408.279359987334,
+        "max_power_w": 9002.191308207364,
+        "max_regen_current_a": 44.6665913258167,
+        "max_speed_mps": 35.25602639478913
+      },
+      "mode": {
+        "max_accel_mps2": 5.703215687942201,
+        "max_battery_current_a": 72.31495252902629,
+        "max_decel_mps2": 7.7208371971821474,
+        "max_gradient_rad": 0.14226484954145366,
+        "max_motor_current_a": 88.95235271437485,
+        "max_motor_rpm": 5587.574496653581,
+        "max_power_w": 5842.737832802945,
+        "max_regen_current_a": 38.1331406642306,
+        "max_speed_mps": 16.895184107123654
+      },
+      "profile": {
+        "max_accel_mps2": 5.450634752954372,
+        "max_battery_current_a": 52.19356932574425,
+        "max_decel_mps2": 7.388939902845763,
+        "max_gradient_rad": 0.1332431332595247,
+        "max_motor_current_a": 90.65230417788966,
+        "max_motor_rpm": 5595.228136053901,
+        "max_power_w": 5319.191078683041,
+        "max_regen_current_a": 30.027517933160397,
+        "max_speed_mps": 14.694114975714252
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.057031193450681,
+        "max_battery_current_a": 106.16175279173049,
+        "max_decel_mps2": 7.916269228054955,
+        "max_gradient_rad": 0.17945083683490912,
+        "max_motor_current_a": 139.38074462200464,
+        "max_motor_rpm": 5016.315507452214,
+        "max_power_w": 6980.156270371272,
+        "max_regen_current_a": 34.89462477077428,
+        "max_speed_mps": 22.631966698670873
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 4.254699230194092,
+        "max_battery_current_a": 75.06855010986328,
+        "max_decel_mps2": 7.138688087463379,
+        "max_gradient_rad": 0.13178789615631104,
+        "max_motor_current_a": 64.10359191894531,
+        "max_motor_rpm": 4449.1171875,
+        "max_power_w": 5712.20166015625,
+        "max_regen_current_a": 35.80048370361328,
+        "max_speed_mps": 8.218162536621094
+      },
+      "hardware": {
+        "max_accel_mps2": 6.596487643429047,
+        "max_battery_current_a": 192.69813039757435,
+        "max_decel_mps2": 7.8365694817066895,
+        "max_gradient_rad": 0.20272089197586088,
+        "max_motor_current_a": 192.86868891972267,
+        "max_motor_rpm": 5483.827038152061,
+        "max_power_w": 7821.435871376882,
+        "max_regen_current_a": 35.8004832231508,
+        "max_speed_mps": 29.25208086166016
+      },
+      "mode": {
+        "max_accel_mps2": 4.650005780860212,
+        "max_battery_current_a": 98.98804459617843,
+        "max_decel_mps2": 7.1388296868906735,
+        "max_gradient_rad": 0.19244701670313424,
+        "max_motor_current_a": 102.98855238461337,
+        "max_motor_rpm": 4449.117362286176,
+        "max_power_w": 7523.022137963714,
+        "max_regen_current_a": 37.80269487497488,
+        "max_speed_mps": 17.92035806565869
+      },
+      "profile": {
+        "max_accel_mps2": 4.254699119019256,
+        "max_battery_current_a": 75.06855285547003,
+        "max_decel_mps2": 7.696979868730372,
+        "max_gradient_rad": 0.13178789247932834,
+        "max_motor_current_a": 64.10358926993636,
+        "max_motor_rpm": 5431.4803927000585,
+        "max_power_w": 5712.201644989851,
+        "max_regen_current_a": 37.61865676935646,
+        "max_speed_mps": 16.43632596339545
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.981327752237894,
+        "max_battery_current_a": 107.25637452077406,
+        "max_decel_mps2": 7.138687965505583,
+        "max_gradient_rad": 0.17127086930815105,
+        "max_motor_current_a": 144.25871613272358,
+        "max_motor_rpm": 5936.556204292948,
+        "max_power_w": 6988.545533160053,
+        "max_regen_current_a": 38.68090714180566,
+        "max_speed_mps": 21.54733948281395
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 3.7145986557006836,
+        "max_battery_current_a": 64.88868713378906,
+        "max_decel_mps2": 6.143441677093506,
+        "max_gradient_rad": 0.17147517204284668,
+        "max_motor_current_a": 89.08939361572266,
+        "max_motor_rpm": 4209.4521484375,
+        "max_power_w": 5721.92529296875,
+        "max_regen_current_a": 25.778989791870117,
+        "max_speed_mps": 8.19521713256836
+      },
+      "hardware": {
+        "max_accel_mps2": 4.927816529210579,
+        "max_battery_current_a": 159.98673649730262,
+        "max_decel_mps2": 8.006422767018353,
+        "max_gradient_rad": 0.17886224590907462,
+        "max_motor_current_a": 235.71306104094086,
+        "max_motor_rpm": 4864.008457927052,
+        "max_power_w": 7518.672250043677,
+        "max_regen_current_a": 39.218047843531345,
+        "max_speed_mps": 29.249670722339772
+      },
+      "mode": {
+        "max_accel_mps2": 4.342606388287297,
+        "max_battery_current_a": 74.16378075454558,
+        "max_decel_mps2": 6.214217428248907,
+        "max_gradient_rad": 0.19009778595694288,
+        "max_motor_current_a": 109.05859158873541,
+        "max_motor_rpm": 4209.452156950112,
+        "max_power_w": 6676.643537557392,
+        "max_regen_current_a": 36.46643410346896,
+        "max_speed_mps": 20.87642644880863
+      },
+      "profile": {
+        "max_accel_mps2": 3.714598671885243,
+        "max_battery_current_a": 64.88868818837518,
+        "max_decel_mps2": 6.143441740011018,
+        "max_gradient_rad": 0.18351192869115507,
+        "max_motor_current_a": 89.08939141299727,
+        "max_motor_rpm": 4322.762867006928,
+        "max_power_w": 5721.925049725538,
+        "max_regen_current_a": 25.778989765187813,
+        "max_speed_mps": 16.390433963550684
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.749656764978611,
+        "max_battery_current_a": 96.67650109267561,
+        "max_decel_mps2": 6.620159340361395,
+        "max_gradient_rad": 0.17147517589253075,
+        "max_motor_current_a": 131.24738020253304,
+        "max_motor_rpm": 5579.952821153018,
+        "max_power_w": 7742.682060178569,
+        "max_regen_current_a": 39.44660723799962,
+        "max_speed_mps": 24.972626756191456
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.5
+      },
+      "expected": {
+        "max_accel_mps2": 3.7064056396484375,
+        "max_battery_current_a": 68.1042251586914,
+        "max_decel_mps2": 5.638981342315674,
+        "max_gradient_rad": 0.18029311299324036,
+        "max_motor_current_a": 89.31764221191406,
+        "max_motor_rpm": 4398.04443359375,
+        "max_power_w": 6452.59326171875,
+        "max_regen_current_a": 33.64162063598633,
+        "max_speed_mps": 7.379209995269775
+      },
+      "hardware": {
+        "max_accel_mps2": 5.380651522610385,
+        "max_battery_current_a": 209.17057576766388,
+        "max_decel_mps2": 6.8594458887880325,
+        "max_gradient_rad": 0.1943391114482667,
+        "max_motor_current_a": 168.8686316232012,
+        "max_motor_rpm": 6036.901752502575,
+        "max_power_w": 6452.593127058863,
+        "max_regen_current_a": 41.54782468510315,
+        "max_speed_mps": 29.485363399637386
+      },
+      "mode": {
+        "max_accel_mps2": 4.656570469924582,
+        "max_battery_current_a": 81.71361197680191,
+        "max_decel_mps2": 5.638981354661474,
+        "max_gradient_rad": 0.18731120097677093,
+        "max_motor_current_a": 103.94947028705504,
+        "max_motor_rpm": 5965.870960592808,
+        "max_power_w": 7125.609899524711,
+        "max_regen_current_a": 33.641620937901834,
+        "max_speed_mps": 21.922987804936685
+      },
+      "profile": {
+        "max_accel_mps2": 3.7064056519084994,
+        "max_battery_current_a": 68.104222799221,
+        "max_decel_mps2": 6.547243984664613,
+        "max_gradient_rad": 0.18508070924448705,
+        "max_motor_current_a": 89.31764085802567,
+        "max_motor_rpm": 4398.0446600927635,
+        "max_power_w": 7152.598351399396,
+        "max_regen_current_a": 36.34402198575775,
+        "max_speed_mps": 14.75841994530713
+      },
+      "vehicle": {
+        "max_accel_mps2": 4.881215187490616,
+        "max_battery_current_a": 105.99762228500495,
+        "max_decel_mps2": 7.241695112515473,
+        "max_gradient_rad": 0.18029310786319147,
+        "max_motor_current_a": 127.2169271641963,
+        "max_motor_rpm": 5969.585389142666,
+        "max_power_w": 6536.982327979619,
+        "max_regen_current_a": 37.314970413936074,
+        "max_speed_mps": 23.074047913879753
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.424055099487305,
+        "max_battery_current_a": 60.37263107299805,
+        "max_decel_mps2": 6.4616827964782715,
+        "max_gradient_rad": 0.17013254761695862,
+        "max_motor_current_a": 90.87972259521484,
+        "max_motor_rpm": 4794.05615234375,
+        "max_power_w": 6387.85009765625,
+        "max_regen_current_a": 32.33524703979492,
+        "max_speed_mps": 4.486615180969238
+      },
+      "hardware": {
+        "max_accel_mps2": 4.951441288877339,
+        "max_battery_current_a": 177.4528487817867,
+        "max_decel_mps2": 8.883809279050949,
+        "max_gradient_rad": 0.19661436619578826,
+        "max_motor_current_a": 222.33140747826252,
+        "max_motor_rpm": 6747.594436434255,
+        "max_power_w": 8421.55471282668,
+        "max_regen_current_a": 43.12622803193702,
+        "max_speed_mps": 26.101069524620502
+      },
+      "mode": {
+        "max_accel_mps2": 4.42405501483989,
+        "max_battery_current_a": 80.70922528106091,
+        "max_decel_mps2": 6.483246018355215,
+        "max_gradient_rad": 0.1933691910207369,
+        "max_motor_current_a": 90.87972350642079,
+        "max_motor_rpm": 4797.4644354864195,
+        "max_power_w": 7677.915864987338,
+        "max_regen_current_a": 37.3700988037411,
+        "max_speed_mps": 20.37172006420451
+      },
+      "profile": {
+        "max_accel_mps2": 5.818345119904713,
+        "max_battery_current_a": 60.37263258434215,
+        "max_decel_mps2": 6.461682731311814,
+        "max_gradient_rad": 0.1840918469921419,
+        "max_motor_current_a": 95.78549979820214,
+        "max_motor_rpm": 4794.056141984705,
+        "max_power_w": 6387.850324918473,
+        "max_regen_current_a": 39.579577349044946,
+        "max_speed_mps": 17.94646164415697
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.986947242755349,
+        "max_battery_current_a": 100.78727600916453,
+        "max_decel_mps2": 7.268849116246698,
+        "max_gradient_rad": 0.17013255060810473,
+        "max_motor_current_a": 121.3141882697737,
+        "max_motor_rpm": 5418.460307105399,
+        "max_power_w": 7893.393567920635,
+        "max_regen_current_a": 32.33524753544306,
+        "max_speed_mps": 21.467212855875157
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.518850326538086,
+        "max_battery_current_a": 49.11356735229492,
+        "max_decel_mps2": 6.615182876586914,
+        "max_gradient_rad": 0.14856676757335663,
+        "max_motor_current_a": 91.25247955322266,
+        "max_motor_rpm": 4479.1884765625,
+        "max_power_w": 6467.76806640625,
+        "max_regen_current_a": 25.075733184814453,
+        "max_speed_mps": 4.215145587921143
+      },
+      "hardware": {
+        "max_accel_mps2": 4.992165386579989,
+        "max_battery_current_a": 187.37663751577637,
+        "max_decel_mps2": 8.514941508666038,
+        "max_gradient_rad": 0.1845196684872602,
+        "max_motor_current_a": 166.31416048443742,
+        "max_motor_rpm": 5570.907427715026,
+        "max_power_w": 8145.518071502838,
+        "max_regen_current_a": 45.157460472638185,
+        "max_speed_mps": 32.72497589211163
+      },
+      "mode": {
+        "max_accel_mps2": 5.422939094066441,
+        "max_battery_current_a": 72.25123494964477,
+        "max_decel_mps2": 7.886694551071059,
+        "max_gradient_rad": 0.14856676810175298,
+        "max_motor_current_a": 118.1245576297111,
+        "max_motor_rpm": 5641.972756011906,
+        "max_power_w": 6471.946713562357,
+        "max_regen_current_a": 35.650150454599576,
+        "max_speed_mps": 21.86818004268224
+      },
+      "profile": {
+        "max_accel_mps2": 4.518850564053066,
+        "max_battery_current_a": 49.11356690555334,
+        "max_decel_mps2": 6.615182853517182,
+        "max_gradient_rad": 0.16840758630838285,
+        "max_motor_current_a": 91.25247878973866,
+        "max_motor_rpm": 4479.188335457156,
+        "max_power_w": 7291.249195221969,
+        "max_regen_current_a": 25.07573380899374,
+        "max_speed_mps": 16.860583226566842
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.2230711723701795,
+        "max_battery_current_a": 112.55435540269167,
+        "max_decel_mps2": 7.997040956436878,
+        "max_gradient_rad": 0.17098221440299433,
+        "max_motor_current_a": 132.78348218649137,
+        "max_motor_rpm": 5844.04461006767,
+        "max_power_w": 6467.768260560208,
+        "max_regen_current_a": 34.81237587017594,
+        "max_speed_mps": 23.013108138653
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.112347602844238,
+        "max_battery_current_a": 58.226810455322266,
+        "max_decel_mps2": 6.668266773223877,
+        "max_gradient_rad": 0.14526744186878204,
+        "max_motor_current_a": 93.82084655761719,
+        "max_motor_rpm": 4901.21142578125,
+        "max_power_w": 5007.80517578125,
+        "max_regen_current_a": 29.471649169921875,
+        "max_speed_mps": 4.321201801300049
+      },
+      "hardware": {
+        "max_accel_mps2": 5.75528171028588,
+        "max_battery_current_a": 170.78496324988922,
+        "max_decel_mps2": 8.4785943574593,
+        "max_gradient_rad": 0.17996893224747185,
+        "max_motor_current_a": 235.9058823412445,
+        "max_motor_rpm": 6070.703715687095,
+        "max_power_w": 8236.549690668466,
+        "max_regen_current_a": 44.20935154877726,
+        "max_speed_mps": 32.14874468296074
+      },
+      "mode": {
+        "max_accel_mps2": 5.817622255415214,
+        "max_battery_current_a": 84.73600585762672,
+        "max_decel_mps2": 6.668266862581892,
+        "max_gradient_rad": 0.14526744446628387,
+        "max_motor_current_a": 116.99324074350773,
+        "max_motor_rpm": 5013.676833441715,
+        "max_power_w": 7646.783096922374,
+        "max_regen_current_a": 29.47164906284765,
+        "max_speed_mps": 17.284807392807842
+      },
+      "profile": {
+        "max_accel_mps2": 5.739196037649333,
+        "max_battery_current_a": 58.22680870719904,
+        "max_decel_mps2": 7.5243585624100024,
+        "max_gradient_rad": 0.176944728320577,
+        "max_motor_current_a": 93.82084875898798,
+        "max_motor_rpm": 4901.21126694135,
+        "max_power_w": 5007.805050611428,
+        "max_regen_current_a": 29.558804715817033,
+        "max_speed_mps": 17.455434082005098
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.112347725367885,
+        "max_battery_current_a": 107.9770550461552,
+        "max_decel_mps2": 7.114036979848986,
+        "max_gradient_rad": 0.19985460448619044,
+        "max_motor_current_a": 142.07024578438285,
+        "max_motor_rpm": 5114.132011904995,
+        "max_power_w": 7298.6763372154355,
+        "max_regen_current_a": 35.09589904031411,
+        "max_speed_mps": 20.56724306292509
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.00995397567749,
+        "max_battery_current_a": 68.47340393066406,
+        "max_decel_mps2": 4.977321147918701,
+        "max_gradient_rad": 0.12993289530277252,
+        "max_motor_current_a": 91.21051788330078,
+        "max_motor_rpm": 4638.28369140625,
+        "max_power_w": 6788.35986328125,
+        "max_regen_current_a": 26.911409378051758,
+        "max_speed_mps": 4.717397689819336
+      },
+      "hardware": {
+        "max_accel_mps2": 5.133304492892078,
+        "max_battery_current_a": 201.14613963684016,
+        "max_decel_mps2": 8.929193794584798,
+        "max_gradient_rad": 0.16210272214466126,
+        "max_motor_current_a": 211.0160018051213,
+        "max_motor_rpm": 5282.352890826446,
+        "max_power_w": 6788.359856251062,
+        "max_regen_current_a": 40.14009192278881,
+        "max_speed_mps": 35.12789348067813
+      },
+      "mode": {
+        "max_accel_mps2": 5.009954092193393,
+        "max_battery_current_a": 94.70018198525172,
+        "max_decel_mps2": 7.232261577558994,
+        "max_gradient_rad": 0.160670886842162,
+        "max_motor_current_a": 111.68992381348912,
+        "max_motor_rpm": 5356.209460895486,
+        "max_power_w": 7933.711355633039,
+        "max_regen_current_a": 28.885008554934867,
+        "max_speed_mps": 18.86959132187998
+      },
+      "profile": {
+        "max_accel_mps2": 5.785709450272529,
+        "max_battery_current_a": 68.47340573973321,
+        "max_decel_mps2": 4.977321120056886,
+        "max_gradient_rad": 0.129932889651121,
+        "max_motor_current_a": 91.21051715353234,
+        "max_motor_rpm": 4638.2838875567395,
+        "max_power_w": 7892.046764589142,
+        "max_regen_current_a": 26.911410184834196,
+        "max_speed_mps": 19.023681213203293
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.171148861034155,
+        "max_battery_current_a": 115.28788143092608,
+        "max_decel_mps2": 7.99935207029502,
+        "max_gradient_rad": 0.18875478639562882,
+        "max_motor_current_a": 131.06733496503662,
+        "max_motor_rpm": 4903.45857798232,
+        "max_power_w": 7379.1173801928335,
+        "max_regen_current_a": 36.41317547141142,
+        "max_speed_mps": 22.770107186297974
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.251072406768799,
+        "max_battery_current_a": 72.54268646240234,
+        "max_decel_mps2": 5.709108352661133,
+        "max_gradient_rad": 0.16616776585578918,
+        "max_motor_current_a": 86.04519653320312,
+        "max_motor_rpm": 4795.29150390625,
+        "max_power_w": 6844.77197265625,
+        "max_regen_current_a": 30.665388107299805,
+        "max_speed_mps": 4.153542518615723
+      },
+      "hardware": {
+        "max_accel_mps2": 6.947822200370698,
+        "max_battery_current_a": 167.231574083128,
+        "max_decel_mps2": 9.10698785969877,
+        "max_gradient_rad": 0.18004842471855995,
+        "max_motor_current_a": 173.17256639120995,
+        "max_motor_rpm": 7058.169731835683,
+        "max_power_w": 7507.273863493994,
+        "max_regen_current_a": 43.34931412046793,
+        "max_speed_mps": 25.83618560172241
+      },
+      "mode": {
+        "max_accel_mps2": 4.251072278217979,
+        "max_battery_current_a": 88.15416723585567,
+        "max_decel_mps2": 5.70910832789922,
+        "max_gradient_rad": 0.1784872240294616,
+        "max_motor_current_a": 109.94277966374182,
+        "max_motor_rpm": 5685.425281187938,
+        "max_power_w": 6952.683282635109,
+        "max_regen_current_a": 38.110360049360665,
+        "max_speed_mps": 19.74763696433278
+      },
+      "profile": {
+        "max_accel_mps2": 5.105193624715403,
+        "max_battery_current_a": 72.54268802932195,
+        "max_decel_mps2": 5.7269493017651385,
+        "max_gradient_rad": 0.19653201359635242,
+        "max_motor_current_a": 86.04519909942398,
+        "max_motor_rpm": 4795.291344326679,
+        "max_power_w": 6844.771815068386,
+        "max_regen_current_a": 30.665388538611936,
+        "max_speed_mps": 16.61416985181903
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.002363082097249,
+        "max_battery_current_a": 99.00408708304568,
+        "max_decel_mps2": 7.906571180589753,
+        "max_gradient_rad": 0.16616777067518254,
+        "max_motor_current_a": 136.5252424644942,
+        "max_motor_rpm": 5403.087773689515,
+        "max_power_w": 7253.564847629409,
+        "max_regen_current_a": 34.42259684887101,
+        "max_speed_mps": 23.17528545693873
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.79583740234375,
+        "max_battery_current_a": 58.47794723510742,
+        "max_decel_mps2": 6.44711971282959,
+        "max_gradient_rad": 0.15489621460437775,
+        "max_motor_current_a": 66.38798522949219,
+        "max_motor_rpm": 4722.3818359375,
+        "max_power_w": 5800.68798828125,
+        "max_regen_current_a": 30.975027084350586,
+        "max_speed_mps": 4.3765411376953125
+      },
+      "hardware": {
+        "max_accel_mps2": 5.855053199808986,
+        "max_battery_current_a": 193.31934056608873,
+        "max_decel_mps2": 7.949603616343549,
+        "max_gradient_rad": 0.1763218410850719,
+        "max_motor_current_a": 224.37505233725864,
+        "max_motor_rpm": 4943.791279043206,
+        "max_power_w": 6633.513681617106,
+        "max_regen_current_a": 36.75894194287588,
+        "max_speed_mps": 29.795337818105033
+      },
+      "mode": {
+        "max_accel_mps2": 4.891469700302891,
+        "max_battery_current_a": 78.02415023362546,
+        "max_decel_mps2": 7.076905865993525,
+        "max_gradient_rad": 0.1548962168228712,
+        "max_motor_current_a": 100.79301241346292,
+        "max_motor_rpm": 4722.381608945822,
+        "max_power_w": 5832.347966145371,
+        "max_regen_current_a": 30.975026590306545,
+        "max_speed_mps": 17.506164850260838
+      },
+      "profile": {
+        "max_accel_mps2": 4.795837300943781,
+        "max_battery_current_a": 58.47794626563824,
+        "max_decel_mps2": 6.4471194855407505,
+        "max_gradient_rad": 0.15990077667181235,
+        "max_motor_current_a": 66.38798648520644,
+        "max_motor_rpm": 5431.491300332709,
+        "max_power_w": 5800.687746759274,
+        "max_regen_current_a": 33.24299260629754,
+        "max_speed_mps": 18.92246001376574
+      },
+      "vehicle": {
+        "max_accel_mps2": 4.956919381862864,
+        "max_battery_current_a": 113.2407092426985,
+        "max_decel_mps2": 6.992864316880466,
+        "max_gradient_rad": 0.18246604862993476,
+        "max_motor_current_a": 129.37747497740799,
+        "max_motor_rpm": 5970.448953497856,
+        "max_power_w": 7777.243785206921,
+        "max_regen_current_a": 37.87359803843637,
+        "max_speed_mps": 23.033301314103184
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.413804531097412,
+        "max_battery_current_a": 51.80195236206055,
+        "max_decel_mps2": 6.561729431152344,
+        "max_gradient_rad": 0.15678323805332184,
+        "max_motor_current_a": 87.2159423828125,
+        "max_motor_rpm": 4332.35693359375,
+        "max_power_w": 6060.49169921875,
+        "max_regen_current_a": 30.33586311340332,
+        "max_speed_mps": 4.453796863555908
+      },
+      "hardware": {
+        "max_accel_mps2": 5.6469482132552535,
+        "max_battery_current_a": 212.05676189298507,
+        "max_decel_mps2": 6.561729294809254,
+        "max_gradient_rad": 0.19959153628201412,
+        "max_motor_current_a": 161.8541038573081,
+        "max_motor_rpm": 5316.346614062979,
+        "max_power_w": 9493.39721776792,
+        "max_regen_current_a": 40.087111408380345,
+        "max_speed_mps": 27.70248578465315
+      },
+      "mode": {
+        "max_accel_mps2": 5.107659952421768,
+        "max_battery_current_a": 87.10844931643088,
+        "max_decel_mps2": 7.434569875297375,
+        "max_gradient_rad": 0.15678324065743893,
+        "max_motor_current_a": 98.42093835653122,
+        "max_motor_rpm": 4332.357149537115,
+        "max_power_w": 6927.735023890763,
+        "max_regen_current_a": 30.335863622652628,
+        "max_speed_mps": 17.815186526615918
+      },
+      "profile": {
+        "max_accel_mps2": 4.413804719886157,
+        "max_battery_current_a": 51.80195263115486,
+        "max_decel_mps2": 7.804635414257201,
+        "max_gradient_rad": 0.18039721378342352,
+        "max_motor_current_a": 87.21594560475442,
+        "max_motor_rpm": 5507.75334811427,
+        "max_power_w": 6060.491880731543,
+        "max_regen_current_a": 39.601325046620545,
+        "max_speed_mps": 19.91272560496578
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.858946877102311,
+        "max_battery_current_a": 107.2940844808367,
+        "max_decel_mps2": 7.564012901375027,
+        "max_gradient_rad": 0.19055427056647958,
+        "max_motor_current_a": 139.6278011066885,
+        "max_motor_rpm": 5317.113323217049,
+        "max_power_w": 7755.475784629549,
+        "max_regen_current_a": 36.293525994311416,
+        "max_speed_mps": 24.411697381841005
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.159080982208252,
+        "max_battery_current_a": 48.85271072387695,
+        "max_decel_mps2": 6.648429870605469,
+        "max_gradient_rad": 0.17771200835704803,
+        "max_motor_current_a": 87.52174377441406,
+        "max_motor_rpm": 5412.8515625,
+        "max_power_w": 6484.05859375,
+        "max_regen_current_a": 31.593442916870117,
+        "max_speed_mps": 4.450648307800293
+      },
+      "hardware": {
+        "max_accel_mps2": 5.936985960948457,
+        "max_battery_current_a": 180.00560905708636,
+        "max_decel_mps2": 7.862363389705196,
+        "max_gradient_rad": 0.20850084179230433,
+        "max_motor_current_a": 200.7298012980146,
+        "max_motor_rpm": 5599.297692846641,
+        "max_power_w": 6838.516395416065,
+        "max_regen_current_a": 32.724853639473196,
+        "max_speed_mps": 26.3886945786294
+      },
+      "mode": {
+        "max_accel_mps2": 5.963816456122491,
+        "max_battery_current_a": 78.9937169421224,
+        "max_decel_mps2": 7.000885140437087,
+        "max_gradient_rad": 0.18780528883580883,
+        "max_motor_current_a": 109.51463303167577,
+        "max_motor_rpm": 5412.85150645143,
+        "max_power_w": 6484.058743677847,
+        "max_regen_current_a": 37.78898599892589,
+        "max_speed_mps": 18.913442877180785
+      },
+      "profile": {
+        "max_accel_mps2": 5.462788860412973,
+        "max_battery_current_a": 48.852708958842655,
+        "max_decel_mps2": 6.6484300667653855,
+        "max_gradient_rad": 0.17771200898370454,
+        "max_motor_current_a": 87.52174604811087,
+        "max_motor_rpm": 5478.969579435411,
+        "max_power_w": 7894.626227750563,
+        "max_regen_current_a": 31.593443425360967,
+        "max_speed_mps": 17.802593700414842
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.159081211033982,
+        "max_battery_current_a": 110.71363490555227,
+        "max_decel_mps2": 6.938197523442685,
+        "max_gradient_rad": 0.19313157543829507,
+        "max_motor_current_a": 129.8389754290958,
+        "max_motor_rpm": 5687.183232688325,
+        "max_power_w": 7984.985180097825,
+        "max_regen_current_a": 33.300016367015516,
+        "max_speed_mps": 22.57752866073627
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.1458587646484375,
+        "max_battery_current_a": 59.33718490600586,
+        "max_decel_mps2": 6.353006362915039,
+        "max_gradient_rad": 0.13538113236427307,
+        "max_motor_current_a": 73.69307708740234,
+        "max_motor_rpm": 5143.94189453125,
+        "max_power_w": 6380.11865234375,
+        "max_regen_current_a": 30.488100051879883,
+        "max_speed_mps": 4.824248313903809
+      },
+      "hardware": {
+        "max_accel_mps2": 6.43374454812163,
+        "max_battery_current_a": 189.28981736246618,
+        "max_decel_mps2": 6.501025642694718,
+        "max_gradient_rad": 0.23585641366274412,
+        "max_motor_current_a": 173.64096493973275,
+        "max_motor_rpm": 5154.661699920796,
+        "max_power_w": 9091.734799866446,
+        "max_regen_current_a": 41.91577288801743,
+        "max_speed_mps": 31.00227932457168
+      },
+      "mode": {
+        "max_accel_mps2": 5.145858872520064,
+        "max_battery_current_a": 74.1424745735563,
+        "max_decel_mps2": 6.353006236970761,
+        "max_gradient_rad": 0.15039094543143966,
+        "max_motor_current_a": 86.24212629651954,
+        "max_motor_rpm": 5392.008239485828,
+        "max_power_w": 6380.118882622531,
+        "max_regen_current_a": 30.488100459654937,
+        "max_speed_mps": 20.256525990373298
+      },
+      "profile": {
+        "max_accel_mps2": 5.26395194407157,
+        "max_battery_current_a": 59.33718363663401,
+        "max_decel_mps2": 6.752245056252005,
+        "max_gradient_rad": 0.1353811335309371,
+        "max_motor_current_a": 73.69308070727385,
+        "max_motor_rpm": 5143.941839998707,
+        "max_power_w": 7106.958596247337,
+        "max_regen_current_a": 36.35183654637985,
+        "max_speed_mps": 19.296993287392084
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.729966762168509,
+        "max_battery_current_a": 103.52861960270053,
+        "max_decel_mps2": 7.872833519835537,
+        "max_gradient_rad": 0.19491270835649283,
+        "max_motor_current_a": 120.56812102519838,
+        "max_motor_rpm": 5292.452891187246,
+        "max_power_w": 7504.800417469641,
+        "max_regen_current_a": 33.21145006495477,
+        "max_speed_mps": 20.549477606668486
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.99627685546875,
+        "max_battery_current_a": 77.85676574707031,
+        "max_decel_mps2": 5.575865745544434,
+        "max_gradient_rad": 0.168744757771492,
+        "max_motor_current_a": 81.5431137084961,
+        "max_motor_rpm": 4823.4541015625,
+        "max_power_w": 5239.2734375,
+        "max_regen_current_a": 31.45156478881836,
+        "max_speed_mps": 3.4041359424591064
+      },
+      "hardware": {
+        "max_accel_mps2": 5.297466707651137,
+        "max_battery_current_a": 160.19042673548282,
+        "max_decel_mps2": 8.655962431168629,
+        "max_gradient_rad": 0.18536325960147584,
+        "max_motor_current_a": 204.64693206459233,
+        "max_motor_rpm": 5493.60992976846,
+        "max_power_w": 7352.3666088861055,
+        "max_regen_current_a": 47.56657004144911,
+        "max_speed_mps": 26.958229626328325
+      },
+      "mode": {
+        "max_accel_mps2": 4.996277001356703,
+        "max_battery_current_a": 78.71357955978806,
+        "max_decel_mps2": 6.215465541136357,
+        "max_gradient_rad": 0.16874475578098902,
+        "max_motor_current_a": 112.96617002243653,
+        "max_motor_rpm": 4823.454325372109,
+        "max_power_w": 7313.939089996149,
+        "max_regen_current_a": 31.45156409936968,
+        "max_speed_mps": 21.700418498383645
+      },
+      "profile": {
+        "max_accel_mps2": 5.008393196569957,
+        "max_battery_current_a": 77.85676588106584,
+        "max_decel_mps2": 5.575865722912917,
+        "max_gradient_rad": 0.17358671719144833,
+        "max_motor_current_a": 81.54311694834611,
+        "max_motor_rpm": 5077.624882594781,
+        "max_power_w": 5239.273455362953,
+        "max_regen_current_a": 35.13874081034916,
+        "max_speed_mps": 13.616544057604772
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.255633022449259,
+        "max_battery_current_a": 115.089728544056,
+        "max_decel_mps2": 7.968256859714179,
+        "max_gradient_rad": 0.19273509840522252,
+        "max_motor_current_a": 148.01101124312402,
+        "max_motor_rpm": 5611.946694939054,
+        "max_power_w": 6594.998569172344,
+        "max_regen_current_a": 34.18766029404339,
+        "max_speed_mps": 21.744015871006532
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.843813419342041,
+        "max_battery_current_a": 79.90950012207031,
+        "max_decel_mps2": 6.020155429840088,
+        "max_gradient_rad": 0.18583591282367706,
+        "max_motor_current_a": 87.22058868408203,
+        "max_motor_rpm": 5039.34716796875,
+        "max_power_w": 6385.228515625,
+        "max_regen_current_a": 30.351913452148438,
+        "max_speed_mps": 3.3515775203704834
+      },
+      "hardware": {
+        "max_accel_mps2": 6.649838539435869,
+        "max_battery_current_a": 147.77935969244135,
+        "max_decel_mps2": 6.416580628502817,
+        "max_gradient_rad": 0.20402820526236934,
+        "max_motor_current_a": 211.03556587269102,
+        "max_motor_rpm": 5041.307771465636,
+        "max_power_w": 8695.545780000779,
+        "max_regen_current_a": 38.612821856772136,
+        "max_speed_mps": 30.37249787679359
+      },
+      "mode": {
+        "max_accel_mps2": 5.843813506205734,
+        "max_battery_current_a": 87.2240005952612,
+        "max_decel_mps2": 6.020155461154311,
+        "max_gradient_rad": 0.19293469838989,
+        "max_motor_current_a": 87.22058593841459,
+        "max_motor_rpm": 5886.004883551127,
+        "max_power_w": 7335.482427781816,
+        "max_regen_current_a": 34.42182732272325,
+        "max_speed_mps": 21.392383927655107
+      },
+      "profile": {
+        "max_accel_mps2": 5.909115312200022,
+        "max_battery_current_a": 79.90949769883231,
+        "max_decel_mps2": 7.7633270332686175,
+        "max_gradient_rad": 0.19013945343343389,
+        "max_motor_current_a": 96.78539247403735,
+        "max_motor_rpm": 5847.860987466631,
+        "max_power_w": 6385.228471429625,
+        "max_regen_current_a": 30.35191318845279,
+        "max_speed_mps": 13.4063096603109
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.956696846669123,
+        "max_battery_current_a": 118.44077036630763,
+        "max_decel_mps2": 6.913868323390667,
+        "max_gradient_rad": 0.1858359167156108,
+        "max_motor_current_a": 132.2072235464065,
+        "max_motor_rpm": 5039.347169601122,
+        "max_power_w": 7163.917632705435,
+        "max_regen_current_a": 39.02719697211383,
+        "max_speed_mps": 24.64549840084989
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.165250778198242,
+        "max_battery_current_a": 52.49958038330078,
+        "max_decel_mps2": 6.69791841506958,
+        "max_gradient_rad": 0.14520426094532013,
+        "max_motor_current_a": 67.39125061035156,
+        "max_motor_rpm": 4225.884765625,
+        "max_power_w": 5593.75048828125,
+        "max_regen_current_a": 29.177627563476562,
+        "max_speed_mps": 4.338511943817139
+      },
+      "hardware": {
+        "max_accel_mps2": 6.10392116053674,
+        "max_battery_current_a": 151.72564973569473,
+        "max_decel_mps2": 7.9805197450938214,
+        "max_gradient_rad": 0.23508484013926978,
+        "max_motor_current_a": 205.43694949315966,
+        "max_motor_rpm": 7173.838728212935,
+        "max_power_w": 7310.597287520149,
+        "max_regen_current_a": 47.7279022139361,
+        "max_speed_mps": 24.1112060217612
+      },
+      "mode": {
+        "max_accel_mps2": 5.688581685497358,
+        "max_battery_current_a": 92.71848250772683,
+        "max_decel_mps2": 6.83667358150351,
+        "max_gradient_rad": 0.14520426619090135,
+        "max_motor_current_a": 104.44012400715381,
+        "max_motor_rpm": 5814.676971211155,
+        "max_power_w": 7654.751610256298,
+        "max_regen_current_a": 30.105938966061572,
+        "max_speed_mps": 20.61906658520669
+      },
+      "profile": {
+        "max_accel_mps2": 4.165251006723682,
+        "max_battery_current_a": 52.49958002029754,
+        "max_decel_mps2": 7.212021285700662,
+        "max_gradient_rad": 0.196322785812393,
+        "max_motor_current_a": 67.39124804189359,
+        "max_motor_rpm": 4225.884664957065,
+        "max_power_w": 5593.750667734864,
+        "max_regen_current_a": 29.17762672136132,
+        "max_speed_mps": 17.354046827279635
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.108717856275423,
+        "max_battery_current_a": 100.62747355857144,
+        "max_decel_mps2": 6.697918510604909,
+        "max_gradient_rad": 0.1894647158196903,
+        "max_motor_current_a": 134.0406230701887,
+        "max_motor_rpm": 5350.697365238833,
+        "max_power_w": 6659.990820063582,
+        "max_regen_current_a": 32.901174088161234,
+        "max_speed_mps": 24.255298692889983
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.04749059677124,
+        "max_battery_current_a": 72.15166473388672,
+        "max_decel_mps2": 5.049928665161133,
+        "max_gradient_rad": 0.1651334911584854,
+        "max_motor_current_a": 69.89862060546875,
+        "max_motor_rpm": 4672.1953125,
+        "max_power_w": 5061.98486328125,
+        "max_regen_current_a": 34.487823486328125,
+        "max_speed_mps": 3.4368231296539307
+      },
+      "hardware": {
+        "max_accel_mps2": 5.083739634729534,
+        "max_battery_current_a": 144.8233728619801,
+        "max_decel_mps2": 7.381780294411583,
+        "max_gradient_rad": 0.1924333290374718,
+        "max_motor_current_a": 217.83060227207977,
+        "max_motor_rpm": 4949.098396321287,
+        "max_power_w": 8616.859489352764,
+        "max_regen_current_a": 42.45893387312318,
+        "max_speed_mps": 27.623350076299378
+      },
+      "mode": {
+        "max_accel_mps2": 5.04749053838276,
+        "max_battery_current_a": 92.43204511452569,
+        "max_decel_mps2": 6.890042450463682,
+        "max_gradient_rad": 0.17984566636037982,
+        "max_motor_current_a": 89.51468032881044,
+        "max_motor_rpm": 5188.622115873056,
+        "max_power_w": 6598.029477034939,
+        "max_regen_current_a": 35.26886737706883,
+        "max_speed_mps": 16.281553962498908
+      },
+      "profile": {
+        "max_accel_mps2": 5.289038700374094,
+        "max_battery_current_a": 72.1516655911957,
+        "max_decel_mps2": 5.049928710871808,
+        "max_gradient_rad": 0.165133497781878,
+        "max_motor_current_a": 69.89861717234311,
+        "max_motor_rpm": 4672.19514599156,
+        "max_power_w": 5061.984980714479,
+        "max_regen_current_a": 37.97016093580373,
+        "max_speed_mps": 13.747292981258607
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.154045120187496,
+        "max_battery_current_a": 112.88536884245414,
+        "max_decel_mps2": 7.383400717030159,
+        "max_gradient_rad": 0.16876514403741377,
+        "max_motor_current_a": 146.8535510944876,
+        "max_motor_rpm": 5899.356463020763,
+        "max_power_w": 6587.865193351642,
+        "max_regen_current_a": 34.48782358707729,
+        "max_speed_mps": 22.512602356191948
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.281521797180176,
+        "max_battery_current_a": 50.208614349365234,
+        "max_decel_mps2": 6.4268693923950195,
+        "max_gradient_rad": 0.14382559061050415,
+        "max_motor_current_a": 97.38330841064453,
+        "max_motor_rpm": 4581.28076171875,
+        "max_power_w": 4901.5517578125,
+        "max_regen_current_a": 37.79743957519531,
+        "max_speed_mps": 4.988247394561768
+      },
+      "hardware": {
+        "max_accel_mps2": 6.048819698843488,
+        "max_battery_current_a": 180.3950680386669,
+        "max_decel_mps2": 6.771968070990926,
+        "max_gradient_rad": 0.17643211884314894,
+        "max_motor_current_a": 203.81193989687452,
+        "max_motor_rpm": 5587.482330581295,
+        "max_power_w": 6879.527620423726,
+        "max_regen_current_a": 41.16322678764583,
+        "max_speed_mps": 24.741096570680206
+      },
+      "mode": {
+        "max_accel_mps2": 4.281521644910091,
+        "max_battery_current_a": 81.87846129859773,
+        "max_decel_mps2": 6.4268692797491225,
+        "max_gradient_rad": 0.143825594726725,
+        "max_motor_current_a": 110.03808287370008,
+        "max_motor_rpm": 5240.960277106264,
+        "max_power_w": 7389.930758796357,
+        "max_regen_current_a": 37.797438711197564,
+        "max_speed_mps": 20.72564132685899
+      },
+      "profile": {
+        "max_accel_mps2": 5.445532950200358,
+        "max_battery_current_a": 50.208612677130034,
+        "max_decel_mps2": 7.2506485853558775,
+        "max_gradient_rad": 0.1982666627939281,
+        "max_motor_current_a": 97.38331195539786,
+        "max_motor_rpm": 4581.280645966196,
+        "max_power_w": 4901.551587273853,
+        "max_regen_current_a": 38.94040900135889,
+        "max_speed_mps": 19.952989283815363
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.348158170854251,
+        "max_battery_current_a": 108.24900849678802,
+        "max_decel_mps2": 6.49237884949204,
+        "max_gradient_rad": 0.17849513222955696,
+        "max_motor_current_a": 122.72824933355065,
+        "max_motor_rpm": 5415.89741184197,
+        "max_power_w": 7125.491680287651,
+        "max_regen_current_a": 38.4695366654179,
+        "max_speed_mps": 22.915738392205085
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.645521640777588,
+        "max_battery_current_a": 51.611026763916016,
+        "max_decel_mps2": 4.850066661834717,
+        "max_gradient_rad": 0.13648653030395508,
+        "max_motor_current_a": 89.00096130371094,
+        "max_motor_rpm": 5434.61083984375,
+        "max_power_w": 6141.56982421875,
+        "max_regen_current_a": 33.42778778076172,
+        "max_speed_mps": 3.8875133991241455
+      },
+      "hardware": {
+        "max_accel_mps2": 5.7015492811247706,
+        "max_battery_current_a": 215.48567509782325,
+        "max_decel_mps2": 8.584737133124932,
+        "max_gradient_rad": 0.21294340305003745,
+        "max_motor_current_a": 193.62895511058622,
+        "max_motor_rpm": 6976.241547658974,
+        "max_power_w": 9182.784912994266,
+        "max_regen_current_a": 38.11967390162195,
+        "max_speed_mps": 31.75056981716596
+      },
+      "mode": {
+        "max_accel_mps2": 4.645521669306795,
+        "max_battery_current_a": 90.20499573329701,
+        "max_decel_mps2": 6.4307833639703045,
+        "max_gradient_rad": 0.15653898366770763,
+        "max_motor_current_a": 94.74106759330735,
+        "max_motor_rpm": 5682.0487872764115,
+        "max_power_w": 6876.640660392221,
+        "max_regen_current_a": 34.533344068300245,
+        "max_speed_mps": 15.550053160324978
+      },
+      "profile": {
+        "max_accel_mps2": 5.721015892428899,
+        "max_battery_current_a": 51.61102844052727,
+        "max_decel_mps2": 4.850066548363358,
+        "max_gradient_rad": 0.13648652974801714,
+        "max_motor_current_a": 89.00095783635673,
+        "max_motor_rpm": 5438.528322033368,
+        "max_power_w": 6141.569915173607,
+        "max_regen_current_a": 36.95165093662711,
+        "max_speed_mps": 19.499282889080533
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.673429769087354,
+        "max_battery_current_a": 104.3464772913396,
+        "max_decel_mps2": 6.7563043455460265,
+        "max_gradient_rad": 0.16013893179779634,
+        "max_motor_current_a": 139.60602295256106,
+        "max_motor_rpm": 5434.611047452811,
+        "max_power_w": 7259.613578236802,
+        "max_regen_current_a": 33.4277890320329,
+        "max_speed_mps": 22.6965013195943
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.309723854064941,
+        "max_battery_current_a": 61.67041778564453,
+        "max_decel_mps2": 7.149885654449463,
+        "max_gradient_rad": 0.14549875259399414,
+        "max_motor_current_a": 85.03972625732422,
+        "max_motor_rpm": 4740.90185546875,
+        "max_power_w": 6130.50244140625,
+        "max_regen_current_a": 31.929933547973633,
+        "max_speed_mps": 4.3790974617004395
+      },
+      "hardware": {
+        "max_accel_mps2": 5.765436841946175,
+        "max_battery_current_a": 187.0405125646718,
+        "max_decel_mps2": 7.149885691160198,
+        "max_gradient_rad": 0.1773815368142043,
+        "max_motor_current_a": 162.68610206034248,
+        "max_motor_rpm": 6577.2985883516685,
+        "max_power_w": 6555.7642279799975,
+        "max_regen_current_a": 43.25258026983886,
+        "max_speed_mps": 25.210760557110085
+      },
+      "mode": {
+        "max_accel_mps2": 4.309723746792171,
+        "max_battery_current_a": 74.29781302489987,
+        "max_decel_mps2": 7.876448612064131,
+        "max_gradient_rad": 0.19278283345783298,
+        "max_motor_current_a": 94.8635196651913,
+        "max_motor_rpm": 4740.901716763355,
+        "max_power_w": 6130.502577070478,
+        "max_regen_current_a": 35.92254908572892,
+        "max_speed_mps": 17.51638976159369
+      },
+      "profile": {
+        "max_accel_mps2": 5.211222059389733,
+        "max_battery_current_a": 61.67041863342539,
+        "max_decel_mps2": 7.314574707137657,
+        "max_gradient_rad": 0.14549875658530498,
+        "max_motor_current_a": 85.03972550593319,
+        "max_motor_rpm": 5859.807383596588,
+        "max_power_w": 7911.328753099795,
+        "max_regen_current_a": 31.929932599888335,
+        "max_speed_mps": 19.292621324964358
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.182684435643031,
+        "max_battery_current_a": 108.09350037458243,
+        "max_decel_mps2": 7.35666827884362,
+        "max_gradient_rad": 0.18690127605747656,
+        "max_motor_current_a": 121.69332105073384,
+        "max_motor_rpm": 5677.820979739222,
+        "max_power_w": 7705.258010821307,
+        "max_regen_current_a": 34.31410761083135,
+        "max_speed_mps": 24.318651213350282
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.044003963470459,
+        "max_battery_current_a": 65.88321685791016,
+        "max_decel_mps2": 4.849067687988281,
+        "max_gradient_rad": 0.15128979086875916,
+        "max_motor_current_a": 87.32870483398438,
+        "max_motor_rpm": 4399.1142578125,
+        "max_power_w": 6244.3076171875,
+        "max_regen_current_a": 30.28577995300293,
+        "max_speed_mps": 4.523392677307129
+      },
+      "hardware": {
+        "max_accel_mps2": 5.5217674051083545,
+        "max_battery_current_a": 171.10513357251352,
+        "max_decel_mps2": 8.664245751961511,
+        "max_gradient_rad": 0.22446209279479096,
+        "max_motor_current_a": 171.9374086260131,
+        "max_motor_rpm": 6838.418237424097,
+        "max_power_w": 7915.2602253191035,
+        "max_regen_current_a": 44.07065755581001,
+        "max_speed_mps": 28.995895601057338
+      },
+      "mode": {
+        "max_accel_mps2": 5.285259680980337,
+        "max_battery_current_a": 91.73754136921606,
+        "max_decel_mps2": 7.696689100374895,
+        "max_gradient_rad": 0.1512897976359653,
+        "max_motor_current_a": 87.32870387496709,
+        "max_motor_rpm": 5412.609457142242,
+        "max_power_w": 6244.307810851955,
+        "max_regen_current_a": 30.285779421168858,
+        "max_speed_mps": 20.991080347069435
+      },
+      "profile": {
+        "max_accel_mps2": 5.896847425264015,
+        "max_battery_current_a": 65.88321524072087,
+        "max_decel_mps2": 4.849067859931177,
+        "max_gradient_rad": 0.19497278105617982,
+        "max_motor_current_a": 88.97220959408597,
+        "max_motor_rpm": 4399.114345965171,
+        "max_power_w": 7582.316324878521,
+        "max_regen_current_a": 31.670307303534635,
+        "max_speed_mps": 18.09357134029768
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.0440040796720655,
+        "max_battery_current_a": 119.22686852511904,
+        "max_decel_mps2": 7.434729362476712,
+        "max_gradient_rad": 0.19688904418044892,
+        "max_motor_current_a": 136.87157848760728,
+        "max_motor_rpm": 5091.430219307503,
+        "max_power_w": 6614.548401694525,
+        "max_regen_current_a": 36.45829406559419,
+        "max_speed_mps": 24.573705869079525
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.598293304443359,
+        "max_battery_current_a": 61.36249923706055,
+        "max_decel_mps2": 5.950214385986328,
+        "max_gradient_rad": 0.1556464433670044,
+        "max_motor_current_a": 83.16571807861328,
+        "max_motor_rpm": 4511.615234375,
+        "max_power_w": 5855.56884765625,
+        "max_regen_current_a": 26.438583374023438,
+        "max_speed_mps": 4.624659061431885
+      },
+      "hardware": {
+        "max_accel_mps2": 5.290831543146945,
+        "max_battery_current_a": 215.96918450528244,
+        "max_decel_mps2": 9.328404670699381,
+        "max_gradient_rad": 0.2041663434038252,
+        "max_motor_current_a": 169.38529595546677,
+        "max_motor_rpm": 6250.563681789075,
+        "max_power_w": 7176.2981819063725,
+        "max_regen_current_a": 39.66273402147785,
+        "max_speed_mps": 35.5449306733735
+      },
+      "mode": {
+        "max_accel_mps2": 4.598293376969205,
+        "max_battery_current_a": 97.42991496692468,
+        "max_decel_mps2": 5.9502145114461165,
+        "max_gradient_rad": 0.15564644659458618,
+        "max_motor_current_a": 114.23032253629266,
+        "max_motor_rpm": 5212.544509435837,
+        "max_power_w": 6593.432409388699,
+        "max_regen_current_a": 32.4484590571751,
+        "max_speed_mps": 18.498636785348886
+      },
+      "profile": {
+        "max_accel_mps2": 5.600070516688764,
+        "max_battery_current_a": 61.36249835376556,
+        "max_decel_mps2": 6.397764743581832,
+        "max_gradient_rad": 0.17236863728968177,
+        "max_motor_current_a": 83.16571704149602,
+        "max_motor_rpm": 4511.61545937877,
+        "max_power_w": 5855.568915129152,
+        "max_regen_current_a": 26.438582562946294,
+        "max_speed_mps": 19.478066002370827
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.3967327517211805,
+        "max_battery_current_a": 108.80760305799032,
+        "max_decel_mps2": 6.557773170504769,
+        "max_gradient_rad": 0.19925273827386308,
+        "max_motor_current_a": 131.41985233118768,
+        "max_motor_rpm": 5415.379848028529,
+        "max_power_w": 6818.498603816564,
+        "max_regen_current_a": 34.87407644441261,
+        "max_speed_mps": 23.877569410318852
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 4.21645450592041,
+        "max_battery_current_a": 67.72862243652344,
+        "max_decel_mps2": 4.837923049926758,
+        "max_gradient_rad": 0.16235341131687164,
+        "max_motor_current_a": 86.6701889038086,
+        "max_motor_rpm": 3615.86962890625,
+        "max_power_w": 6155.43994140625,
+        "max_regen_current_a": 31.731266021728516,
+        "max_speed_mps": 4.235670566558838
+      },
+      "hardware": {
+        "max_accel_mps2": 5.203760750283699,
+        "max_battery_current_a": 203.15461965784965,
+        "max_decel_mps2": 8.94392164593163,
+        "max_gradient_rad": 0.17354125686881455,
+        "max_motor_current_a": 180.58614061079064,
+        "max_motor_rpm": 5977.429398193878,
+        "max_power_w": 8453.422254075862,
+        "max_regen_current_a": 47.46413227600549,
+        "max_speed_mps": 32.21815934815087
+      },
+      "mode": {
+        "max_accel_mps2": 4.216454631043192,
+        "max_battery_current_a": 82.37176667246779,
+        "max_decel_mps2": 6.813759007263356,
+        "max_gradient_rad": 0.1623920415612087,
+        "max_motor_current_a": 111.51619836859268,
+        "max_motor_rpm": 5472.905214666228,
+        "max_power_w": 6155.440140985869,
+        "max_regen_current_a": 38.11053660190418,
+        "max_speed_mps": 19.810222586394808
+      },
+      "profile": {
+        "max_accel_mps2": 4.923944546187016,
+        "max_battery_current_a": 67.72861955469881,
+        "max_decel_mps2": 4.837923098009256,
+        "max_gradient_rad": 0.16235341174733206,
+        "max_motor_current_a": 86.67018918213358,
+        "max_motor_rpm": 3615.869656781181,
+        "max_power_w": 6361.134028809828,
+        "max_regen_current_a": 31.7312664579492,
+        "max_speed_mps": 16.942681887014423
+      },
+      "vehicle": {
+        "max_accel_mps2": 4.840588508597628,
+        "max_battery_current_a": 118.00558535266481,
+        "max_decel_mps2": 7.754715813092356,
+        "max_gradient_rad": 0.19780752444803595,
+        "max_motor_current_a": 134.649489637624,
+        "max_motor_rpm": 4870.478461896876,
+        "max_power_w": 7426.895141091786,
+        "max_regen_current_a": 36.33709484281084,
+        "max_speed_mps": 23.601567653810466
+      }
+    },
+    {
+      "derating": {
+        "accel": 1.0,
+        "battery_current": 1.0,
+        "decel": 1.0,
+        "gradient": 1.0,
+        "motor_current": 1.0,
+        "motor_rpm": 1.0,
+        "power": 1.0,
+        "regen_current": 1.0,
+        "speed": 0.25
+      },
+      "expected": {
+        "max_accel_mps2": 5.24766206741333,
+        "max_battery_current_a": 48.302406311035156,
+        "max_decel_mps2": 5.824401378631592,
+        "max_gradient_rad": 0.1627558469772339,
+        "max_motor_current_a": 62.244598388671875,
+        "max_motor_rpm": 4641.38330078125,
+        "max_power_w": 6399.546875,
+        "max_regen_current_a": 26.742137908935547,
+        "max_speed_mps": 4.105402946472168
+      },
+      "hardware": {
+        "max_accel_mps2": 6.9834560783970385,
+        "max_battery_current_a": 145.23426702737478,
+        "max_decel_mps2": 6.742452571822378,
+        "max_gradient_rad": 0.1677051112201127,
+        "max_motor_current_a": 238.1983478586009,
+        "max_motor_rpm": 6734.802477473829,
+        "max_power_w": 8556.905446781473,
+        "max_regen_current_a": 45.010515534622556,
+        "max_speed_mps": 27.296888846373985
+      },
+      "mode": {
+        "max_accel_mps2": 5.567254530318321,
+        "max_battery_current_a": 90.52124876411156,
+        "max_decel_mps2": 5.824401213025062,
+        "max_gradient_rad": 0.16275584133438895,
+        "max_motor_current_a": 92.1308610945872,
+        "max_motor_rpm": 5744.794486238137,
+        "max_power_w": 7168.965726941967,
+        "max_regen_current_a": 38.174405224378425,
+        "max_speed_mps": 21.9355380088222
+      },
+      "profile": {
+        "max_accel_mps2": 5.482503145896267,
+        "max_battery_current_a": 48.30240552493218,
+        "max_decel_mps2": 6.610741209443312,
+        "max_gradient_rad": 0.18863682506909357,
+        "max_motor_current_a": 62.24459756515862,
+        "max_motor_rpm": 4641.383164731989,
+        "max_power_w": 6399.546857960934,
+        "max_regen_current_a": 26.742137203536764,
+        "max_speed_mps": 16.42161151623756
+      },
+      "vehicle": {
+        "max_accel_mps2": 5.247661900156419,
+        "max_battery_current_a": 108.63494364960519,
+        "max_decel_mps2": 7.049643855798218,
+        "max_gradient_rad": 0.18260008729791877,
+        "max_motor_current_a": 125.7579617097484,
+        "max_motor_rpm": 5276.275706997686,
+        "max_power_w": 6827.719578682618,
+        "max_regen_current_a": 38.521715125706265,
+        "max_speed_mps": 20.74448742870125
+      }
+    }
+  ],
+  "version": 1
+}

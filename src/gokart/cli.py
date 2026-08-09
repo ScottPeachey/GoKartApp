@@ -213,6 +213,35 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_telemetry_ingest(args: argparse.Namespace) -> int:
+    from gokart.telemetry.ingest import ingest_file, ingest_serial
+
+    if args.file:
+        session_id = ingest_file(Path(args.file))
+    else:
+        session_id = ingest_serial(
+            args.serial,
+            baud=args.baud,
+            duration_s=args.duration,
+            vehicle_name=args.vehicle,
+            vehicle_version=args.version,
+        )
+    print(f"Ingested session {session_id}")
+    return 0
+
+
+def cmd_firmware_golden(args: argparse.Namespace) -> int:
+    import subprocess
+
+    subprocess.run(["uv", "run", "python", "tools/generate_golden.py"], check=True)
+    if args.generate_only:
+        print("Golden vectors regenerated.")
+        return 0
+    subprocess.run(["make", "-C", "firmware/core_c/tests", "test"], check=True)
+    print("Golden vectors regenerated and C core verified.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gokart", description="Go-kart configuration tools")
     parser.add_argument("--actor", default="cli", help="Actor name for audit log entries")
@@ -291,6 +320,27 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("session_id", help="Telemetry session UUID")
     report.add_argument("--out", help="Output HTML path")
     report.set_defaults(func=cmd_report)
+
+    telemetry = sub.add_parser("telemetry", help="Telemetry ingest commands")
+    telemetry_sub = telemetry.add_subparsers(dest="telemetry_command", required=True)
+    ingest = telemetry_sub.add_parser("ingest", help="Ingest firmware JSON lines")
+    ingest.add_argument("--serial", help="Serial port (e.g. /dev/ttyUSB0)")
+    ingest.add_argument("--file", help="Import JSON lines from a file")
+    ingest.add_argument("--baud", type=int, default=115200, help="Serial baud rate")
+    ingest.add_argument("--duration", type=float, help="Capture duration in seconds")
+    ingest.add_argument("--vehicle", default="Scott Kart V1", help="Vehicle name metadata")
+    ingest.add_argument("--version", default="V1.0", help="Vehicle version metadata")
+    ingest.set_defaults(func=cmd_telemetry_ingest)
+
+    firmware = sub.add_parser("firmware", help="Firmware development commands")
+    firmware_sub = firmware.add_subparsers(dest="firmware_command", required=True)
+    golden = firmware_sub.add_parser("golden", help="Regenerate golden vectors and run C tests")
+    golden.add_argument(
+        "--generate-only",
+        action="store_true",
+        help="Only regenerate JSON vectors (skip C runner)",
+    )
+    golden.set_defaults(func=cmd_firmware_golden)
 
     return parser
 

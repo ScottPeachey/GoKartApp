@@ -16,6 +16,7 @@ build/
 # PlatformIO / firmware
 firmware/esp32/.pio/
 firmware/core_c/build/
+firmware/core_c/tests/golden_runner
 
 # OS / editor
 .DS_Store

@@ -26,9 +26,30 @@ Read in this order:
   questions by the plan. Genuine ambiguities: pick the simplest option
   consistent with the architecture, record it under `## Decisions` at the
   bottom of the plan, and continue.
-- The MVP is Phases 0–5 (pure software: configure → validate → simulate →
-  dashboard → log → analyse). Firmware and hardware integration are
-  Phases 6–9.
+## Pre-build testing (Phases 0–5)
+
+You can configure and test the full software loop **before the kart exists**:
+
+```bash
+uv sync
+gokart config validate data/vehicles/Scott_Kart_V1/V1.0.json
+gokart sim run "Scott Kart V1" V1.0 standing_start_30s --out run.csv
+gokart dashboard
+gokart sweep run data/sweeps/sprocket_0_30.json
+```
+
+## Firmware (Phase 6+)
+
+Phase 6 adds the ESP32 firmware skeleton and a C port of the safety/limits/control
+core, verified by golden test vectors:
+
+```bash
+gokart firmware golden
+make -C firmware/core_c/tests test
+# ESP32 (requires PlatformIO): cd firmware/esp32 && pio run -e esp32s3_mock
+gokart telemetry ingest --file firmware_capture.jsonl
+```
+
 
 ## Status
 
@@ -41,4 +62,5 @@ Read in this order:
 - [x] Phase 3 — safety state machine, fault injection, mode/profile switching
 - [x] Phase 4 — telemetry storage and virtual dashboard
 - [x] Phase 5 — analysis and virtual tuning
-- [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL
+- [x] Phase 6 — portable C core and ESP32 firmware skeleton
+- [ ] Phases 7–9 — drivers, real telemetry, HIL

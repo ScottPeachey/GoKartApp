@@ -1,0 +1,8 @@
+#ifndef GOKART_CONFIG_H
+#define GOKART_CONFIG_H
+
+#ifndef CONFIG_GOKART_MOCK_SENSORS
+#define CONFIG_GOKART_MOCK_SENSORS 1
+#endif
+
+#endif
