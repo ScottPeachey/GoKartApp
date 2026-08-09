@@ -58,9 +58,7 @@ def _blocking_faults(faults: set[FaultId]) -> set[FaultId]:
 
 
 def _critical_faults(faults: set[FaultId]) -> set[FaultId]:
-    return {
-        fault for fault in faults if FAULT_REGISTRY[fault].severity == FaultSeverity.CRITICAL
-    }
+    return {fault for fault in faults if FAULT_REGISTRY[fault].severity == FaultSeverity.CRITICAL}
 
 
 def _outputs_for_state(
@@ -112,9 +110,19 @@ def safety_step(
         if inputs.power_on_request:
             state = SafetyState.BOOT
             timers.state_elapsed_s = 0.0
-        return state, _outputs_for_state(
-            state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
-        ), timers, latched
+        return (
+            state,
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=ContactorCommand.OPEN,
+                torque=False,
+                regen=False,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.BOOT:
         if FaultId.WATCHDOG_RESET in active_faults:
@@ -123,9 +131,19 @@ def safety_step(
         elif timers.state_elapsed_s >= dt:
             state = SafetyState.SELF_TEST
             timers.state_elapsed_s = 0.0
-        return state, _outputs_for_state(
-            state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
-        ), timers, latched
+        return (
+            state,
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=ContactorCommand.OPEN,
+                torque=False,
+                regen=False,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.SELF_TEST:
         if critical or blocking:
@@ -133,9 +151,19 @@ def safety_step(
         elif timers.state_elapsed_s >= config.self_test_duration_s:
             state = SafetyState.READY
             timers.state_elapsed_s = 0.0
-        return state, _outputs_for_state(
-            state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
-        ), timers, latched
+        return (
+            state,
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=ContactorCommand.OPEN,
+                torque=False,
+                regen=False,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.READY:
         if critical:
@@ -150,9 +178,19 @@ def safety_step(
             timers.precharge_elapsed_s = 0.0
             state = SafetyState.ARMED
             timers.state_elapsed_s = 0.0
-        return state, _outputs_for_state(
-            state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
-        ), timers, latched
+        return (
+            state,
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=ContactorCommand.OPEN,
+                torque=False,
+                regen=False,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.ARMED:
         if critical:
@@ -161,25 +199,35 @@ def safety_step(
                     latched.add(fault)
             state = SafetyState.SAFE_SHUTDOWN
             timers.shutdown_elapsed_s = 0.0
-            return state, _outputs_for_state(
+            return (
                 state,
-                active_faults,
-                config,
-                contactor=ContactorCommand.OPEN,
-                torque=False,
-                regen=False,
-            ), timers, latched
+                _outputs_for_state(
+                    state,
+                    active_faults,
+                    config,
+                    contactor=ContactorCommand.OPEN,
+                    torque=False,
+                    regen=False,
+                ),
+                timers,
+                latched,
+            )
 
         if blocking:
             state = SafetyState.FAULT
-            return state, _outputs_for_state(
+            return (
                 state,
-                active_faults,
-                config,
-                contactor=ContactorCommand.OPEN,
-                torque=False,
-                regen=False,
-            ), timers, latched
+                _outputs_for_state(
+                    state,
+                    active_faults,
+                    config,
+                    contactor=ContactorCommand.OPEN,
+                    torque=False,
+                    regen=False,
+                ),
+                timers,
+                latched,
+            )
 
         timers.precharge_elapsed_s += dt
         if timers.precharge_elapsed_s < config.precharge_timeout_s:
@@ -188,32 +236,39 @@ def safety_step(
                 latched.add(FaultId.PRECHARGE_FAILURE)
                 state = SafetyState.SAFE_SHUTDOWN
                 timers.shutdown_elapsed_s = 0.0
-                return state, _outputs_for_state(
+                return (
                     state,
-                    active_faults,
-                    config,
-                    contactor=ContactorCommand.OPEN,
-                    torque=False,
-                    regen=False,
-                ), timers, latched
+                    _outputs_for_state(
+                        state,
+                        active_faults,
+                        config,
+                        contactor=ContactorCommand.OPEN,
+                        torque=False,
+                        regen=False,
+                    ),
+                    timers,
+                    latched,
+                )
             contactor = ContactorCommand.PRECHARGE
         else:
             contactor = ContactorCommand.CLOSE
-            if (
-                inputs.throttle > config.throttle_drive_deadband
-                and not inputs.brake_pressed
-            ):
+            if inputs.throttle > config.throttle_drive_deadband and not inputs.brake_pressed:
                 state = SafetyState.DRIVING
                 timers.state_elapsed_s = 0.0
 
-        return state, _outputs_for_state(
+        return (
             state,
-            active_faults,
-            config,
-            contactor=contactor,
-            torque=False,
-            regen=False,
-        ), timers, latched
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=contactor,
+                torque=False,
+                regen=False,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.DRIVING:
         if critical:
@@ -222,46 +277,66 @@ def safety_step(
                     latched.add(fault)
             state = SafetyState.SAFE_SHUTDOWN
             timers.shutdown_elapsed_s = 0.0
-            return state, _outputs_for_state(
+            return (
                 state,
-                active_faults,
-                config,
-                contactor=ContactorCommand.OPEN,
-                torque=False,
-                regen=False,
-            ), timers, latched
+                _outputs_for_state(
+                    state,
+                    active_faults,
+                    config,
+                    contactor=ContactorCommand.OPEN,
+                    torque=False,
+                    regen=False,
+                ),
+                timers,
+                latched,
+            )
 
         if blocking:
             state = SafetyState.FAULT
-            return state, _outputs_for_state(
+            return (
                 state,
-                active_faults,
-                config,
-                contactor=ContactorCommand.OPEN,
-                torque=False,
-                regen=False,
-            ), timers, latched
+                _outputs_for_state(
+                    state,
+                    active_faults,
+                    config,
+                    contactor=ContactorCommand.OPEN,
+                    torque=False,
+                    regen=False,
+                ),
+                timers,
+                latched,
+            )
 
         if inputs.disarm_request or inputs.brake_pressed:
             state = SafetyState.READY
             timers.state_elapsed_s = 0.0
-            return state, _outputs_for_state(
+            return (
+                state,
+                _outputs_for_state(
+                    state,
+                    active_faults,
+                    config,
+                    contactor=ContactorCommand.OPEN,
+                    torque=False,
+                    regen=False,
+                ),
+                timers,
+                latched,
+            )
+
+        return (
+            state,
+            _outputs_for_state(
                 state,
                 active_faults,
                 config,
-                contactor=ContactorCommand.OPEN,
-                torque=False,
-                regen=False,
-            ), timers, latched
-
-        return state, _outputs_for_state(
-            state,
-            active_faults,
-            config,
-            contactor=ContactorCommand.CLOSE,
-            torque=True,
-            regen=True,
-        ), timers, latched
+                contactor=ContactorCommand.CLOSE,
+                torque=True,
+                regen=True,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.FAULT:
         if critical:
@@ -273,34 +348,49 @@ def safety_step(
         elif not blocking and inputs.fault_ack_request:
             state = SafetyState.READY
             timers.state_elapsed_s = 0.0
-        return state, _outputs_for_state(
+        return (
             state,
-            active_faults,
-            config,
-            contactor=ContactorCommand.OPEN,
-            torque=False,
-            regen=False,
-            message=1,
-        ), timers, latched
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=ContactorCommand.OPEN,
+                torque=False,
+                regen=False,
+                message=1,
+            ),
+            timers,
+            latched,
+        )
 
     if state == SafetyState.SAFE_SHUTDOWN:
         timers.shutdown_elapsed_s += dt
         contactor = ContactorCommand.OPEN
         if timers.shutdown_elapsed_s >= 0.5:
             state = SafetyState.OFF
-        return state, _outputs_for_state(
+        return (
             state,
-            active_faults,
-            config,
-            contactor=contactor,
-            torque=False,
-            regen=False,
-            message=2,
-        ), timers, latched
+            _outputs_for_state(
+                state,
+                active_faults,
+                config,
+                contactor=contactor,
+                torque=False,
+                regen=False,
+                message=2,
+            ),
+            timers,
+            latched,
+        )
 
-    return state, _outputs_for_state(
-        state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
-    ), timers, latched
+    return (
+        state,
+        _outputs_for_state(
+            state, active_faults, config, contactor=ContactorCommand.OPEN, torque=False, regen=False
+        ),
+        timers,
+        latched,
+    )
 
 
 def severity_for_faults(faults: set[FaultId]) -> FaultSeverity | None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -30,8 +31,10 @@ from gokart.safety.state_machine import SafetyInputs, SafetyTimers, safety_step
 from gokart.safety.types import ContactorCommand, SafetyState
 from gokart.sim.clock import SimClock
 from gokart.sim.fault_injection import FaultInjector
+from gokart.sim.runtime import RuntimeControls
 from gokart.sim.scenarios import Scenario
 from gokart.telemetry.channels import CHANNEL_NAMES
+from gokart.telemetry.recorder import SessionRecorder
 
 DEFAULT_DT_S = 0.01
 
@@ -166,6 +169,9 @@ def run_simulation(
     dt_s: float = DEFAULT_DT_S,
     speedup: float = 0.0,
     initial_speed_mps: float = 0.0,
+    controls: RuntimeControls | None = None,
+    on_tick: Callable[[SimTickRecord], None] | None = None,
+    recorder: SessionRecorder | None = None,
 ) -> SimulationResult:
     root = data_root_path or data_root()
     vehicle_model = load_validated_vehicle_model(vehicle_name, vehicle_version, data_root=root)
@@ -204,7 +210,10 @@ def run_simulation(
         clock.start()
 
     records: list[SimTickRecord] = []
-    steps = int(scenario.duration_s / dt_s)
+    if controls and controls.manual:
+        steps = 10_000_000
+    else:
+        steps = int(scenario.duration_s / dt_s)
     injector = FaultInjector.from_scenario_data(scenario.injections)
 
     safety_state = SafetyState.OFF
@@ -227,12 +236,18 @@ def run_simulation(
     prev_synthetic_brake_hold = False
 
     for step in range(steps):
+        if controls and controls.stop_requested:
+            break
         time_s = step * dt_s
-        throttle, brake = scenario.driver_inputs_at(time_s)
+        if controls and controls.manual:
+            throttle = controls.throttle
+            brake = controls.brake
+        else:
+            throttle, brake = scenario.driver_inputs_at(time_s)
         env = scenario.environment
 
         power_on = scenario.auto_boot and safety_state == SafetyState.OFF and step == 0
-        arm_request = False
+        arm_request = bool(controls and controls.arm_request)
         brake_pressed = brake > 0.1
         synthetic_brake_hold = False
         if scenario.auto_boot and safety_state == SafetyState.READY and not auto_arm_sent:
@@ -266,8 +281,10 @@ def run_simulation(
         sensors = injector.apply(time_s, sensors)
         _sync_injected_temps(vehicle_state, sensors)
 
-        if step == 0 or synthetic_brake_hold or (
-            prev_synthetic_brake_hold and not synthetic_brake_hold
+        if (
+            step == 0
+            or synthetic_brake_hold
+            or (prev_synthetic_brake_hold and not synthetic_brake_hold)
         ):
             detection_state.previous_throttle_adc = sensors.throttle_adc
 
@@ -281,7 +298,7 @@ def run_simulation(
                 power_on_request=power_on,
                 arm_request=arm_request,
                 disarm_request=False,
-                fault_ack_request=False,
+                fault_ack_request=bool(controls and controls.fault_ack_request),
                 driver_authenticated=True,
                 brake_pressed=brake_pressed,
                 throttle=detect_throttle if synthetic_brake_hold else throttle,
@@ -354,35 +371,39 @@ def run_simulation(
             dt_s,
         )
 
-        records.append(
-            SimTickRecord(
-                time_s=time_s,
-                values={
-                    "position_m": physics_out.position_m,
-                    "speed_mps": physics_out.speed_mps,
-                    "acceleration_mps2": physics_out.acceleration_mps2,
-                    "throttle": throttle,
-                    "brake": brake,
-                    "motor_rpm": physics_out.motor_rpm,
-                    "motor_torque_nm": physics_out.motor_torque_nm,
-                    "motor_current_a": physics_out.motor_current_a,
-                    "battery_current_a": physics_out.battery_current_a,
-                    "pack_voltage_v": physics_out.pack_voltage_v,
-                    "soc": physics_out.soc,
-                    "power_w": physics_out.power_w,
-                    "traction_force_n": physics_out.traction_force_n,
-                    "motor_temp_c": physics_out.motor_temp_c,
-                    "battery_temp_c": physics_out.battery_temp_c,
-                    "traction_limited": float(control_out.traction_limited),
-                    "filtered_throttle": control_out.filtered_throttle,
-                    "safety_state": safety_state.value,
-                    "contactor_command": safety_outputs.contactor_command.value,
-                    "torque_permitted": float(safety_outputs.torque_permitted),
-                    "active_faults": ",".join(f.value for f in safety_outputs.active_faults),
-                    "derating_factor": safety_outputs.derating.power,
-                },
-            )
+        tick = SimTickRecord(
+            time_s=time_s,
+            values={
+                "position_m": physics_out.position_m,
+                "speed_mps": physics_out.speed_mps,
+                "acceleration_mps2": physics_out.acceleration_mps2,
+                "throttle": throttle,
+                "brake": brake,
+                "motor_rpm": physics_out.motor_rpm,
+                "motor_torque_nm": physics_out.motor_torque_nm,
+                "motor_current_a": physics_out.motor_current_a,
+                "battery_current_a": physics_out.battery_current_a,
+                "pack_voltage_v": physics_out.pack_voltage_v,
+                "soc": physics_out.soc,
+                "power_w": physics_out.power_w,
+                "traction_force_n": physics_out.traction_force_n,
+                "motor_temp_c": physics_out.motor_temp_c,
+                "battery_temp_c": physics_out.battery_temp_c,
+                "traction_limited": float(control_out.traction_limited),
+                "filtered_throttle": control_out.filtered_throttle,
+                "drive_mode": control_params.mode.name,
+                "safety_state": safety_state.value,
+                "contactor_command": safety_outputs.contactor_command.value,
+                "torque_permitted": float(safety_outputs.torque_permitted),
+                "active_faults": ",".join(f.value for f in safety_outputs.active_faults),
+                "derating_factor": safety_outputs.derating.power,
+            },
         )
+        records.append(tick)
+        if on_tick is not None:
+            on_tick(tick)
+        if recorder is not None:
+            recorder.record_tick(tick.to_row())
 
         if speedup > 0:
             clock.tick(dt_s)

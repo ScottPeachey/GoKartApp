@@ -70,16 +70,13 @@ def test_battery_overtemp_acceptance_trace() -> None:
         data_root_path=root / "data",
     )
     derate_seen = any(
-        "BATTERY_OVERTEMP_DERATE" in r.values.get("active_faults", "")
-        for r in result.records
+        "BATTERY_OVERTEMP_DERATE" in r.values.get("active_faults", "") for r in result.records
     )
     fault_seen = any(
-        "BATTERY_OVERTEMP" in r.values.get("active_faults", "")
-        for r in result.records
+        "BATTERY_OVERTEMP" in r.values.get("active_faults", "") for r in result.records
     )
     shutdown_seen = any(
-        r.values.get("safety_state") in {"SAFE_SHUTDOWN", "OFF"}
-        for r in result.records
+        r.values.get("safety_state") in {"SAFE_SHUTDOWN", "OFF"} for r in result.records
     )
     zero_torque_after_fault = any(
         r.values.get("torque_permitted") == 0.0

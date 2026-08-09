@@ -312,9 +312,15 @@ def highest_severity(faults: set[FaultId]) -> FaultSeverity | None:
 
 
 def derating_from_faults(faults: set[FaultId], config: SafetyConfig) -> DeratingFactors:
-    factor = config.derate_factor if any(
-        FAULT_REGISTRY[f].severity == FaultSeverity.DERATE for f in faults if f in FAULT_REGISTRY
-    ) else 1.0
+    factor = (
+        config.derate_factor
+        if any(
+            FAULT_REGISTRY[f].severity == FaultSeverity.DERATE
+            for f in faults
+            if f in FAULT_REGISTRY
+        )
+        else 1.0
+    )
     return DeratingFactors(
         speed=factor,
         motor_current=factor,

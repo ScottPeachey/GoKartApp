@@ -140,6 +140,17 @@ def cmd_sim_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dashboard(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from gokart.dashboard.app import create_app
+
+    app = create_app()
+    print(f"Dashboard: http://{args.host}:{args.port}/")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gokart", description="Go-kart configuration tools")
     parser.add_argument("--actor", default="cli", help="Actor name for audit log entries")
@@ -188,6 +199,11 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--initial-speed", type=float, default=0.0, help="Initial speed in m/s")
     run.add_argument("--out", help="CSV output path")
     run.set_defaults(func=cmd_sim_run)
+
+    dashboard = sub.add_parser("dashboard", help="Launch the virtual dashboard")
+    dashboard.add_argument("--host", default="127.0.0.1", help="Bind host")
+    dashboard.add_argument("--port", type=int, default=8000, help="Bind port")
+    dashboard.set_defaults(func=cmd_dashboard)
 
     return parser
 

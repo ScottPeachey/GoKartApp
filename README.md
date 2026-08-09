@@ -39,5 +39,6 @@ Read in this order:
 - [x] Phase 1 — data model, validation, seed configs
 - [x] Phase 2 — physics engine and simulation loop
 - [x] Phase 3 — safety state machine, fault injection, mode/profile switching
-- [ ] Phases 4–5 — MVP (dashboard, telemetry, analysis)
+- [x] Phase 4 — telemetry storage and virtual dashboard
+- [ ] Phase 5 — analysis and virtual tuning
 - [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL

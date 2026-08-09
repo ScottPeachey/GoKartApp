@@ -41,10 +41,7 @@ def _advance_to_driving(config: SafetyConfig | None = None) -> tuple[SafetyState
     )
     steps = [
         SafetyInputs(power_on_request=True),
-        *[
-            SafetyInputs()
-            for _ in range(int(config.self_test_duration_s / 0.01) + 2)
-        ],
+        *[SafetyInputs() for _ in range(int(config.self_test_duration_s / 0.01) + 2)],
         SafetyInputs(arm_request=True, brake_pressed=True, driver_authenticated=True),
         *[
             SafetyInputs(throttle=0.0, brake_pressed=True)

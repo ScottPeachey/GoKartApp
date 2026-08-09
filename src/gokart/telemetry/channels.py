@@ -1,14 +1,18 @@
-"""Simulation telemetry channel definitions."""
+"""Canonical telemetry channel schema — single source of truth."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any, Literal
+
+ChannelType = Literal["float", "string"]
 
 
 @dataclass(frozen=True)
 class TelemetryChannel:
     name: str
     unit: str
+    channel_type: ChannelType = "float"
 
 
 TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
@@ -30,11 +34,40 @@ TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
     TelemetryChannel("battery_temp_c", "C"),
     TelemetryChannel("traction_limited", "1"),
     TelemetryChannel("filtered_throttle", "1"),
-    TelemetryChannel("safety_state", "1"),
-    TelemetryChannel("contactor_command", "1"),
+    TelemetryChannel("drive_mode", "1", channel_type="string"),
+    TelemetryChannel("safety_state", "1", channel_type="string"),
+    TelemetryChannel("contactor_command", "1", channel_type="string"),
     TelemetryChannel("torque_permitted", "1"),
-    TelemetryChannel("active_faults", "1"),
+    TelemetryChannel("active_faults", "1", channel_type="string"),
     TelemetryChannel("derating_factor", "1"),
 )
 
 CHANNEL_NAMES: tuple[str, ...] = tuple(channel.name for channel in TELEMETRY_CHANNELS)
+STRING_CHANNELS: frozenset[str] = frozenset(
+    channel.name for channel in TELEMETRY_CHANNELS if channel.channel_type == "string"
+)
+
+
+def channel_schema() -> list[dict[str, str]]:
+    return [
+        {"name": channel.name, "unit": channel.unit, "type": channel.channel_type}
+        for channel in TELEMETRY_CHANNELS
+    ]
+
+
+def validate_sample_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Return a row containing only known channels with correct types."""
+    validated: dict[str, Any] = {}
+    for channel in TELEMETRY_CHANNELS:
+        if channel.name not in row:
+            continue
+        value = row[channel.name]
+        if channel.channel_type == "string":
+            validated[channel.name] = str(value)
+        else:
+            validated[channel.name] = float(value)
+    return validated
+
+
+def sample_to_json(row: dict[str, Any]) -> dict[str, Any]:
+    return validate_sample_row(row)

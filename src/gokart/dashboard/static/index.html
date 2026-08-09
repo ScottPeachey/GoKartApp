@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Go-Kart Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Electric Go-Kart</h1>
+    <div id="fault-banner" class="fault-banner hidden"></div>
+  </header>
+
+  <main>
+    <section class="drive-panel">
+      <div class="speed-readout">
+        <span id="speed-value">0</span>
+        <span class="unit">km/h</span>
+      </div>
+      <div class="status-grid">
+        <div><span class="label">Mode</span><span id="drive-mode">—</span></div>
+        <div><span class="label">Safety</span><span id="safety-state">OFF</span></div>
+        <div><span class="label">Power</span><span id="power-kw">0.0 kW</span></div>
+        <div><span class="label">SOC</span>
+          <div class="soc-bar"><div id="soc-fill"></div></div>
+          <span id="soc-text">—</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <h2>Simulation</h2>
+      <div class="row">
+        <label>Vehicle <select id="vehicle-select"></select></label>
+        <label>Scenario <select id="scenario-select"></select></label>
+      </div>
+      <div class="row">
+        <button id="btn-start">Start</button>
+        <button id="btn-stop">Stop</button>
+        <button id="btn-arm">Arm</button>
+        <button id="btn-ack">Ack Fault</button>
+        <label><input type="checkbox" id="manual-mode" /> Manual throttle/brake</label>
+      </div>
+      <div class="row sliders">
+        <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
+        <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
+      </div>
+    </section>
+
+    <section class="tabs">
+      <button class="tab active" data-tab="live">Live Channels</button>
+      <button class="tab" data-tab="history">Session History</button>
+    </section>
+
+    <section id="tab-live" class="tab-panel">
+      <table id="channels-table">
+        <thead><tr><th>Channel</th><th>Value</th><th>Unit</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="tab-history" class="tab-panel hidden">
+      <div class="row">
+        <button id="btn-refresh-sessions">Refresh</button>
+        <select id="session-select"></select>
+      </div>
+      <canvas id="history-chart" width="900" height="240"></canvas>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
