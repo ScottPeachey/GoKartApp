@@ -38,5 +38,6 @@ Read in this order:
 - [x] Phase 0 — scaffolding
 - [x] Phase 1 — data model, validation, seed configs
 - [x] Phase 2 — physics engine and simulation loop
-- [ ] Phases 3–5 — MVP (safety, dashboard, telemetry, analysis)
+- [x] Phase 3 — safety state machine, fault injection, mode/profile switching
+- [ ] Phases 4–5 — MVP (dashboard, telemetry, analysis)
 - [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL

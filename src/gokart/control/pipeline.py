@@ -1,4 +1,4 @@
-"""Control pipeline types and permissive safety stub for Phase 2."""
+"""Control pipeline types and step function."""
 
 from __future__ import annotations
 
@@ -6,14 +6,16 @@ from dataclasses import dataclass
 
 from gokart.config.schemas.modes import DriveMode
 from gokart.limits.resolver import EffectiveLimits
+from gokart.safety.state_machine import SafetyOutputs
 
-
-@dataclass(frozen=True)
-class SafetyOutputs:
-    """Permissive stub until Phase 3 safety state machine."""
-
-    torque_permitted: bool = True
-    regen_permitted: bool = True
+__all__ = [
+    "ControlInputs",
+    "ControlOutputs",
+    "ControlParams",
+    "ControlState",
+    "SafetyOutputs",
+    "control_step",
+]
 
 
 @dataclass(frozen=True)

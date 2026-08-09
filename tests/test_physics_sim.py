@@ -13,10 +13,9 @@ from gokart.control.pipeline import (
     ControlInputs,
     ControlParams,
     ControlState,
-    SafetyOutputs,
     control_step,
 )
-from gokart.limits.resolver import EffectiveLimits
+from gokart.limits.resolver import DeratingFactors, EffectiveLimits
 from gokart.physics.aero import aero_drag_force_n, rolling_resistance_force_n
 from gokart.physics.battery import BatteryInputs, BatteryParams, BatteryState, step_battery
 from gokart.physics.drivetrain import DrivetrainParams, motor_rpm_from_speed, speed_from_motor_rpm
@@ -26,6 +25,7 @@ from gokart.physics.motor import (
 )
 from gokart.physics.tyres import max_traction_force_n
 from gokart.physics.vehicle import Environment, VehicleModel, VehicleStepInputs
+from gokart.safety.state_machine import SafetyOutputs
 from gokart.sim.engine import run_simulation
 from gokart.sim.scenarios import Scenario, standing_start_30s
 from gokart.units import kmh_to_mps, mps_to_kmh
@@ -202,7 +202,19 @@ def test_traction_limiter_caps_force_on_low_mu() -> None:
                 gradient_rad=0.0,
             ),
             limits,
-            SafetyOutputs(),
+            SafetyOutputs(
+                torque_permitted=True,
+                regen_permitted=True,
+                contactor_command=__import__(
+                    "gokart.safety.types", fromlist=["ContactorCommand"]
+                ).ContactorCommand.CLOSE,
+                derating=DeratingFactors(),
+                active_faults=(),
+                display_message_code=0,
+                safety_state=__import__(
+                    "gokart.safety.types", fromlist=["SafetyState"]
+                ).SafetyState.DRIVING,
+            ),
             state,
             params,
             dt=0.01,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from gokart.physics.vehicle import Environment
 
@@ -16,6 +17,18 @@ class DriverInputPoint:
     brake: float = 0.0
 
 
+@dataclass(frozen=True)
+class ModeChangePoint:
+    time_s: float
+    mode_name: str
+
+
+@dataclass(frozen=True)
+class ProfileChangePoint:
+    time_s: float
+    profile_name: str
+
+
 @dataclass
 class Scenario:
     name: str
@@ -24,6 +37,10 @@ class Scenario:
     profile_name: str = "Owner"
     environment: Environment = field(default_factory=Environment)
     inputs: list[DriverInputPoint] = field(default_factory=list)
+    injections: list[dict[str, Any]] | None = None
+    auto_boot: bool = True
+    mode_changes: list[ModeChangePoint] = field(default_factory=list)
+    profile_changes: list[ProfileChangePoint] = field(default_factory=list)
 
     def driver_inputs_at(self, time_s: float) -> tuple[float, float]:
         if not self.inputs:
@@ -35,6 +52,24 @@ class Scenario:
             else:
                 break
         return active.throttle, active.brake
+
+    def mode_at(self, time_s: float) -> str | None:
+        active: str | None = None
+        for point in self.mode_changes:
+            if point.time_s <= time_s:
+                active = point.mode_name
+            else:
+                break
+        return active
+
+    def profile_at(self, time_s: float) -> str | None:
+        active: str | None = None
+        for point in self.profile_changes:
+            if point.time_s <= time_s:
+                active = point.profile_name
+            else:
+                break
+        return active
 
 
 def standing_start_30s() -> Scenario:
@@ -92,12 +127,34 @@ def coast_down() -> Scenario:
     )
 
 
+def battery_overtemp_shutdown() -> Scenario:
+    return Scenario(
+        name="battery_overtemp_shutdown",
+        duration_s=12.0,
+        mode_name="Default",
+        profile_name="Owner",
+        inputs=[DriverInputPoint(time_s=0.0, throttle=1.0, brake=0.0)],
+        injections=[
+            {
+                "time_s": 4.0,
+                "ramp": {
+                    "field": "battery_temp_c",
+                    "duration_s": 3.0,
+                    "from": 25.0,
+                    "to": 65.0,
+                },
+            },
+        ],
+    )
+
+
 BUILTIN_SCENARIOS: dict[str, Scenario] = {
     "standing_start_30s": standing_start_30s(),
     "hill_climb": hill_climb(),
     "constant_speed_cruise": constant_speed_cruise(),
     "duty_cycle_range": duty_cycle_range(),
     "coast_down": coast_down(),
+    "battery_overtemp_shutdown": battery_overtemp_shutdown(),
 }
 
 
@@ -120,6 +177,14 @@ def load_scenario(name_or_path: str) -> Scenario:
         )
         for point in data.get("inputs", [])
     ]
+    mode_changes = [
+        ModeChangePoint(time_s=point["time_s"], mode_name=point["mode"])
+        for point in data.get("mode_changes", [])
+    ]
+    profile_changes = [
+        ProfileChangePoint(time_s=point["time_s"], profile_name=point["profile"])
+        for point in data.get("profile_changes", [])
+    ]
     return Scenario(
         name=data.get("name", path.stem),
         duration_s=float(data["duration_s"]),
@@ -127,4 +192,8 @@ def load_scenario(name_or_path: str) -> Scenario:
         profile_name=data.get("profile", "Owner"),
         environment=environment,
         inputs=inputs,
+        injections=data.get("injections"),
+        auto_boot=data.get("auto_boot", True),
+        mode_changes=mode_changes,
+        profile_changes=profile_changes,
     )
