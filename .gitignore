@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+
+# Runtime output
+telemetry/
+*.sqlite
+*.sqlite-journal
+
+# PlatformIO / firmware
+firmware/esp32/.pio/
+firmware/core_c/build/
+
+# OS / editor
+.DS_Store
