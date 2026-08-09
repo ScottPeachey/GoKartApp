@@ -36,5 +36,6 @@ Read in this order:
 - [x] Architecture (`docs/ARCHITECTURE.md`)
 - [x] Implementation plan (`docs/IMPLEMENTATION_PLAN.md`)
 - [x] Phase 0 — scaffolding
-- [ ] Phases 1–5 — MVP (simulation, safety, dashboard, telemetry, analysis)
+- [x] Phase 1 — data model, validation, seed configs
+- [ ] Phases 2–5 — MVP (simulation, safety, dashboard, telemetry, analysis)
 - [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL

@@ -1,0 +1,31 @@
+{
+  "brake_type": "disc",
+  "component_type": "brake",
+  "datasheet_path": null,
+  "date_added": null,
+  "disc_diameter_m": null,
+  "front_distribution": 0.6,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": null,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": null,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "v1_hydraulic_disc",
+  "manufacturer": "Generic",
+  "max_brake_torque_nm": 400.0,
+  "max_regen_fraction": 0.3,
+  "model": "Hydraulic disc",
+  "notes": null,
+  "part_number": null,
+  "price": null,
+  "source": null
+}

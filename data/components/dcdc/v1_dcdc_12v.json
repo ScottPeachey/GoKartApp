@@ -1,0 +1,31 @@
+{
+  "component_type": "dcdc",
+  "datasheet_path": null,
+  "date_added": null,
+  "efficiency": 0.9,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": null,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": null,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "v1_dcdc_12v",
+  "input_max_voltage_v": 72.0,
+  "input_min_voltage_v": 36.0,
+  "manufacturer": "Generic",
+  "max_output_power_w": 120.0,
+  "model": "48-60V to 12V 10A",
+  "notes": null,
+  "output_voltage_v": 12.0,
+  "part_number": null,
+  "price": null,
+  "source": null
+}

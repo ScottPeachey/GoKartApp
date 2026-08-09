@@ -1,0 +1,58 @@
+{
+  "capacity_ah": 40.0,
+  "chemistry": "lifepo4",
+  "component_type": "battery",
+  "continuous_discharge_current_a": 80.0,
+  "datasheet_path": null,
+  "date_added": "2026-01-01",
+  "energy_wh": 2048.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": 150.0,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": 7500.0,
+    "max_regen_current_a": 40.0,
+    "max_speed_mps": null,
+    "max_temp_c": 60.0,
+    "max_voltage_v": 58.4,
+    "min_voltage_v": 40.0
+  },
+  "id": "v1_pack_48v_40ah",
+  "internal_resistance_ohm": 0.015,
+  "manufacturer": "Generic",
+  "max_cell_temp_c": 60.0,
+  "max_charge_current_a": 40.0,
+  "max_regen_current_a": 40.0,
+  "max_voltage_v": 58.4,
+  "min_cell_temp_c": -10.0,
+  "min_voltage_v": 40.0,
+  "model": "LiFePO4 48V 40Ah",
+  "nominal_voltage_v": 51.2,
+  "notes": null,
+  "ocv_curve": [
+    {
+      "soc": 0.0,
+      "value": 40.0
+    },
+    {
+      "soc": 0.5,
+      "value": 51.2
+    },
+    {
+      "soc": 1.0,
+      "value": 58.4
+    }
+  ],
+  "parallel_cells": 1,
+  "part_number": null,
+  "peak_discharge_current_a": 150.0,
+  "price": null,
+  "resistance_curve": [],
+  "series_cells": 16,
+  "source": null,
+  "thermal_capacity_j_per_k": null,
+  "thermal_resistance_k_per_w": null
+}

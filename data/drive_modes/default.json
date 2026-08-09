@@ -1,0 +1,18 @@
+{
+  "limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": null,
+    "max_regen_current_a": null,
+    "max_speed_mps": 8.333333333333334
+  },
+  "name": "Default",
+  "regen_strength": 0.5,
+  "throttle_curve": "progressive",
+  "throttle_ramp_per_s": 2.0,
+  "traction_limiter": "moderate"
+}

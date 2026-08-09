@@ -1,0 +1,74 @@
+{
+  "battery": {
+    "component_id": "v2_pack_72v_50ah",
+    "content_hash": "e31ccf0b9f597257e9869a4ba41a696823f99a3f66dfd4b757a1b4794dff0c14"
+  },
+  "battery_mass_kg": 28.0,
+  "bms": {
+    "component_id": "v2_bms_180a",
+    "content_hash": "e9b5511fa3cadf7f1450bcb9d5f27e7c00dc8b3d6c4d9105e610b07d98df1696"
+  },
+  "brake": {
+    "component_id": "v1_hydraulic_disc",
+    "content_hash": "84380667c046360f8527ee1e38efacf3d4431e4e682e96a7b6c114e1d9ceb184"
+  },
+  "cg_height_m": 0.28,
+  "cg_longitudinal_m": 0.52,
+  "contactor": {
+    "component_id": "v1_contactor_200a",
+    "content_hash": "a0b6b0fd29998f67514980910a87b862c949c98f52053132431a1edb16a55f97"
+  },
+  "dcdc": {
+    "component_id": "v1_dcdc_12v",
+    "content_hash": "b546871807a64dab4057157f1da50bbf123eec16eef9d4cdaf3240941befe628"
+  },
+  "drag_coefficient": 0.85,
+  "driver_mass_kg": 80.0,
+  "drivetrain": {
+    "axle_efficiency": 0.98,
+    "axle_sprocket_teeth": 56,
+    "chain_efficiency": 0.97,
+    "motor_sprocket_teeth": 14
+  },
+  "dry_mass_kg": 85.0,
+  "front_track_m": 0.9,
+  "front_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "f7f3efdee416c2e20d60d9503ece43987440d37df889ae4e2ee4851e2bfd44c5"
+  },
+  "frontal_area_m2": 0.65,
+  "limits": {
+    "max_accel_mps2": 10.0,
+    "max_battery_current_a": 180.0,
+    "max_decel_mps2": 12.0,
+    "max_gradient_rad": 0.25,
+    "max_motor_current_a": 180.0,
+    "max_motor_rpm": 7000.0,
+    "max_power_w": 10000.0,
+    "max_regen_current_a": 50.0,
+    "max_speed_mps": 16.666666666666668
+  },
+  "max_vehicle_mass_kg": 220.0,
+  "motor": {
+    "component_id": "v2_motor_10kw",
+    "content_hash": "fcd6952b54e7e5e3f8c48fcf6b277fc844f2135aeb6aee8a8550e08b9c68e67d"
+  },
+  "motor_controller": {
+    "component_id": "v2_vesc_180a",
+    "content_hash": "4d1d609c2f7996f4f9b15981687914d3e1b64731329a0cdf8243070c00ee888e"
+  },
+  "name": "Scott Kart V2",
+  "rear_track_m": 0.95,
+  "rear_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "f7f3efdee416c2e20d60d9503ece43987440d37df889ae4e2ee4851e2bfd44c5"
+  },
+  "rolling_resistance_coefficient": 0.015,
+  "version": "V2.0",
+  "wheel": {
+    "component_id": "v1_wheel_10in",
+    "content_hash": "a2777c1925ed757e3ad21cba1c61b728d6fd375ca68c6668b2510bd18a62595b"
+  },
+  "wheel_radius_m": 0.127,
+  "wheelbase_m": 1.04
+}
