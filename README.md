@@ -35,6 +35,6 @@ Read in this order:
 - [x] Requirements specification (v1.1)
 - [x] Architecture (`docs/ARCHITECTURE.md`)
 - [x] Implementation plan (`docs/IMPLEMENTATION_PLAN.md`)
-- [ ] Phase 0 — scaffolding
+- [x] Phase 0 — scaffolding
 - [ ] Phases 1–5 — MVP (simulation, safety, dashboard, telemetry, analysis)
 - [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL
