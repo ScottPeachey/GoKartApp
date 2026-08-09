@@ -22,6 +22,9 @@ from gokart.config.store import (
     save_component,
 )
 from gokart.config.validation import validate_vehicle_config
+from gokart.sim.engine import run_simulation, write_csv
+from gokart.sim.scenarios import BUILTIN_SCENARIOS, load_scenario
+from gokart.units import mps_to_kmh
 
 
 def _print_violations(violations: list) -> None:
@@ -117,6 +120,26 @@ def cmd_component_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sim_run(args: argparse.Namespace) -> int:
+    scenario = load_scenario(args.scenario)
+    result = run_simulation(
+        args.vehicle,
+        args.version,
+        scenario,
+        speedup=args.speedup,
+        initial_speed_mps=args.initial_speed,
+    )
+    if args.out:
+        write_csv(Path(args.out), result.records)
+        print(f"Wrote {len(result.records)} samples to {args.out}")
+    max_speed = max(record.values["speed_mps"] for record in result.records)
+    print(
+        f"Simulation complete: max speed {mps_to_kmh(max_speed):.1f} km/h, "
+        f"final SOC {result.final_state.battery.soc:.3f}"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gokart", description="Go-kart configuration tools")
     parser.add_argument("--actor", default="cli", help="Actor name for audit log entries")
@@ -151,6 +174,21 @@ def build_parser() -> argparse.ArgumentParser:
     exp.add_argument("--out", help="Output file path")
     exp.set_defaults(func=cmd_component_export)
 
+    sim = sub.add_parser("sim", help="Simulation commands")
+    sim_sub = sim.add_subparsers(dest="sim_command", required=True)
+
+    run = sim_sub.add_parser("run", help="Run a simulation scenario")
+    run.add_argument("vehicle", help="Vehicle name")
+    run.add_argument("version", help="Vehicle version")
+    run.add_argument(
+        "scenario",
+        help=f"Built-in scenario name or JSON path ({', '.join(sorted(BUILTIN_SCENARIOS))})",
+    )
+    run.add_argument("--speedup", type=float, default=0.0, help="Real-time pacing factor (0=fast)")
+    run.add_argument("--initial-speed", type=float, default=0.0, help="Initial speed in m/s")
+    run.add_argument("--out", help="CSV output path")
+    run.set_defaults(func=cmd_sim_run)
+
     return parser
 
 
@@ -159,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except ConfigStoreError as exc:
+    except (ConfigStoreError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 

@@ -8,7 +8,7 @@
     "max_motor_rpm": null,
     "max_power_w": null,
     "max_regen_current_a": null,
-    "max_speed_mps": 16.666666666666668
+    "max_speed_mps": null
   },
   "name": "Owner",
   "pin_hash": null

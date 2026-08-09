@@ -37,5 +37,6 @@ Read in this order:
 - [x] Implementation plan (`docs/IMPLEMENTATION_PLAN.md`)
 - [x] Phase 0 — scaffolding
 - [x] Phase 1 — data model, validation, seed configs
-- [ ] Phases 2–5 — MVP (simulation, safety, dashboard, telemetry, analysis)
+- [x] Phase 2 — physics engine and simulation loop
+- [ ] Phases 3–5 — MVP (safety, dashboard, telemetry, analysis)
 - [ ] Phases 6–9 — firmware, drivers, real telemetry, HIL

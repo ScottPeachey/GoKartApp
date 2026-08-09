@@ -403,7 +403,7 @@ def build_profiles() -> list[DriverProfile]:
     return [
         DriverProfile(
             name="Owner",
-            limits=LimitLayer(max_speed_mps=kmh_to_mps(60.0)),
+            limits=LimitLayer(),
         ),
         DriverProfile(
             name="Junior",
