@@ -224,7 +224,21 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   }
 
   .telemetry-split.layout-split #tab-live .channels-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .telemetry-split.layout-split #tab-live .channel-card {
+    min-height: 100px;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .telemetry-split.layout-split #tab-live .channel-card-value {
+    font-size: 1.25rem;
+  }
+
+  .telemetry-split.layout-split #tab-live .channel-card-icon {
+    font-size: 1.1rem;
   }
 
   .tabs.split-telemetry-active .tab[data-tab="live"],
