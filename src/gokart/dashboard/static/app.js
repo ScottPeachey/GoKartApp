@@ -304,8 +304,24 @@ function setBrakeHold(active) {
     btn.textContent = active ? "Brake hold: ON" : "Brake hold: OFF";
   }
   const slider = document.getElementById("brake");
-  if (active) slider.value = "100";
-  else if (slider.value === "100") slider.value = "0";
+  if (active) {
+    slider.value = "100";
+  } else if (slider.value === "100") {
+    slider.value = "0";
+  }
+  void sendInputs();
+}
+
+function onBrakeSliderInput() {
+  const slider = document.getElementById("brake");
+  if (state.brakeHold && Number(slider.value) < 95) {
+    state.brakeHold = false;
+    const btn = document.getElementById("btn-brake-hold");
+    if (btn) {
+      btn.classList.remove("active");
+      btn.textContent = "Brake hold: OFF";
+    }
+  }
   void sendInputs();
 }
 
@@ -356,7 +372,8 @@ function updateFreeDriveGuide(safetyState) {
       setStep("arm");
       break;
     case "ARMED":
-      hint.innerHTML = "Precharge complete. <strong>Release the brake</strong> (toggle brake hold or lower the slider), then use throttle.";
+      hint.innerHTML =
+        "Precharge complete. <strong>Lower the brake slider to zero</strong> (or turn off brake hold), then <strong>add throttle</strong> to enter DRIVING.";
       armBtn.disabled = true;
       driving.classList.remove("locked");
       setStep("drive");
@@ -476,9 +493,10 @@ function setupControls() {
     drawSessionChart(event.target.value);
   });
 
-  for (const id of ["throttle", "brake", "steering"]) {
+  for (const id of ["throttle", "steering"]) {
     document.getElementById(id).addEventListener("input", sendInputs);
   }
+  document.getElementById("brake").addEventListener("input", onBrakeSliderInput);
   updateSimModeUi();
 }
 
