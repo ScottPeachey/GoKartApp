@@ -27,6 +27,7 @@ from gokart.physics.tyres import max_traction_force_n
 from gokart.physics.vehicle import Environment, VehicleModel, VehicleStepInputs
 from gokart.safety.state_machine import SafetyOutputs
 from gokart.sim.engine import run_simulation
+from gokart.sim.runtime import RuntimeControls
 from gokart.sim.scenarios import Scenario, standing_start_30s
 from gokart.units import kmh_to_mps, mps_to_kmh
 
@@ -280,3 +281,84 @@ def test_vehicle_step_kinematic_motor_rpm() -> None:
     )
     expected_rpm = motor_rpm_from_speed(model.drivetrain_params, 8.0)
     assert out.motor_rpm == pytest.approx(expected_rpm, rel=1e-6)
+
+
+def test_manual_mode_coast_then_reaccelerates() -> None:
+    root = Path(__file__).resolve().parents[1]
+    controls = RuntimeControls(manual=True)
+    scenario = Scenario(name="manual", duration_s=1e9, auto_boot=True)
+    driving_seen = False
+    speed_after_coast = 0.0
+
+    def on_tick(tick) -> None:
+        nonlocal driving_seen, speed_after_coast
+        t = tick.time_s
+        if t < 3.0:
+            controls.throttle = 0.8
+            controls.brake = 0.0
+        elif t < 5.0:
+            controls.throttle = 0.0
+            controls.brake = 0.0
+        elif t < 5.5:
+            speed_after_coast = tick.values["speed_mps"]
+            controls.throttle = 0.0
+            controls.brake = 0.0
+        elif t < 10.0:
+            controls.throttle = 0.8
+            controls.brake = 0.0
+        else:
+            controls.stop_requested = True
+
+        if tick.values["safety_state"] == "DRIVING":
+            driving_seen = True
+        if driving_seen and t >= 3.0:
+            assert tick.values["safety_state"] == "DRIVING"
+            assert tick.values["torque_permitted"] == 1.0
+
+    result = run_simulation(
+        "Scott Kart V1",
+        "V1.0",
+        scenario,
+        data_root_path=root / "data",
+        controls=controls,
+        on_tick=on_tick,
+    )
+    max_speed_after_reaccel = max(
+        r.values["speed_mps"] for r in result.records if r.time_s >= 5.5
+    )
+    assert driving_seen
+    assert max_speed_after_reaccel > speed_after_coast + 0.5
+
+
+def test_manual_mode_brake_does_not_disarm() -> None:
+    root = Path(__file__).resolve().parents[1]
+    controls = RuntimeControls(manual=True)
+    scenario = Scenario(name="manual", duration_s=1e9, auto_boot=True)
+    driving_seen = False
+
+    def on_tick(tick) -> None:
+        nonlocal driving_seen
+        t = tick.time_s
+        if t < 3.0:
+            controls.throttle = 0.8
+            controls.brake = 0.0
+        elif t < 6.0:
+            controls.throttle = 0.0
+            controls.brake = 0.15
+        else:
+            controls.stop_requested = True
+
+        if tick.values["safety_state"] == "DRIVING":
+            driving_seen = True
+        if driving_seen and t >= 3.0:
+            assert tick.values["safety_state"] == "DRIVING"
+
+    run_simulation(
+        "Scott Kart V1",
+        "V1.0",
+        scenario,
+        data_root_path=root / "data",
+        controls=controls,
+        on_tick=on_tick,
+    )
+    assert driving_seen

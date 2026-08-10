@@ -3,6 +3,7 @@ const state = {
   lastSample: {},
   ws: null,
   vehicles: [],
+  inputPollTimer: null,
 };
 
 async function api(path, options = {}) {
@@ -176,6 +177,22 @@ async function sendInputs() {
   });
 }
 
+function startManualInputPolling() {
+  stopManualInputPolling();
+  if (!document.getElementById("manual-mode").checked) return;
+  void sendInputs();
+  state.inputPollTimer = setInterval(() => {
+    void sendInputs();
+  }, 100);
+}
+
+function stopManualInputPolling() {
+  if (state.inputPollTimer !== null) {
+    clearInterval(state.inputPollTimer);
+    state.inputPollTimer = null;
+  }
+}
+
 function setupTabs() {
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
@@ -196,18 +213,23 @@ function setupTabs() {
 function setupControls() {
   document.getElementById("btn-start").addEventListener("click", async () => {
     const vehicle = selectedVehicle();
+    const manual = document.getElementById("manual-mode").checked;
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
         ...vehicle,
         scenario: document.getElementById("scenario-select").value,
-        manual: document.getElementById("manual-mode").checked,
+        manual,
         speedup: 5.0,
       }),
     });
+    if (manual) startManualInputPolling();
   });
 
-  document.getElementById("btn-stop").addEventListener("click", () => api("/api/sim/stop", { method: "POST" }));
+  document.getElementById("btn-stop").addEventListener("click", async () => {
+    stopManualInputPolling();
+    await api("/api/sim/stop", { method: "POST" });
+  });
   document.getElementById("btn-arm").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
   document.getElementById("btn-ack").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
   document.getElementById("btn-refresh-sessions").addEventListener("click", refreshSessions);

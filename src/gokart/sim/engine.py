@@ -6,9 +6,8 @@ import csv
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from gokart.analysis.overlays import CalibrationOverlay, apply_overlay
 from gokart.config.schemas.modes import DriveMode, DriverProfile
 from gokart.config.schemas.vehicle import VehicleConfig
 from gokart.config.store import data_root, load_component, load_drive_mode, load_driver_profile
@@ -30,7 +29,7 @@ from gokart.physics.vehicle import (
 )
 from gokart.safety.faults import DetectionState, SafetyConfig, SensorInputs, detect_faults
 from gokart.safety.state_machine import SafetyInputs, SafetyTimers, safety_step
-from gokart.safety.types import ContactorCommand, SafetyState
+from gokart.safety.types import ContactorCommand, FaultId, SafetyState
 from gokart.sim.clock import SimClock
 from gokart.sim.fault_injection import FaultInjector
 from gokart.sim.runtime import RuntimeControls
@@ -39,6 +38,9 @@ from gokart.telemetry.channels import CHANNEL_NAMES
 from gokart.telemetry.recorder import SessionRecorder
 
 DEFAULT_DT_S = 0.01
+
+if TYPE_CHECKING:
+    from gokart.analysis.overlays import CalibrationOverlay
 
 
 @dataclass
@@ -186,9 +188,14 @@ def run_simulation(
     else:
         vehicle_model = load_validated_vehicle_model(vehicle_name, vehicle_version, data_root=root)
     if overlay is not None:
+        from gokart.analysis.overlays import apply_overlay
+
         apply_overlay(vehicle_model, overlay)
     mode = load_drive_mode(scenario.mode_name, root=root)
     profile = load_driver_profile(scenario.profile_name, root=root)
+    manual_mode = bool(controls and controls.manual)
+    if manual_mode:
+        mode = mode.model_copy(update={"throttle_ramp_per_s": None})
 
     validation = validate_vehicle_config(
         vehicle_model.config,
@@ -251,20 +258,18 @@ def run_simulation(
         if controls and controls.stop_requested:
             break
         time_s = step * dt_s
-        if controls and controls.manual:
-            throttle = controls.throttle
-            brake = controls.brake
+        if manual_mode:
+            throttle = controls.throttle  # type: ignore[union-attr]
+            brake = controls.brake  # type: ignore[union-attr]
         else:
             throttle, brake = scenario.driver_inputs_at(time_s)
         env = scenario.environment
 
         power_on = scenario.auto_boot and safety_state == SafetyState.OFF and step == 0
         arm_request = bool(controls and controls.arm_request)
-        brake_pressed = brake > 0.1
         synthetic_brake_hold = False
         if scenario.auto_boot and safety_state == SafetyState.READY and not auto_arm_sent:
             arm_request = True
-            brake_pressed = True
             synthetic_brake_hold = True
             auto_arm_sent = True
         precharging = (
@@ -272,8 +277,14 @@ def run_simulation(
             and safety_timers.precharge_elapsed_s < safety_config.precharge_timeout_s
         )
         if precharging:
-            brake_pressed = True
             synthetic_brake_hold = True
+
+        if synthetic_brake_hold:
+            safety_brake_pressed = True
+        elif manual_mode:
+            safety_brake_pressed = False
+        else:
+            safety_brake_pressed = brake > 0.1
 
         detect_throttle = 0.0 if synthetic_brake_hold else throttle
         detect_brake = 1.0 if synthetic_brake_hold else brake
@@ -301,6 +312,9 @@ def run_simulation(
             detection_state.previous_throttle_adc = sensors.throttle_adc
 
         detected = detect_faults(sensors, safety_config, detection_state=detection_state)
+        if manual_mode:
+            detected.discard(FaultId.THROTTLE_BRAKE_SIMULTANEOUS)
+            detected.discard(FaultId.THROTTLE_IMPLAUSIBLE)
         detection_state.previous_throttle_adc = sensors.throttle_adc
         prev_synthetic_brake_hold = synthetic_brake_hold
 
@@ -312,7 +326,7 @@ def run_simulation(
                 disarm_request=False,
                 fault_ack_request=bool(controls and controls.fault_ack_request),
                 driver_authenticated=True,
-                brake_pressed=brake_pressed,
+                brake_pressed=safety_brake_pressed,
                 throttle=detect_throttle if synthetic_brake_hold else throttle,
                 detected_faults=detected,
                 precharge_feedback_ok=sensors.precharge_feedback_ok,
