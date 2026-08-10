@@ -12,7 +12,53 @@ const state = {
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
+  channelStableValues: {},
 };
+
+const CHANNEL_DISPLAY = {
+  time_s: { decimals: 2, deadband: 0.02 },
+  speed_mps: { decimals: 2, deadband: 0.05 },
+  acceleration_mps2: { decimals: 2, deadband: 0.05 },
+  throttle: { decimals: 2, deadband: 0.02 },
+  brake: { decimals: 2, deadband: 0.02 },
+  steering: { decimals: 2, deadband: 0.02 },
+  steering_angle_deg: { decimals: 1, deadband: 0.5 },
+  heading_deg: { decimals: 1, deadband: 0.5 },
+  position_m: { decimals: 2, deadband: 0.05 },
+  position_x_m: { decimals: 2, deadband: 0.05 },
+  position_y_m: { decimals: 2, deadband: 0.05 },
+  motor_rpm: { decimals: 0, deadband: 10 },
+  motor_torque_nm: { decimals: 1, deadband: 0.2 },
+  motor_current_a: { decimals: 1, deadband: 0.2 },
+  battery_current_a: { decimals: 1, deadband: 0.2 },
+  pack_voltage_v: { decimals: 2, deadband: 0.1 },
+  soc: { decimals: 1, deadband: 0.005 },
+  power_w: { decimals: 0, deadband: 10 },
+  traction_force_n: { decimals: 0, deadband: 5 },
+  motor_temp_c: { decimals: 1, deadband: 0.3 },
+  battery_temp_c: { decimals: 1, deadband: 0.3 },
+  traction_limited: { decimals: 0, deadband: 0.5 },
+  filtered_throttle: { decimals: 2, deadband: 0.02 },
+  torque_permitted: { decimals: 0, deadband: 0.5 },
+  derating_factor: { decimals: 2, deadband: 0.02 },
+};
+
+function channelDisplayRule(name) {
+  if (CHANNEL_DISPLAY[name]) return CHANNEL_DISPLAY[name];
+  return { decimals: 2, deadband: 0.05 };
+}
+
+function stabilizeChannelValue(name, value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return value;
+  const rule = channelDisplayRule(name);
+  const last = state.channelStableValues[name];
+  if (last !== undefined && Math.abs(num - last) < rule.deadband) {
+    return last;
+  }
+  state.channelStableValues[name] = num;
+  return num;
+}
 
 const FAULT_HELP = {
   THROTTLE_BRAKE_SIMULTANEOUS: "Throttle and brake were pressed together — release one pedal.",
@@ -117,6 +163,7 @@ function resetDriveUi() {
   safetyCard.classList.add("safety-off");
   document.getElementById("fault-banner").classList.add("hidden");
   document.getElementById("fault-recovery-panel")?.classList.add("hidden");
+  state.channelStableValues = {};
 }
 
 async function resetSession() {
@@ -149,12 +196,14 @@ function ensureChannelsTable() {
   state.channelRowsBuilt = true;
 }
 
-function formatChannelValue(value, channelType = "float") {
+function formatChannelValue(value, channelType = "float", channelName = "") {
   if (value === null || value === undefined || value === "") return "";
   if (channelType === "string") return String(value);
   const num = Number(value);
   if (!Number.isFinite(num)) return String(value);
-  return num.toFixed(3);
+  const stable = stabilizeChannelValue(channelName, num);
+  const { decimals } = channelDisplayRule(channelName);
+  return Number(stable).toFixed(decimals);
 }
 
 function updateChannelsTable(sample) {
@@ -165,7 +214,11 @@ function updateChannelsTable(sample) {
   for (const row of document.querySelectorAll("#channels-table tbody tr")) {
     const name = row.dataset.channel;
     const cell = row.querySelector(".channel-value");
-    if (cell) cell.textContent = formatChannelValue(sample[name], typeByName[name]);
+    if (!cell) continue;
+    const text = formatChannelValue(sample[name], typeByName[name], name);
+    if (cell.textContent !== text) {
+      cell.textContent = text;
+    }
   }
 }
 
