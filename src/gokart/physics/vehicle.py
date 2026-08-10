@@ -25,6 +25,7 @@ from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_moto
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
 from gokart.physics.steering import step_steering, steering_angle_rad
 from gokart.physics.tyres import (
+    cornering_scrub_force_n,
     cornering_speed_limit_mps,
     lateral_force_from_steering_n,
     saturate_traction_friction_circle,
@@ -252,7 +253,15 @@ class VehicleModel:
             GRAVITY_MPS2,
         )
         f_grad = gradient_force_n(self.mass_kg, env.gradient_rad, GRAVITY_MPS2)
-        f_net = tyre_out.traction_force_n - f_aero - f_roll - f_grad - brake_out.mechanical_force_n
+        f_scrub = cornering_scrub_force_n(lateral_force, self.mass_kg, grip, env.gradient_rad)
+        f_net = (
+            tyre_out.traction_force_n
+            - f_aero
+            - f_roll
+            - f_grad
+            - f_scrub
+            - brake_out.mechanical_force_n
+        )
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
 
         new_speed = max(0.0, state.speed_mps + accel * dt)

@@ -84,6 +84,23 @@ def cornering_speed_limit_mps(
     return math.sqrt(max_lat * wheelbase_m / math.tan(abs(steer_rad)))
 
 
+def cornering_scrub_force_n(
+    lateral_force_n: float,
+    mass_kg: float,
+    grip_coefficient: float,
+    gradient_rad: float = 0.0,
+    *,
+    scrub_gain: float = 0.4,
+) -> float:
+    """Longitudinal drag from cornering load — makes steering bleed speed even when coasting."""
+    normal = normal_load_n(mass_kg, gradient_rad)
+    max_total = normal * grip_coefficient
+    if max_total <= 0.0:
+        return 0.0
+    lat_ratio = min(abs(lateral_force_n) / max_total, 1.5)
+    return scrub_gain * lat_ratio * lat_ratio * normal
+
+
 def saturate_traction_friction_circle(
     requested_force_n: float,
     lateral_force_n: float,

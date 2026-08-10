@@ -3,6 +3,7 @@ const state = {
   lastSample: {},
   ws: null,
   vehicles: [],
+  inputPollTimer: null,
   brakeHold: false,
   simRunning: false,
   historyPollTimer: null,
@@ -516,8 +517,12 @@ function updateFreeDriveGuide(safetyState) {
 }
 
 function startManualInputPolling() {
+  stopManualInputPolling();
   if (!interactiveInputsEnabled()) return;
   void sendInputs();
+  state.inputPollTimer = setInterval(() => {
+    void sendInputs();
+  }, 100);
 }
 
 function updateSimModeUi() {
@@ -541,7 +546,10 @@ function updateSimModeUi() {
 }
 
 function stopManualInputPolling() {
-  // Inputs are sent on slider change; nothing to stop.
+  if (state.inputPollTimer !== null) {
+    clearInterval(state.inputPollTimer);
+    state.inputPollTimer = null;
+  }
 }
 
 function setupTabs() {

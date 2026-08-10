@@ -411,7 +411,42 @@ def test_cornering_reduces_speed_vs_straight() -> None:
     straight_peak = run_with_steering(0.0)
     turning_peak = run_with_steering(1.0)
     assert straight_peak > 5.0
-    assert turning_peak < straight_peak * 0.85
+    assert turning_peak < straight_peak * 0.75
+
+
+def test_steering_scrub_slows_coasting_vehicle() -> None:
+    from gokart.physics.vehicle import Environment, VehicleModel, VehicleState, VehicleStepInputs
+    from gokart.config.store import load_vehicle
+
+    root = Path(__file__).resolve().parents[1]
+    vehicle = load_vehicle("Scott Kart V1", "V1.0", root=root / "data")
+    model = VehicleModel.from_config(vehicle, data_root=root / "data")
+    state = VehicleState(speed_mps=8.0)
+    env = Environment()
+
+    _, straight = model.step(
+        state,
+        VehicleStepInputs(
+            motor_torque_request_nm=0.0,
+            regen_torque_request_nm=0.0,
+            mechanical_brake=0.0,
+            environment=env,
+            steering=0.0,
+        ),
+        0.01,
+    )
+    _, turning = model.step(
+        state,
+        VehicleStepInputs(
+            motor_torque_request_nm=0.0,
+            regen_torque_request_nm=0.0,
+            mechanical_brake=0.0,
+            environment=env,
+            steering=1.0,
+        ),
+        0.01,
+    )
+    assert turning.speed_mps < straight.speed_mps
 
 
 def test_manual_mode_brake_does_not_disarm() -> None:
