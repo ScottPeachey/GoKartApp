@@ -149,12 +149,23 @@ function ensureChannelsTable() {
   state.channelRowsBuilt = true;
 }
 
+function formatChannelValue(value, channelType = "float") {
+  if (value === null || value === undefined || value === "") return "";
+  if (channelType === "string") return String(value);
+  const num = Number(value);
+  if (!Number.isFinite(num)) return String(value);
+  return num.toFixed(3);
+}
+
 function updateChannelsTable(sample) {
   ensureChannelsTable();
+  const typeByName = Object.fromEntries(
+    state.channels.map((channel) => [channel.name, channel.type || "float"]),
+  );
   for (const row of document.querySelectorAll("#channels-table tbody tr")) {
     const name = row.dataset.channel;
     const cell = row.querySelector(".channel-value");
-    if (cell) cell.textContent = sample[name] ?? "";
+    if (cell) cell.textContent = formatChannelValue(sample[name], typeByName[name]);
   }
 }
 
