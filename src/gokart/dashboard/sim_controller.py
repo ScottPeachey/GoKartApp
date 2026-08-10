@@ -41,6 +41,8 @@ class SimController:
         vehicle_name: str,
         vehicle_version: str,
         scenario_name: str,
+        drive_mode: str = "default",
+        driver_profile: str = "owner",
         manual: bool = False,
         free_mode: bool = False,
         speedup: float = 1.0,
@@ -58,6 +60,8 @@ class SimController:
                     "vehicle_name": vehicle_name,
                     "vehicle_version": vehicle_version,
                     "scenario_name": scenario_name,
+                    "drive_mode": drive_mode,
+                    "driver_profile": driver_profile,
                     "speedup": speedup,
                     "manual": manual,
                     "free_mode": free_mode,
@@ -105,18 +109,22 @@ class SimController:
         vehicle_name: str,
         vehicle_version: str,
         scenario_name: str,
+        drive_mode: str,
+        driver_profile: str,
         speedup: float,
         manual: bool,
         free_mode: bool,
     ) -> None:
         try:
+            base = load_scenario(scenario_name)
+            mode_name = drive_mode or base.mode_name
+            profile_name = driver_profile or base.profile_name
             if free_mode:
-                base = load_scenario(scenario_name)
                 scenario = Scenario(
                     name="free_drive",
                     duration_s=1e9,
-                    mode_name=base.mode_name,
-                    profile_name=base.profile_name,
+                    mode_name=mode_name,
+                    profile_name=profile_name,
                     auto_boot=False,
                 )
                 self.controls.free_mode = True
@@ -125,13 +133,24 @@ class SimController:
                 scenario = Scenario(
                     name="manual",
                     duration_s=1e9,
-                    mode_name=load_scenario(scenario_name).mode_name,
-                    profile_name=load_scenario(scenario_name).profile_name,
+                    mode_name=mode_name,
+                    profile_name=profile_name,
                     auto_boot=True,
                 )
                 self.controls.manual = True
             else:
-                scenario = load_scenario(scenario_name)
+                scenario = Scenario(
+                    name=base.name,
+                    duration_s=base.duration_s,
+                    mode_name=mode_name,
+                    profile_name=profile_name,
+                    environment=base.environment,
+                    inputs=base.inputs,
+                    injections=base.injections,
+                    auto_boot=base.auto_boot,
+                    mode_changes=base.mode_changes,
+                    profile_changes=base.profile_changes,
+                )
             vehicle = load_vehicle(vehicle_name, vehicle_version, root=data_root())
             mode = load_drive_mode(scenario.mode_name, root=data_root())
             profile = load_driver_profile(scenario.profile_name, root=data_root())

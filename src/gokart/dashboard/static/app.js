@@ -260,6 +260,7 @@ function connectWebSocket() {
 async function loadConfig() {
   state.channels = await api("/api/channels");
   await refreshVehicleLists();
+  await loadDriveSettingOptions();
   if (typeof window.refreshVehicleCatalog === "function") {
     await window.refreshVehicleCatalog();
   }
@@ -272,6 +273,82 @@ async function loadConfig() {
     option.value = scenario;
     option.textContent = scenario;
     scenarioSelect.appendChild(option);
+  }
+  await updateEffectiveLimits();
+}
+
+async function loadDriveSettingOptions() {
+  const modes = await api("/api/config/modes");
+  const profiles = await api("/api/config/profiles");
+  const modeSelect = document.getElementById("drive-mode-select");
+  const profileSelect = document.getElementById("driver-profile-select");
+  const previousMode = modeSelect.value;
+  const previousProfile = profileSelect.value;
+  modeSelect.innerHTML = "";
+  profileSelect.innerHTML = "";
+  for (const mode of modes) {
+    const option = document.createElement("option");
+    option.value = mode;
+    option.textContent = mode;
+    modeSelect.appendChild(option);
+  }
+  for (const profile of profiles) {
+    const option = document.createElement("option");
+    option.value = profile;
+    option.textContent = profile;
+    profileSelect.appendChild(option);
+  }
+  if (previousMode && [...modeSelect.options].some((o) => o.value === previousMode)) {
+    modeSelect.value = previousMode;
+  } else if ([...modeSelect.options].some((o) => o.value === "default")) {
+    modeSelect.value = "default";
+  }
+  if (previousProfile && [...profileSelect.options].some((o) => o.value === previousProfile)) {
+    profileSelect.value = previousProfile;
+  } else if ([...profileSelect.options].some((o) => o.value === "owner")) {
+    profileSelect.value = "owner";
+  }
+  if (typeof window.refreshDriveSettingsNames === "function") {
+    window.refreshDriveSettingsNames();
+  }
+}
+
+function selectedDriveSettings() {
+  return {
+    drive_mode: document.getElementById("drive-mode-select").value,
+    driver_profile: document.getElementById("driver-profile-select").value,
+  };
+}
+
+async function updateEffectiveLimits() {
+  const el = document.getElementById("effective-limits");
+  if (!el) return;
+  const vehicle = selectedVehicle();
+  const { drive_mode: mode, driver_profile: profile } = selectedDriveSettings();
+  if (!vehicle.vehicle_name || !vehicle.vehicle_version || !mode || !profile) {
+    el.textContent = "Effective max speed: —";
+    return;
+  }
+  try {
+    const params = new URLSearchParams({
+      vehicle_name: vehicle.vehicle_name,
+      vehicle_version: vehicle.vehicle_version,
+      mode,
+      profile,
+    });
+    const limits = await api(`/api/config/effective-limits?${params}`);
+    const layerLabel = {
+      hardware: "hardware",
+      vehicle: "vehicle",
+      mode: limits.layers.mode.name,
+      profile: limits.layers.profile.name,
+    }[limits.binding_layer] || limits.binding_layer;
+    const binding = limits.binding_layer
+      ? ` (limited by ${layerLabel})`
+      : "";
+    el.textContent = `Effective max speed: ${limits.max_speed_kmh.toFixed(1)} km/h${binding}`;
+  } catch (_error) {
+    el.textContent = "Effective max speed: —";
   }
 }
 
@@ -706,14 +783,25 @@ function setupTabs() {
 
 function setupControls() {
   document.getElementById("sim-mode").addEventListener("change", updateSimModeUi);
+  document.getElementById("vehicle-select").addEventListener("change", () => {
+    void updateEffectiveLimits();
+  });
+  document.getElementById("drive-mode-select").addEventListener("change", () => {
+    void updateEffectiveLimits();
+  });
+  document.getElementById("driver-profile-select").addEventListener("change", () => {
+    void updateEffectiveLimits();
+  });
 
   document.getElementById("btn-start").addEventListener("click", async () => {
     const vehicle = selectedVehicle();
     const mode = simMode();
+    const driveSettings = selectedDriveSettings();
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
         ...vehicle,
+        ...driveSettings,
         scenario: document.getElementById("scenario-select").value,
         manual: mode === "manual",
         free_mode: mode === "free",
@@ -791,3 +879,6 @@ async function init() {
 }
 
 init();
+
+window.loadDriveSettingOptions = loadDriveSettingOptions;
+window.updateEffectiveLimits = updateEffectiveLimits;

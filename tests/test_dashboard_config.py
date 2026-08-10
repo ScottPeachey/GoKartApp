@@ -118,3 +118,33 @@ def test_save_vehicle_version(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.json()["version"] == "V1.1"
+
+
+def test_effective_limits_endpoint(client: TestClient) -> None:
+    response = client.get(
+        "/api/config/effective-limits",
+        params={
+            "vehicle_name": "Scott Kart V1",
+            "vehicle_version": "V1.0",
+            "mode": "chill",
+            "profile": "owner",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["max_speed_kmh"] == pytest.approx(20.0, abs=0.2)
+    assert payload["binding_layer"] == "mode"
+
+
+def test_drive_mode_detail_and_save(client: TestClient) -> None:
+    detail = client.get("/api/config/modes/chill")
+    assert detail.status_code == 200
+    data = detail.json()
+    data["limits"]["max_speed_mps"] = 6.944444444444445
+    save = client.post(
+        "/api/config/modes/save",
+        json={"data": data, "allow_overwrite": True},
+    )
+    assert save.status_code == 200
+    updated = client.get("/api/config/modes/chill").json()
+    assert updated["limits"]["max_speed_mps"] == pytest.approx(6.944444444444445)

@@ -54,6 +54,11 @@
         </label>
         <label id="scenario-label">Scenario <select id="scenario-select"></select></label>
       </div>
+      <div class="row">
+        <label>Drive mode <select id="drive-mode-select"></select></label>
+        <label>Driver profile <select id="driver-profile-select"></select></label>
+      </div>
+      <p id="effective-limits" class="config-hint">Effective max speed: —</p>
       <div id="free-drive-panel" class="free-drive-panel hidden">
         <ol class="free-steps" id="free-steps">
           <li data-step="session" class="free-step">① Start session</li>
@@ -173,6 +178,33 @@
         </div>
       </div>
       <div class="config-components-panel">
+        <h3>Drive modes &amp; driver profiles</h3>
+        <p class="config-hint">
+          Speed and power caps are the <strong>minimum</strong> across vehicle, drive mode, and driver profile.
+          Set <code>limits.max_speed_mps</code> in JSON (m/s; 5.56 ≈ 20 km/h, 12.5 ≈ 45 km/h).
+        </p>
+        <div class="row config-component-toolbar">
+          <label>Type
+            <select id="drive-settings-type">
+              <option value="mode">Drive mode</option>
+              <option value="profile">Driver profile</option>
+            </select>
+          </label>
+          <label>Name
+            <select id="drive-settings-name"></select>
+          </label>
+          <button id="btn-drive-settings-load" type="button">Load</button>
+          <label class="config-overwrite-label">
+            <input id="drive-settings-allow-overwrite" type="checkbox" checked />
+            Allow overwrite
+          </label>
+          <button id="btn-drive-settings-save" type="button">Save</button>
+        </div>
+        <p id="drive-settings-status" class="config-status hidden"></p>
+        <textarea id="drive-settings-editor" class="component-json-editor" spellcheck="false"
+          placeholder="Load a drive mode or driver profile to edit JSON here…"></textarea>
+      </div>
+      <div class="config-components-panel">
         <h3>Component library</h3>
         <p class="config-hint">
           Load a component to edit its JSON, or create a new one from a template. Save writes to the component library.
@@ -199,7 +231,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=17"></script>
-  <script src="/static/config.js?v=6"></script>
+  <script src="/static/app.js?v=18"></script>
+  <script src="/static/config.js?v=7"></script>
 </body>
 </html>

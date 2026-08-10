@@ -328,6 +328,71 @@ async function saveConfigEditor() {
   }
 }
 
+function setDriveSettingsStatus(message, isError = false) {
+  const el = document.getElementById("drive-settings-status");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove("hidden", "error", "success");
+  el.classList.add(isError ? "error" : "success");
+}
+
+async function refreshDriveSettingsNames() {
+  const type = document.getElementById("drive-settings-type")?.value || "mode";
+  const select = document.getElementById("drive-settings-name");
+  if (!select) return;
+  const previous = select.value;
+  const names = await api(type === "profile" ? "/api/config/profiles" : "/api/config/modes");
+  select.innerHTML = "";
+  for (const name of names) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  }
+  if (previous && [...select.options].some((o) => o.value === previous)) {
+    select.value = previous;
+  }
+}
+
+async function loadDriveSettingsEditor() {
+  const type = document.getElementById("drive-settings-type").value;
+  const name = document.getElementById("drive-settings-name").value;
+  if (!name) return;
+  const path = type === "profile" ? `/api/config/profiles/${name}` : `/api/config/modes/${name}`;
+  const data = await api(path);
+  document.getElementById("drive-settings-editor").value = JSON.stringify(data, null, 2);
+  setDriveSettingsStatus(`Loaded ${type} "${name}".`);
+}
+
+async function saveDriveSettingsEditor() {
+  const type = document.getElementById("drive-settings-type").value;
+  const editor = document.getElementById("drive-settings-editor");
+  const allowOverwrite = document.getElementById("drive-settings-allow-overwrite").checked;
+  let data;
+  try {
+    data = JSON.parse(editor.value);
+  } catch (_error) {
+    setDriveSettingsStatus("Invalid JSON in editor.", true);
+    return;
+  }
+  const path = type === "profile" ? "/api/config/profiles/save" : "/api/config/modes/save";
+  try {
+    const result = await api(path, {
+      method: "POST",
+      body: JSON.stringify({ data, allow_overwrite: allowOverwrite }),
+    });
+    setDriveSettingsStatus(`Saved ${type} "${result.name}".`);
+    if (typeof window.loadDriveSettingOptions === "function") {
+      await window.loadDriveSettingOptions();
+    }
+    if (typeof window.updateEffectiveLimits === "function") {
+      await window.updateEffectiveLimits();
+    }
+  } catch (error) {
+    setDriveSettingsStatus(error.message, true);
+  }
+}
+
 function setupConfigEditor() {
   document.getElementById("btn-config-save").addEventListener("click", saveConfigEditor);
   document.getElementById("btn-config-reload").addEventListener("click", () => {
@@ -349,8 +414,19 @@ function setupConfigEditor() {
   document.getElementById("component-type-select")?.addEventListener("change", () => {
     void refreshComponentIdSelect();
   });
+  document.getElementById("drive-settings-type")?.addEventListener("change", () => {
+    void refreshDriveSettingsNames();
+  });
+  document.getElementById("btn-drive-settings-load")?.addEventListener("click", () => {
+    void loadDriveSettingsEditor();
+  });
+  document.getElementById("btn-drive-settings-save")?.addEventListener("click", () => {
+    void saveDriveSettingsEditor();
+  });
   void loadComponentTypeSelect();
+  void refreshDriveSettingsNames();
 }
 
 window.loadConfigEditor = loadConfigEditor;
+window.refreshDriveSettingsNames = refreshDriveSettingsNames;
 setupConfigEditor();

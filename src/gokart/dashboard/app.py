@@ -24,7 +24,18 @@ from gokart.config.editor import (
     save_component_record,
     save_vehicle_as_new_version,
 )
-from gokart.config.store import data_root, list_drive_modes, list_driver_profiles, list_vehicles
+from gokart.config.schemas.modes import DriveMode, DriverProfile
+from gokart.config.store import (
+    data_root,
+    list_drive_modes,
+    list_driver_profiles,
+    list_vehicles,
+    load_drive_mode,
+    load_driver_profile,
+    save_drive_mode,
+    save_driver_profile,
+)
+from gokart.dashboard.limits import compute_effective_limits
 from gokart.dashboard.sim_controller import SimController
 from gokart.sim.scenarios import BUILTIN_SCENARIOS
 from gokart.telemetry.bus import TelemetryBus
@@ -39,9 +50,16 @@ class SimStartRequest(BaseModel):
     vehicle_name: str
     vehicle_version: str
     scenario: str = "standing_start_30s"
+    drive_mode: str = "default"
+    driver_profile: str = "owner"
     manual: bool = False
     free_mode: bool = False
     speedup: float = Field(default=1.0, ge=0.0)
+
+
+class SaveDriveSettingRequest(BaseModel):
+    data: dict[str, Any]
+    allow_overwrite: bool = True
 
 
 class SimInputsRequest(BaseModel):
@@ -110,9 +128,63 @@ def create_app(
     def api_modes() -> list[str]:
         return [path.stem for path in list_drive_modes(root=data_root())]
 
+    @app.get("/api/config/modes/{name}")
+    def api_mode_detail(name: str) -> dict[str, Any]:
+        try:
+            return load_drive_mode(name, root=data_root()).model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/config/modes/save")
+    def api_save_mode(request: SaveDriveSettingRequest) -> dict[str, Any]:
+        if sim_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop the simulation before saving drive mode changes.",
+            )
+        mode = DriveMode.model_validate(request.data)
+        save_drive_mode(mode, root=data_root(), allow_overwrite=request.allow_overwrite)
+        return {"status": "saved", "name": mode.name}
+
     @app.get("/api/config/profiles")
     def api_profiles() -> list[str]:
         return [path.stem for path in list_driver_profiles(root=data_root())]
+
+    @app.get("/api/config/profiles/{name}")
+    def api_profile_detail(name: str) -> dict[str, Any]:
+        try:
+            return load_driver_profile(name, root=data_root()).model_dump(mode="json")
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/config/profiles/save")
+    def api_save_profile(request: SaveDriveSettingRequest) -> dict[str, Any]:
+        if sim_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop the simulation before saving driver profile changes.",
+            )
+        profile = DriverProfile.model_validate(request.data)
+        save_driver_profile(profile, root=data_root(), allow_overwrite=request.allow_overwrite)
+        return {"status": "saved", "name": profile.name}
+
+    @app.get("/api/config/effective-limits")
+    def api_effective_limits(
+        vehicle_name: str,
+        vehicle_version: str,
+        mode: str,
+        profile: str,
+    ) -> dict[str, Any]:
+        try:
+            return compute_effective_limits(
+                vehicle_name=vehicle_name,
+                vehicle_version=vehicle_version,
+                mode_name=mode,
+                profile_name=profile,
+                root=data_root(),
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     @app.get("/api/config/scenarios")
     def api_scenarios() -> list[str]:
@@ -273,6 +345,8 @@ def create_app(
                 vehicle_name=request.vehicle_name,
                 vehicle_version=request.vehicle_version,
                 scenario_name=request.scenario,
+                drive_mode=request.drive_mode,
+                driver_profile=request.driver_profile,
                 manual=request.manual,
                 free_mode=request.free_mode,
                 speedup=request.speedup,
