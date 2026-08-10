@@ -156,6 +156,27 @@ def test_recoverable_fault_requires_ack() -> None:
     assert state == SafetyState.READY
 
 
+def test_recover_from_safe_shutdown_after_critical_clears() -> None:
+    config = SafetyConfig()
+    state = SafetyState.SAFE_SHUTDOWN
+    timers = SafetyTimers(shutdown_elapsed_s=0.1)
+    latched = {FaultId.PACK_OVERVOLTAGE}
+    state, outputs, timers, latched = safety_step(
+        state,
+        SafetyInputs(
+            detected_faults=set(),
+            fault_ack_request=True,
+            power_cycle_event=True,
+        ),
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    assert state == SafetyState.OFF
+    assert not latched
+
+
 def test_latched_critical_persists_until_power_cycle() -> None:
     config = SafetyConfig()
     state = SafetyState.DRIVING

@@ -69,9 +69,11 @@ const FAULT_HELP = {
   SENSOR_DISAGREEMENT: "Sensor readings disagree.",
   PRECHARGE_TIMEOUT: "Precharge did not complete in time — try arming again with brake held.",
   CONTACTOR_WELDED: "Contactor welded — critical fault; use New session.",
-  OVERVOLTAGE: "Pack voltage too high.",
-  UNDERVOLTAGE: "Pack voltage too low.",
-  OVERTEMP: "Motor or battery overtemperature.",
+  PACK_OVERVOLTAGE:
+    "Pack voltage too high — release brake, wait a moment, then click Clear fault to power-cycle and recover.",
+  PACK_UNDERVOLTAGE: "Pack voltage too low — stop driving and click Clear fault after the pack recovers.",
+  CELL_OVERVOLTAGE: "Cell voltage too high — release brake/regen, wait, then click Clear fault.",
+  CELL_UNDERVOLTAGE: "Cell voltage too low — stop driving and click Clear fault after recovery.",
 };
 
 function describeFaults(faultCodes) {
@@ -573,9 +575,16 @@ function updateFreeDriveGuide(safetyState) {
         recovery.classList.remove("hidden");
         recoveryText.textContent = describeFaults(faults);
       }
+      const isCritical = String(faults).includes("PACK_") || String(faults).includes("CELL_")
+        || String(faults).includes("BATTERY_OVERTEMP") || String(faults).includes("CONTACTOR")
+        || String(faults).includes("PRECHARGE");
       hint.innerHTML = safetyState === "SAFE_SHUTDOWN"
-        ? "<strong>Critical fault</strong> — system shut down. Click <strong>New session</strong> to start over."
-        : "Fault active — follow the steps below, then click <strong>Clear fault</strong>.";
+        ? isCritical
+          ? "<strong>Critical fault</strong> — release brake if you were regen-braking, wait for voltage to settle, then click <strong>Clear fault</strong>."
+          : "<strong>System shut down</strong> — click <strong>Clear fault</strong> to recover, or use <strong>New session</strong>."
+        : isCritical
+          ? "Critical fault — fix the cause (see below), wait a moment, then click <strong>Clear fault</strong>."
+          : "Fault active — click <strong>Clear fault</strong> to return to READY.";
       armBtn.disabled = true;
       driving.classList.add("locked");
       break;

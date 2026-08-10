@@ -67,7 +67,7 @@
           <p id="fault-recovery-text" class="fault-recovery-text"></p>
           <ol class="fault-recovery-steps">
             <li>Fix the cause (release both pedals if needed, wait for readings to settle).</li>
-            <li>Click <strong>Clear fault</strong> — this acknowledges the fault and returns safety to <strong>READY</strong>.</li>
+            <li>Click <strong>Clear fault</strong> — for critical faults this power-cycles the system; you may need to wait for pack voltage to drop first.</li>
             <li>Click <strong>Arm with brake</strong> and drive again.</li>
           </ol>
           <p class="config-hint">Or use <strong>New session</strong> to reset everything without refreshing the page.</p>
@@ -199,7 +199,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=15"></script>
+  <script src="/static/app.js?v=16"></script>
   <script src="/static/config.js?v=6"></script>
 </body>
 </html>

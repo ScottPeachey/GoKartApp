@@ -365,9 +365,16 @@ def safety_step(
 
     if state == SafetyState.SAFE_SHUTDOWN:
         timers.shutdown_elapsed_s += dt
-        contactor = ContactorCommand.OPEN
-        if timers.shutdown_elapsed_s >= 0.5:
+        if (
+            inputs.power_cycle_event
+            and inputs.fault_ack_request
+            and not _critical_faults(inputs.detected_faults)
+        ):
             state = SafetyState.OFF
+            timers.shutdown_elapsed_s = 0.0
+        elif timers.shutdown_elapsed_s >= 0.5:
+            state = SafetyState.OFF
+        contactor = ContactorCommand.OPEN
         return (
             state,
             _outputs_for_state(

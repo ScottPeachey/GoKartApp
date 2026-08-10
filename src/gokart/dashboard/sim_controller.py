@@ -86,6 +86,8 @@ class SimController:
 
     def acknowledge_fault(self) -> None:
         self.controls.fault_ack_request = True
+        self.controls.power_cycle_request = True
+        self.controls.power_on_request = True
 
     def reset(self) -> None:
         """Stop any running simulation and clear dashboard session state."""
@@ -158,6 +160,7 @@ class SimController:
                 if safety != "DRIVING":
                     self.controls.disarm_request = False
                 self.controls.fault_ack_request = False
+                self.controls.power_cycle_request = False
 
             result = run_simulation(
                 vehicle_name,

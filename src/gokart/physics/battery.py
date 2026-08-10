@@ -104,7 +104,15 @@ def step_battery(
         params.resistance_curve,
         params.internal_resistance_ohm,
     )
-    pack_voltage = max(params.min_voltage_v, ocv - current * resistance)
+    if current < 0.0 and resistance > 0.0:
+        headroom_v = params.max_voltage_v - ocv
+        if headroom_v <= 0.0:
+            current = 0.0
+        else:
+            max_charge_a = headroom_v / resistance
+            current = max(current, -min(abs(current), max_charge_a))
+
+    pack_voltage = max(params.min_voltage_v, min(params.max_voltage_v, ocv - current * resistance))
 
     soc_delta = -(current * dt) / params.capacity_as
     new_soc = max(0.0, min(1.0, state.soc + soc_delta))

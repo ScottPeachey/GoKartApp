@@ -16,4 +16,5 @@ class RuntimeControls:
     power_on_request: bool = False
     disarm_request: bool = False
     fault_ack_request: bool = False
+    power_cycle_request: bool = False
     stop_requested: bool = False

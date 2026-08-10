@@ -93,6 +93,37 @@ def test_battery_sags_and_soc_decreases() -> None:
     assert state.soc < 0.8
 
 
+def test_regen_voltage_capped_at_full_soc() -> None:
+    battery = BatteryPack(
+        id="test_pack",
+        model="test",
+        manufacturer="test",
+        chemistry="lifepo4",
+        nominal_voltage_v=51.2,
+        max_voltage_v=58.4,
+        min_voltage_v=40.0,
+        series_cells=16,
+        parallel_cells=1,
+        capacity_ah=40.0,
+        energy_wh=1920.0,
+        internal_resistance_ohm=0.015,
+        continuous_discharge_current_a=80.0,
+        peak_discharge_current_a=150.0,
+        max_charge_current_a=40.0,
+        max_regen_current_a=40.0,
+        hardware_limits=HardwareLimits(),
+        ocv_curve=[
+            {"soc": 0.0, "value": 40.0},
+            {"soc": 1.0, "value": 58.4},
+        ],
+    )
+    params = BatteryParams.from_component(battery)
+    state = BatteryState(soc=1.0)
+    state, out = step_battery(state, BatteryInputs(current_a=-100.0), params, dt=0.01)
+    assert out.pack_voltage_v <= params.max_voltage_v + 1e-6
+    assert out.current_a >= -params.max_charge_current_a
+
+
 def test_coast_down_decelerates() -> None:
     root = Path(__file__).resolve().parents[1]
     scenario = Scenario(

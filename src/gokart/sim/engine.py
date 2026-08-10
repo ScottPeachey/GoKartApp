@@ -271,7 +271,7 @@ def run_simulation(
         env = scenario.environment
 
         power_on = False
-        if free_mode and controls.power_on_request:  # type: ignore[union-attr]
+        if controls and controls.power_on_request and manual_mode and safety_state == SafetyState.OFF:
             power_on = True
         elif scenario.auto_boot and safety_state == SafetyState.OFF and step == 0:
             power_on = True
@@ -297,6 +297,13 @@ def run_simulation(
             safety_brake_pressed = brake > 0.1
         else:
             safety_brake_pressed = brake > 0.1
+
+        power_cycle_event = bool(controls and controls.power_cycle_request)
+        fault_ack = bool(controls and controls.fault_ack_request)
+        if manual_mode and fault_ack:
+            power_cycle_event = True
+            if safety_state == SafetyState.OFF:
+                power_on = True
 
         detect_throttle = 0.0 if synthetic_brake_hold else throttle
         detect_brake = 1.0 if synthetic_brake_hold else brake
@@ -336,7 +343,8 @@ def run_simulation(
                 power_on_request=power_on,
                 arm_request=arm_request,
                 disarm_request=disarm_request,
-                fault_ack_request=bool(controls and controls.fault_ack_request),
+                fault_ack_request=fault_ack,
+                power_cycle_event=power_cycle_event,
                 driver_authenticated=True,
                 brake_pressed=safety_brake_pressed,
                 throttle=detect_throttle if synthetic_brake_hold else throttle,
