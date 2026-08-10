@@ -35,12 +35,14 @@ class SimStartRequest(BaseModel):
     vehicle_version: str
     scenario: str = "standing_start_30s"
     manual: bool = False
+    free_mode: bool = False
     speedup: float = Field(default=1.0, ge=0.0)
 
 
 class SimInputsRequest(BaseModel):
     throttle: float = Field(ge=0.0, le=1.0)
     brake: float = Field(ge=0.0, le=1.0)
+    steering: float = Field(default=0.0, ge=-1.0, le=1.0)
 
 
 def create_app(
@@ -196,6 +198,7 @@ def create_app(
                 vehicle_version=request.vehicle_version,
                 scenario_name=request.scenario,
                 manual=request.manual,
+                free_mode=request.free_mode,
                 speedup=request.speedup,
             )
         except RuntimeError as exc:
@@ -209,13 +212,27 @@ def create_app(
 
     @app.post("/api/sim/inputs")
     def api_sim_inputs(request: SimInputsRequest) -> dict[str, str]:
-        sim_controller.set_inputs(throttle=request.throttle, brake=request.brake)
+        sim_controller.set_inputs(
+            throttle=request.throttle,
+            brake=request.brake,
+            steering=request.steering,
+        )
         return {"status": "ok"}
 
     @app.post("/api/sim/arm")
     def api_sim_arm() -> dict[str, str]:
         sim_controller.arm()
         return {"status": "armed"}
+
+    @app.post("/api/sim/power-on")
+    def api_sim_power_on() -> dict[str, str]:
+        sim_controller.power_on()
+        return {"status": "power_on"}
+
+    @app.post("/api/sim/disarm")
+    def api_sim_disarm() -> dict[str, str]:
+        sim_controller.disarm()
+        return {"status": "disarmed"}
 
     @app.post("/api/sim/ack")
     def api_sim_ack() -> dict[str, str]:

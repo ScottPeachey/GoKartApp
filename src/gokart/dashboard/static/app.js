@@ -35,10 +35,23 @@ function updateDrivePanel(sample, speedKmh) {
   document.getElementById("safety-state").textContent = sample.safety_state || "OFF";
   const powerKw = (Number(sample.power_w || 0) / 1000).toFixed(1);
   document.getElementById("power-kw").textContent = `${powerKw} kW`;
+  const steerDeg = Number(sample.steering_angle_deg || 0);
+  const headingDeg = Number(sample.heading_deg || 0);
+  document.getElementById("steer-value").textContent = `${steerDeg.toFixed(0)}°`;
+  document.getElementById("heading-value").textContent = `${headingDeg.toFixed(0)}°`;
   const soc = Number(sample.soc || 0);
   document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
   document.getElementById("soc-fill").style.width = `${soc * 100}%`;
   setFaultBanner(sample);
+}
+
+function simMode() {
+  return document.getElementById("sim-mode").value;
+}
+
+function interactiveInputsEnabled() {
+  const mode = simMode();
+  return mode === "free" || mode === "manual";
 }
 
 function updateChannelsTable(sample) {
@@ -133,32 +146,72 @@ async function refreshSessions() {
   }
 }
 
-async function drawSessionChart(sessionId) {
-  const samples = await api(`/api/sessions/${sessionId}/samples?limit=5000`);
-  const canvas = document.getElementById("history-chart");
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!samples.length) return;
-
-  const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
-  const max = Math.max(...speeds, 1);
-  const width = canvas.width;
-  const height = canvas.height;
-
-  ctx.strokeStyle = "#3dd6c6";
+function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
+  const width = ctx.canvas.width;
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  speeds.forEach((speed, index) => {
+  values.forEach((value, index) => {
     const x = (index / Math.max(samples.length - 1, 1)) * width;
-    const y = height - (speed / max) * (height - 20) - 10;
+    const y = topPad + height - (value / maxValue) * height;
     if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
+}
+
+async function drawSessionChart(sessionId) {
+  const samples = await api(`/api/sessions/${sessionId}/samples?limit=5000`);
+  const canvas = document.getElementById("history-chart");
+  const pathCanvas = document.getElementById("history-path");
+  const ctx = canvas.getContext("2d");
+  const pathCtx = pathCanvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+  if (!samples.length) return;
+
+  const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
+  const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
+  const maxSpeed = Math.max(...speeds, 1);
+  const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
+  const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
+  const panelHeight = (canvas.height - 50) / 2;
+
+  plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
+  plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
 
   ctx.fillStyle = "#8aa0b8";
   ctx.font = "12px sans-serif";
-  ctx.fillText(`Top speed: ${max.toFixed(1)} km/h`, 10, 18);
+  ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
+  ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+
+  const xs = samples.map((s) => Number(s.position_x_m || 0));
+  const ys = samples.map((s) => Number(s.position_y_m || 0));
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 1);
+  const spanY = Math.max(maxY - minY, 1);
+  const margin = 20;
+  const plotW = pathCanvas.width - margin * 2;
+  const plotH = pathCanvas.height - margin * 2;
+
+  pathCtx.strokeStyle = "#3dd6c6";
+  pathCtx.lineWidth = 2;
+  pathCtx.beginPath();
+  xs.forEach((x, index) => {
+    const y = ys[index];
+    const px = margin + ((x - minX) / spanX) * plotW;
+    const py = margin + plotH - ((y - minY) / spanY) * plotH;
+    if (index === 0) pathCtx.moveTo(px, py);
+    else pathCtx.lineTo(px, py);
+  });
+  pathCtx.stroke();
+
+  pathCtx.fillStyle = "#8aa0b8";
+  pathCtx.font = "12px sans-serif";
+  pathCtx.fillText("Path trace (plan view)", 10, 16);
 }
 
 function selectedVehicle() {
@@ -167,23 +220,39 @@ function selectedVehicle() {
 }
 
 async function sendInputs() {
-  if (!document.getElementById("manual-mode").checked) return;
+  if (!interactiveInputsEnabled()) return;
   await api("/api/sim/inputs", {
     method: "POST",
     body: JSON.stringify({
       throttle: Number(document.getElementById("throttle").value) / 100,
       brake: Number(document.getElementById("brake").value) / 100,
+      steering: Number(document.getElementById("steering").value) / 100,
     }),
   });
 }
 
 function startManualInputPolling() {
   stopManualInputPolling();
-  if (!document.getElementById("manual-mode").checked) return;
+  if (!interactiveInputsEnabled()) return;
   void sendInputs();
   state.inputPollTimer = setInterval(() => {
     void sendInputs();
   }, 100);
+}
+
+function updateSimModeUi() {
+  const mode = simMode();
+  const free = mode === "free";
+  const manual = mode === "manual";
+  document.getElementById("scenario-label").classList.toggle("hidden", free);
+  document.getElementById("free-startup").classList.toggle("hidden", !free);
+  document.getElementById("steering-label").classList.toggle("hidden", !free);
+  document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
+  document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
+  document.getElementById("btn-arm").classList.toggle("hidden", !free);
+  document.getElementById("btn-ack").classList.toggle("hidden", !free);
+  document.getElementById("btn-disarm").classList.toggle("hidden", !free);
+  document.getElementById("btn-power-on").classList.toggle("hidden", !free);
 }
 
 function stopManualInputPolling() {
@@ -211,19 +280,22 @@ function setupTabs() {
 }
 
 function setupControls() {
+  document.getElementById("sim-mode").addEventListener("change", updateSimModeUi);
+
   document.getElementById("btn-start").addEventListener("click", async () => {
     const vehicle = selectedVehicle();
-    const manual = document.getElementById("manual-mode").checked;
+    const mode = simMode();
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
         ...vehicle,
         scenario: document.getElementById("scenario-select").value,
-        manual,
-        speedup: 5.0,
+        manual: mode === "manual",
+        free_mode: mode === "free",
+        speedup: mode === "free" ? 5.0 : 5.0,
       }),
     });
-    if (manual) startManualInputPolling();
+    if (interactiveInputsEnabled()) startManualInputPolling();
   });
 
   document.getElementById("btn-stop").addEventListener("click", async () => {
@@ -231,15 +303,20 @@ function setupControls() {
     await api("/api/sim/stop", { method: "POST" });
   });
   document.getElementById("btn-arm").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
+  document.getElementById("btn-arm-scenario").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
+  document.getElementById("btn-power-on").addEventListener("click", () => api("/api/sim/power-on", { method: "POST" }));
+  document.getElementById("btn-disarm").addEventListener("click", () => api("/api/sim/disarm", { method: "POST" }));
   document.getElementById("btn-ack").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
+  document.getElementById("btn-ack-scenario").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
   document.getElementById("btn-refresh-sessions").addEventListener("click", refreshSessions);
   document.getElementById("session-select").addEventListener("change", (event) => {
     drawSessionChart(event.target.value);
   });
 
-  for (const id of ["throttle", "brake"]) {
+  for (const id of ["throttle", "brake", "steering"]) {
     document.getElementById(id).addEventListener("input", sendInputs);
   }
+  updateSimModeUi();
 }
 
 async function init() {

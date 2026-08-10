@@ -22,6 +22,8 @@
         <div><span class="label">Mode</span><span id="drive-mode">—</span></div>
         <div><span class="label">Safety</span><span id="safety-state">OFF</span></div>
         <div><span class="label">Power</span><span id="power-kw">0.0 kW</span></div>
+        <div><span class="label">Steer</span><span id="steer-value">0°</span></div>
+        <div><span class="label">Heading</span><span id="heading-value">0°</span></div>
         <div><span class="label">SOC</span>
           <div class="soc-bar"><div id="soc-fill"></div></div>
           <span id="soc-text">—</span>
@@ -33,18 +35,36 @@
       <h2>Simulation</h2>
       <div class="row">
         <label>Vehicle <select id="vehicle-select"></select></label>
-        <label>Scenario <select id="scenario-select"></select></label>
+        <label>Mode
+          <select id="sim-mode">
+            <option value="scenario">Scenario</option>
+            <option value="free">Free drive</option>
+            <option value="manual">Manual throttle/brake</option>
+          </select>
+        </label>
+        <label id="scenario-label">Scenario <select id="scenario-select"></select></label>
+      </div>
+      <div id="free-startup" class="startup-panel hidden">
+        <p class="config-hint">Startup: Power On → hold brake + Arm → release brake and drive.</p>
+        <div class="row">
+          <button id="btn-power-on" type="button">Power On</button>
+          <button id="btn-arm" type="button">Arm</button>
+          <button id="btn-disarm" type="button">Disarm</button>
+          <button id="btn-ack" type="button">Ack Fault</button>
+        </div>
       </div>
       <div class="row">
         <button id="btn-start">Start</button>
         <button id="btn-stop">Stop</button>
-        <button id="btn-arm">Arm</button>
-        <button id="btn-ack">Ack Fault</button>
-        <label><input type="checkbox" id="manual-mode" /> Manual throttle/brake</label>
+        <button id="btn-arm-scenario" type="button">Arm</button>
+        <button id="btn-ack-scenario" type="button">Ack Fault</button>
       </div>
       <div class="row sliders">
         <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
         <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
+        <label id="steering-label" class="hidden">Steering
+          <input type="range" id="steering" min="-100" max="100" value="0" />
+        </label>
       </div>
     </section>
 
@@ -66,7 +86,8 @@
         <button id="btn-refresh-sessions">Refresh</button>
         <select id="session-select"></select>
       </div>
-      <canvas id="history-chart" width="900" height="240"></canvas>
+      <canvas id="history-chart" width="900" height="280"></canvas>
+      <canvas id="history-path" width="900" height="220"></canvas>
     </section>
 
     <section id="tab-config" class="tab-panel hidden">

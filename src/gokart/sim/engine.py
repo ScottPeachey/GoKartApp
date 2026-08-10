@@ -193,7 +193,8 @@ def run_simulation(
         apply_overlay(vehicle_model, overlay)
     mode = load_drive_mode(scenario.mode_name, root=root)
     profile = load_driver_profile(scenario.profile_name, root=root)
-    manual_mode = bool(controls and controls.manual)
+    manual_mode = bool(controls and (controls.manual or controls.free_mode))
+    free_mode = bool(controls and controls.free_mode)
     if manual_mode:
         mode = mode.model_copy(update={"throttle_ramp_per_s": None})
 
@@ -229,7 +230,7 @@ def run_simulation(
         clock.start()
 
     records: list[SimTickRecord] = []
-    if controls and controls.manual:
+    if controls and (controls.manual or controls.free_mode):
         steps = 10_000_000
     else:
         steps = int(scenario.duration_s / dt_s)
@@ -261,14 +262,21 @@ def run_simulation(
         if manual_mode:
             throttle = controls.throttle  # type: ignore[union-attr]
             brake = controls.brake  # type: ignore[union-attr]
+            steering = controls.steering  # type: ignore[union-attr]
         else:
             throttle, brake = scenario.driver_inputs_at(time_s)
+            steering = 0.0
         env = scenario.environment
 
-        power_on = scenario.auto_boot and safety_state == SafetyState.OFF and step == 0
+        power_on = False
+        if free_mode and controls.power_on_request:  # type: ignore[union-attr]
+            power_on = True
+        elif scenario.auto_boot and safety_state == SafetyState.OFF and step == 0:
+            power_on = True
         arm_request = bool(controls and controls.arm_request)
+        disarm_request = bool(controls and controls.disarm_request)
         synthetic_brake_hold = False
-        if scenario.auto_boot and safety_state == SafetyState.READY and not auto_arm_sent:
+        if scenario.auto_boot and not free_mode and safety_state == SafetyState.READY and not auto_arm_sent:
             arm_request = True
             synthetic_brake_hold = True
             auto_arm_sent = True
@@ -281,8 +289,10 @@ def run_simulation(
 
         if synthetic_brake_hold:
             safety_brake_pressed = True
-        elif manual_mode:
+        elif manual_mode and safety_state == SafetyState.DRIVING:
             safety_brake_pressed = False
+        elif manual_mode:
+            safety_brake_pressed = brake > 0.1
         else:
             safety_brake_pressed = brake > 0.1
 
@@ -323,7 +333,7 @@ def run_simulation(
             SafetyInputs(
                 power_on_request=power_on,
                 arm_request=arm_request,
-                disarm_request=False,
+                disarm_request=disarm_request,
                 fault_ack_request=bool(controls and controls.fault_ack_request),
                 driver_authenticated=True,
                 brake_pressed=safety_brake_pressed,
@@ -393,6 +403,7 @@ def run_simulation(
                 regen_torque_request_nm=control_out.regen_torque_request_nm,
                 mechanical_brake=control_out.mechanical_brake,
                 environment=env,
+                steering=steering,
             ),
             dt_s,
         )
@@ -405,6 +416,11 @@ def run_simulation(
                 "acceleration_mps2": physics_out.acceleration_mps2,
                 "throttle": throttle,
                 "brake": brake,
+                "steering": steering,
+                "steering_angle_deg": physics_out.steering_angle_deg,
+                "heading_deg": physics_out.heading_deg,
+                "position_x_m": physics_out.position_x_m,
+                "position_y_m": physics_out.position_y_m,
                 "motor_rpm": physics_out.motor_rpm,
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,

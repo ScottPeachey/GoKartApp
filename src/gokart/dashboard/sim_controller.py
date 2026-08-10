@@ -42,12 +42,13 @@ class SimController:
         vehicle_version: str,
         scenario_name: str,
         manual: bool = False,
+        free_mode: bool = False,
         speedup: float = 1.0,
     ) -> str:
         with self._lock:
             if self.status.running:
                 raise RuntimeError("Simulation already running")
-            self.controls = RuntimeControls(manual=manual)
+            self.controls = RuntimeControls(manual=manual, free_mode=free_mode)
             self.status = SimStatus(running=True)
             self._thread = threading.Thread(
                 target=self._run,
@@ -57,6 +58,7 @@ class SimController:
                     "scenario_name": scenario_name,
                     "speedup": speedup,
                     "manual": manual,
+                    "free_mode": free_mode,
                 },
                 daemon=True,
             )
@@ -66,12 +68,19 @@ class SimController:
     def stop(self) -> None:
         self.controls.stop_requested = True
 
-    def set_inputs(self, *, throttle: float, brake: float) -> None:
+    def set_inputs(self, *, throttle: float, brake: float, steering: float = 0.0) -> None:
         self.controls.throttle = max(0.0, min(1.0, throttle))
         self.controls.brake = max(0.0, min(1.0, brake))
+        self.controls.steering = max(-1.0, min(1.0, steering))
 
     def arm(self) -> None:
         self.controls.arm_request = True
+
+    def power_on(self) -> None:
+        self.controls.power_on_request = True
+
+    def disarm(self) -> None:
+        self.controls.disarm_request = True
 
     def acknowledge_fault(self) -> None:
         self.controls.fault_ack_request = True
@@ -84,9 +93,21 @@ class SimController:
         scenario_name: str,
         speedup: float,
         manual: bool,
+        free_mode: bool,
     ) -> None:
         try:
-            if manual:
+            if free_mode:
+                base = load_scenario(scenario_name)
+                scenario = Scenario(
+                    name="free_drive",
+                    duration_s=1e9,
+                    mode_name=base.mode_name,
+                    profile_name=base.profile_name,
+                    auto_boot=False,
+                )
+                self.controls.free_mode = True
+                self.controls.manual = True
+            elif manual:
                 scenario = Scenario(
                     name="manual",
                     duration_s=1e9,
@@ -118,6 +139,8 @@ class SimController:
             def on_tick(tick) -> None:
                 self.status.last_sample = tick.to_row()
                 self.controls.arm_request = False
+                self.controls.power_on_request = False
+                self.controls.disarm_request = False
                 self.controls.fault_ack_request = False
 
             result = run_simulation(

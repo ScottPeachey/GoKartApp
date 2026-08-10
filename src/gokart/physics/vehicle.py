@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from gokart.physics.drivetrain import (
 )
 from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_motor
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
+from gokart.physics.steering import step_steering
 from gokart.physics.tyres import saturate_traction_force
 
 
@@ -35,6 +37,9 @@ class Environment:
 @dataclass
 class VehicleState:
     position_m: float = 0.0
+    position_x_m: float = 0.0
+    position_y_m: float = 0.0
+    heading_rad: float = 0.0
     speed_mps: float = 0.0
     motor: MotorState | None = None
     battery: BatteryState | None = None
@@ -59,11 +64,16 @@ class VehicleStepInputs:
     regen_torque_request_nm: float
     mechanical_brake: float
     environment: Environment
+    steering: float = 0.0
 
 
 @dataclass(frozen=True)
 class VehicleStepOutputs:
     position_m: float
+    position_x_m: float
+    position_y_m: float
+    heading_deg: float
+    steering_angle_deg: float
     speed_mps: float
     acceleration_mps2: float
     motor_rpm: float
@@ -231,6 +241,16 @@ class VehicleModel:
         new_speed = max(0.0, state.speed_mps + accel * dt)
         new_position = state.position_m + new_speed * dt
 
+        steering_out = step_steering(
+            heading_rad=state.heading_rad,
+            position_x_m=state.position_x_m,
+            position_y_m=state.position_y_m,
+            speed_mps=new_speed,
+            steering_input=inputs.steering,
+            wheelbase_m=self.config.wheelbase_m,
+            dt=dt,
+        )
+
         if self.accessory_params:
             accessory = step_accessories(state.pack_voltage_v, self.accessory_params)
         else:
@@ -262,6 +282,9 @@ class VehicleModel:
 
         new_state = VehicleState(
             position_m=new_position,
+            position_x_m=steering_out.position_x_m,
+            position_y_m=steering_out.position_y_m,
+            heading_rad=steering_out.heading_rad,
             speed_mps=new_speed,
             motor=motor_state,
             battery=battery_state,
@@ -272,6 +295,10 @@ class VehicleModel:
 
         return new_state, VehicleStepOutputs(
             position_m=new_position,
+            position_x_m=steering_out.position_x_m,
+            position_y_m=steering_out.position_y_m,
+            heading_deg=math.degrees(steering_out.heading_rad),
+            steering_angle_deg=math.degrees(steering_out.steering_angle_rad),
             speed_mps=new_speed,
             acceleration_mps2=accel,
             motor_rpm=drivetrain_out.motor_rpm,

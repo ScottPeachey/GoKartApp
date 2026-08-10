@@ -330,6 +330,54 @@ def test_manual_mode_coast_then_reaccelerates() -> None:
     assert max_speed_after_reaccel > speed_after_coast + 0.5
 
 
+def test_steering_turns_at_speed() -> None:
+    from gokart.physics.steering import step_steering
+
+    out = step_steering(
+        heading_rad=0.0,
+        position_x_m=0.0,
+        position_y_m=0.0,
+        speed_mps=10.0,
+        steering_input=1.0,
+        wheelbase_m=1.1,
+        dt=0.1,
+    )
+    assert out.heading_rad > 0.0
+    assert out.position_y_m > 0.0
+    assert out.steering_angle_rad == pytest.approx(0.488692, rel=1e-3)
+
+
+def test_free_mode_records_steering_in_session() -> None:
+    root = Path(__file__).resolve().parents[1]
+    controls = RuntimeControls(free_mode=True, manual=True)
+    controls.power_on_request = True
+    scenario = Scenario(name="free_drive", duration_s=1e9, auto_boot=False)
+
+    def on_tick(tick) -> None:
+        t = tick.time_s
+        if t < 3.0:
+            controls.brake = 1.0
+            controls.arm_request = True
+        elif t < 7.0:
+            controls.brake = 0.0
+            controls.throttle = 0.8
+            controls.steering = 0.8
+        else:
+            controls.stop_requested = True
+
+    result = run_simulation(
+        "Scott Kart V1",
+        "V1.0",
+        scenario,
+        data_root_path=root / "data",
+        controls=controls,
+        on_tick=on_tick,
+    )
+    late = [r for r in result.records if r.time_s >= 5.0]
+    assert any(abs(r.values["steering_angle_deg"]) > 1.0 for r in late)
+    assert any(abs(r.values["position_y_m"]) > 0.5 for r in late)
+
+
 def test_manual_mode_brake_does_not_disarm() -> None:
     root = Path(__file__).resolve().parents[1]
     controls = RuntimeControls(manual=True)
