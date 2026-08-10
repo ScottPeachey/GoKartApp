@@ -2,6 +2,7 @@ const configState = {
   detail: null,
   componentOptions: {},
   loading: false,
+  vehicleCatalog: [],
 };
 
 function configVehicleKey() {
@@ -99,6 +100,13 @@ async function renderConfigSlots() {
   }
 }
 
+async function refreshVehicleCatalog() {
+  configState.vehicleCatalog = await api("/api/config/vehicles");
+  return configState.vehicleCatalog;
+}
+
+window.refreshVehicleCatalog = refreshVehicleCatalog;
+
 async function loadConfigEditor() {
   const parts = configVehicleParts();
   if (!parts) {
@@ -109,13 +117,28 @@ async function loadConfigEditor() {
   setConfigLoading(true);
   try {
     const { name, version } = parts;
-    configState.detail = await api("/api/config/vehicle-detail", {
-      method: "POST",
-      body: JSON.stringify({
-        vehicle_name: name,
-        vehicle_version: version,
-      }),
-    });
+    let detail = configState.vehicleCatalog.find(
+      (vehicle) => vehicle.name === name && vehicle.version === version,
+    )?.detail;
+
+    if (!detail) {
+      await refreshVehicleCatalog();
+      detail = configState.vehicleCatalog.find(
+        (vehicle) => vehicle.name === name && vehicle.version === version,
+      )?.detail;
+    }
+
+    if (!detail) {
+      detail = await api("/api/config/vehicle-detail", {
+        method: "POST",
+        body: JSON.stringify({
+          vehicle_name: name,
+          vehicle_version: version,
+        }),
+      });
+    }
+
+    configState.detail = detail;
     document.getElementById("config-new-version").placeholder =
       configState.detail.suggested_next_version;
     document.getElementById("cfg-motor-sprocket").value =

@@ -66,24 +66,32 @@ def create_app(
 
     @app.get("/")
     def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(
+            STATIC_DIR / "index.html",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.get("/api/channels")
     def api_channels() -> list[dict[str, str]]:
         return channel_schema()
 
+    @app.get("/api/version")
+    def api_version() -> dict[str, str]:
+        return {"dashboard": "0.2.0", "data_root": str(data_root())}
+
     @app.get("/api/config/vehicles")
-    def api_vehicles() -> list[dict[str, str]]:
+    def api_vehicles(include_detail: bool = True) -> list[dict[str, Any]]:
         root = data_root()
-        vehicles = []
+        vehicles: list[dict[str, Any]] = []
         for path in list_vehicles(root=root):
             data = json.loads(path.read_text(encoding="utf-8"))
-            vehicles.append(
-                {
-                    "name": data["name"],
-                    "version": data["version"],
-                }
-            )
+            entry: dict[str, Any] = {
+                "name": data["name"],
+                "version": data["version"],
+            }
+            if include_detail:
+                entry["detail"] = build_vehicle_detail(data["name"], data["version"], root=root)
+            vehicles.append(entry)
         return vehicles
 
     @app.get("/api/config/modes")

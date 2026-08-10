@@ -21,6 +21,13 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     return TestClient(create_app())
 
 
+def test_vehicle_list_includes_detail(client: TestClient) -> None:
+    response = client.get("/api/config/vehicles")
+    assert response.status_code == 200
+    vehicles = response.json()
+    assert vehicles[0]["detail"]["slots"]["motor"]["component_id"] == "v1_motor_5kw"
+
+
 def test_vehicle_detail_endpoint(client: TestClient) -> None:
     response = client.get("/api/config/vehicles/Scott%20Kart%20V1/V1.0/detail")
     assert response.status_code == 200

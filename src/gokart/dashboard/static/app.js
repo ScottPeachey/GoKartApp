@@ -103,6 +103,9 @@ function connectWebSocket() {
 async function loadConfig() {
   state.channels = await api("/api/channels");
   await refreshVehicleLists();
+  if (typeof window.refreshVehicleCatalog === "function") {
+    await window.refreshVehicleCatalog();
+  }
   const scenarios = await api("/api/config/scenarios");
 
   const scenarioSelect = document.getElementById("scenario-select");
