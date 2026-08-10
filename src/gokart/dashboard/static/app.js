@@ -239,8 +239,10 @@ function channelCardClass(name, value) {
 }
 
 function ensureChannelsGrid() {
-  if (state.channelRowsBuilt) return;
   const grid = document.getElementById("channels-grid");
+  if (!grid || !state.channels.length) return;
+  if (state.channelRowsBuilt && grid.children.length === state.channels.length) return;
+
   grid.innerHTML = "";
   for (const channel of state.channels) {
     const meta = channelUiMeta(channel.name);
@@ -250,7 +252,7 @@ function ensureChannelsGrid() {
     card.innerHTML = `
       <span class="channel-card-icon" aria-hidden="true">${meta.icon}</span>
       <span class="channel-card-label">${meta.label}</span>
-      <span class="channel-card-value"></span>
+      <span class="channel-card-value">—</span>
       <span class="channel-card-unit">${channel.unit}</span>
     `;
     grid.appendChild(card);
@@ -258,8 +260,13 @@ function ensureChannelsGrid() {
   state.channelRowsBuilt = true;
 }
 
+function rebuildChannelsGrid() {
+  state.channelRowsBuilt = false;
+  ensureChannelsGrid();
+}
+
 function formatChannelValue(value, channelType = "float", channelName = "") {
-  if (value === null || value === undefined || value === "") return "";
+  if (value === null || value === undefined || value === "") return "—";
   if (channelType === "string") return String(value);
   const num = Number(value);
   if (!Number.isFinite(num)) return String(value);
@@ -312,11 +319,11 @@ function connectWebSocket() {
   state.ws = new WebSocket(`${protocol}://${location.host}/ws/live`);
   state.ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
-    if (message.type !== "sample") return;
     if (message.channels?.length) {
       state.channels = message.channels;
-      state.channelRowsBuilt = false;
+      rebuildChannelsGrid();
     }
+    if (message.type !== "sample" || !message.data) return;
     scheduleLiveUi(message.data, message.speed_kmh);
   };
   state.ws.onclose = () => setTimeout(connectWebSocket, 1000);
@@ -324,6 +331,7 @@ function connectWebSocket() {
 
 async function loadConfig() {
   state.channels = await api("/api/channels");
+  rebuildChannelsGrid();
   await refreshVehicleLists();
   await loadDriveSettingOptions();
   if (typeof window.refreshVehicleCatalog === "function") {
@@ -981,6 +989,12 @@ function setupTabs() {
       document.getElementById("tab-live").classList.toggle("hidden", tab !== "live");
       document.getElementById("tab-history").classList.toggle("hidden", tab !== "history");
       document.getElementById("tab-config").classList.toggle("hidden", tab !== "config");
+      if (tab === "live") {
+        rebuildChannelsGrid();
+        if (state.lastSample && Object.keys(state.lastSample).length) {
+          updateChannelsGrid(state.lastSample);
+        }
+      }
       if (tab === "history") {
         invalidateHistoryDrawCache();
         startHistoryPolling();
