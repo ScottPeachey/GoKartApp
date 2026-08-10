@@ -6,6 +6,7 @@ const state = {
   inputPollTimer: null,
   brakeHold: false,
   simRunning: false,
+  historyPollTimer: null,
 };
 
 const SAFETY_CLASSES = [
@@ -157,18 +158,54 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 window.refreshVehicleLists = refreshVehicleLists;
 
 async function refreshSessions() {
-  const sessions = await api("/api/sessions");
+  await refreshHistoryView(true);
+}
+
+async function refreshHistoryView(forceSessionList = false) {
   const select = document.getElementById("session-select");
-  select.innerHTML = "";
-  for (const session of sessions) {
-    const option = document.createElement("option");
-    option.value = session.session_id;
-    option.textContent = `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
-    select.appendChild(option);
+  const previousSessionId = select.value;
+  const tabVisible = !document.getElementById("tab-history").classList.contains("hidden");
+
+  if (forceSessionList || tabVisible) {
+    const sessions = await api("/api/sessions");
+    select.innerHTML = "";
+    for (const session of sessions) {
+      const option = document.createElement("option");
+      option.value = session.session_id;
+      option.textContent = `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
+      select.appendChild(option);
+    }
+    if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
+      select.value = previousSessionId;
+    } else if (sessions.length) {
+      select.value = sessions[0].session_id;
+    }
+    if (!sessions.length) return;
   }
-  if (sessions.length) {
-    await drawSessionChart(sessions[0].session_id);
+
+  const sessionId = select.value;
+  if (sessionId) {
+    await drawSessionChart(sessionId);
   }
+}
+
+function startHistoryPolling() {
+  stopHistoryPolling();
+  void refreshHistoryView(true);
+  state.historyPollTimer = setInterval(() => {
+    void refreshHistoryView(false);
+  }, 100);
+}
+
+function stopHistoryPolling() {
+  if (state.historyPollTimer !== null) {
+    clearInterval(state.historyPollTimer);
+    state.historyPollTimer = null;
+  }
+}
+
+function isHistoryTabActive() {
+  return !document.getElementById("tab-history").classList.contains("hidden");
 }
 
 function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
@@ -388,7 +425,8 @@ function setupTabs() {
       document.getElementById("tab-live").classList.toggle("hidden", tab !== "live");
       document.getElementById("tab-history").classList.toggle("hidden", tab !== "history");
       document.getElementById("tab-config").classList.toggle("hidden", tab !== "config");
-      if (tab === "history") refreshSessions();
+      if (tab === "history") startHistoryPolling();
+      else stopHistoryPolling();
       if (tab === "config" && typeof window.loadConfigEditor === "function") {
         window.loadConfigEditor();
       }
