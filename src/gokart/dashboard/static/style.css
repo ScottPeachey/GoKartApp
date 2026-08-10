@@ -154,8 +154,18 @@ th, td {
 
 .config-intro {
   color: #8aa0b8;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   font-size: 0.95rem;
+}
+
+.config-steps {
+  margin: 0 0 1rem 1.25rem;
+  color: #8aa0b8;
+  font-size: 0.9rem;
+}
+
+.config-steps li {
+  margin-bottom: 0.25rem;
 }
 
 .config-layout {
@@ -178,6 +188,18 @@ th, td {
   margin: 0 0 0.75rem;
   font-size: 0.95rem;
   color: var(--accent);
+}
+
+.config-slots-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 1.2fr;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8aa0b8;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #2a3548;
 }
 
 .config-slot-row {
@@ -221,6 +243,15 @@ th, td {
   border-radius: 6px;
   padding: 0.35rem 0.5rem;
   width: 6rem;
+}
+
+.config-number {
+  background: #1a2332;
+  color: var(--text);
+  border: 1px solid #2a3548;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  width: 5rem;
 }
 
 .config-status {

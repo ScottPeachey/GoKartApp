@@ -1,6 +1,7 @@
 const configState = {
   detail: null,
   componentOptions: {},
+  loading: false,
 };
 
 function configVehicleKey() {
@@ -8,7 +9,12 @@ function configVehicleKey() {
 }
 
 function configVehicleParts() {
-  const [name, version] = configVehicleKey().split("|");
+  const key = configVehicleKey();
+  if (!key || !key.includes("|")) {
+    return null;
+  }
+  const [name, version] = key.split("|");
+  if (!name || !version) return null;
   return { name, version };
 }
 
@@ -29,6 +35,11 @@ function setConfigStatus(message, isError = false) {
   el.classList.add(isError ? "error" : "success");
 }
 
+function setConfigLoading(loading) {
+  configState.loading = loading;
+  document.getElementById("config-loading").classList.toggle("hidden", !loading);
+}
+
 async function ensureComponentOptions(componentType) {
   if (configState.componentOptions[componentType]) {
     return configState.componentOptions[componentType];
@@ -42,10 +53,18 @@ async function renderConfigSlots() {
   const detail = configState.detail;
   const container = document.getElementById("config-slots-list");
   container.innerHTML = "";
-  if (!detail) return;
+  if (!detail) {
+    container.innerHTML = '<p class="config-hint">No components loaded yet.</p>';
+    return;
+  }
 
-  for (const [slotId, slot] of Object.entries(detail.slots)) {
-    if (!slot || !slot.component_type) continue;
+  const slotEntries = Object.entries(detail.slots).filter(([, slot]) => slot && slot.component_type);
+  if (!slotEntries.length) {
+    container.innerHTML = '<p class="config-hint">This vehicle has no editable component slots.</p>';
+    return;
+  }
+
+  for (const [slotId, slot] of slotEntries) {
     const row = document.createElement("div");
     row.className = "config-slot-row";
 
@@ -56,7 +75,10 @@ async function renderConfigSlots() {
     const current = document.createElement("div");
     current.className = "config-slot-current";
     const summary = slot.summary || {};
-    current.textContent = `${summary.manufacturer || ""} ${summary.model || ""}`.trim() || slot.component_id;
+    const summaryText = `${summary.manufacturer || ""} ${summary.model || ""}`.trim();
+    current.textContent = summaryText
+      ? `${summaryText} (${slot.component_id})`
+      : slot.component_id;
 
     const select = document.createElement("select");
     select.dataset.slotId = slotId;
@@ -76,19 +98,45 @@ async function renderConfigSlots() {
 }
 
 async function loadConfigEditor() {
-  const { name, version } = configVehicleParts();
-  configState.detail = await api(
-    `/api/config/vehicles/${encodeURIComponent(name)}/${encodeURIComponent(version)}/detail`,
-  );
-  document.getElementById("config-new-version").placeholder = configState.detail.suggested_next_version;
-  document.getElementById("cfg-motor-sprocket").value = configState.detail.drivetrain.motor_sprocket_teeth;
-  document.getElementById("cfg-axle-sprocket").value = configState.detail.drivetrain.axle_sprocket_teeth;
-  document.getElementById("cfg-mass").textContent = configState.detail.mass_kg.toFixed(1);
-  await renderConfigSlots();
+  const parts = configVehicleParts();
+  if (!parts) {
+    setConfigStatus("Select a vehicle above to load its fitted components.", true);
+    return;
+  }
+
+  setConfigLoading(true);
+  try {
+    const { name, version } = parts;
+    configState.detail = await api(
+      `/api/config/vehicles/${encodeURIComponent(name)}/${encodeURIComponent(version)}/detail`,
+    );
+    document.getElementById("config-new-version").placeholder =
+      configState.detail.suggested_next_version;
+    document.getElementById("cfg-motor-sprocket").value =
+      configState.detail.drivetrain.motor_sprocket_teeth;
+    document.getElementById("cfg-axle-sprocket").value =
+      configState.detail.drivetrain.axle_sprocket_teeth;
+    document.getElementById("cfg-mass").textContent = configState.detail.mass_kg.toFixed(1);
+    await renderConfigSlots();
+    document.getElementById("config-status").classList.add("hidden");
+  } catch (error) {
+    setConfigStatus(`Could not load vehicle: ${error.message}`, true);
+    document.getElementById("config-slots-list").innerHTML =
+      '<p class="config-hint">Failed to load components. Click Reload or refresh the page.</p>';
+    document.getElementById("cfg-mass").textContent = "—";
+  } finally {
+    setConfigLoading(false);
+  }
 }
 
 async function saveConfigEditor() {
-  const { name, version } = configVehicleParts();
+  const parts = configVehicleParts();
+  if (!parts || !configState.detail) {
+    setConfigStatus("Load a vehicle configuration before saving.", true);
+    return;
+  }
+
+  const { name, version } = parts;
   const slots = {};
   document.querySelectorAll(".config-slot-select").forEach((select) => {
     slots[select.dataset.slotId] = select.value;
@@ -112,7 +160,7 @@ async function saveConfigEditor() {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    setConfigStatus(`Saved ${result.name} ${result.version}. Use it in the simulation dropdown.`, false);
+    setConfigStatus(`Saved ${result.name} ${result.version}. Use it in the Simulation dropdown.`, false);
     if (typeof window.refreshVehicleLists === "function") {
       await window.refreshVehicleLists(result.name, result.version);
     }
@@ -136,8 +184,11 @@ async function saveConfigEditor() {
 
 function setupConfigEditor() {
   document.getElementById("btn-config-save").addEventListener("click", saveConfigEditor);
+  document.getElementById("btn-config-reload").addEventListener("click", () => {
+    void loadConfigEditor();
+  });
   document.getElementById("config-vehicle-select").addEventListener("change", () => {
-    loadConfigEditor();
+    void loadConfigEditor();
   });
 }
 

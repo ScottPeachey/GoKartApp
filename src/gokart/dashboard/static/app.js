@@ -126,6 +126,9 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
     } else if (configPrevious) {
       configSelect.value = configPrevious;
     }
+    if (typeof window.loadConfigEditor === "function" && !document.getElementById("tab-config").classList.contains("hidden")) {
+      void window.loadConfigEditor();
+    }
   }
 }
 
