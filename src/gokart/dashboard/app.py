@@ -45,6 +45,11 @@ class SimInputsRequest(BaseModel):
     steering: float = Field(default=0.0, ge=-1.0, le=1.0)
 
 
+class VehicleDetailRequest(BaseModel):
+    vehicle_name: str
+    vehicle_version: str
+
+
 def create_app(
     *,
     bus: TelemetryBus | None = None,
@@ -109,6 +114,17 @@ def create_app(
     def api_vehicle_detail_query(vehicle_name: str, vehicle_version: str) -> dict[str, Any]:
         try:
             return build_vehicle_detail(vehicle_name, vehicle_version, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/config/vehicle-detail")
+    def api_vehicle_detail_post(request: VehicleDetailRequest) -> dict[str, Any]:
+        try:
+            return build_vehicle_detail(
+                request.vehicle_name,
+                request.vehicle_version,
+                root=data_root(),
+            )
         except Exception as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 

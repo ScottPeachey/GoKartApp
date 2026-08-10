@@ -109,11 +109,13 @@ async function loadConfigEditor() {
   setConfigLoading(true);
   try {
     const { name, version } = parts;
-    const params = new URLSearchParams({
-      vehicle_name: name,
-      vehicle_version: version,
+    configState.detail = await api("/api/config/vehicle-detail", {
+      method: "POST",
+      body: JSON.stringify({
+        vehicle_name: name,
+        vehicle_version: version,
+      }),
     });
-    configState.detail = await api(`/api/config/vehicle-detail?${params.toString()}`);
     document.getElementById("config-new-version").placeholder =
       configState.detail.suggested_next_version;
     document.getElementById("cfg-motor-sprocket").value =

@@ -23,20 +23,28 @@ T = TypeVar("T", bound=BaseModel)
 DEFAULT_DATA_ROOT = Path("data")
 
 
+def _bundled_data_root() -> Path:
+    return Path(__file__).resolve().parents[3] / DEFAULT_DATA_ROOT
+
+
+def data_root(root: Path | None = None) -> Path:
+    if root is not None:
+        return root
+    cwd_data = Path.cwd() / DEFAULT_DATA_ROOT
+    if (cwd_data / "vehicles").is_dir():
+        return cwd_data
+    bundled = _bundled_data_root()
+    if (bundled / "vehicles").is_dir():
+        return bundled
+    return cwd_data
+
+
 class ConfigStoreError(Exception):
     """Raised when a configuration cannot be loaded or saved."""
 
 
 class ImmutableConfigError(ConfigStoreError):
     """Raised when an existing configuration would be overwritten."""
-
-
-def _repo_root() -> Path:
-    return Path.cwd()
-
-
-def data_root(root: Path | None = None) -> Path:
-    return root if root is not None else _repo_root() / DEFAULT_DATA_ROOT
 
 
 def _component_path(root: Path, component_type: str, component_id: str) -> Path:

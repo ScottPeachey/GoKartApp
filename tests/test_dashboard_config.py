@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from gokart.config.store import data_root, load_vehicle
 from gokart.dashboard.app import create_app
 
 
@@ -37,6 +38,23 @@ def test_vehicle_detail_query_endpoint(client: TestClient) -> None:
     payload = response.json()
     assert payload["slots"]["battery"]["component_id"] == "v1_pack_48v_40ah"
     assert payload["drivetrain"]["motor_sprocket_teeth"] == 12
+
+
+def test_vehicle_detail_post_endpoint(client: TestClient) -> None:
+    response = client.post(
+        "/api/config/vehicle-detail",
+        json={"vehicle_name": "Scott Kart V1", "vehicle_version": "V1.0"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slots"]["motor"]["component_id"] == "v1_motor_5kw"
+
+
+def test_data_root_falls_back_to_bundled_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    root = data_root()
+    assert (root / "vehicles").is_dir()
+    assert load_vehicle("Scott Kart V1", "V1.0", root=root).name == "Scott Kart V1"
 
 
 def test_list_motors(client: TestClient) -> None:
