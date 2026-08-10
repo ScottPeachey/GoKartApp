@@ -62,19 +62,34 @@
           <li data-step="drive" class="free-step">④ Release brake &amp; drive</li>
         </ol>
         <p id="free-drive-hint" class="free-hint">Press <strong>Start session</strong> below to begin.</p>
+        <div id="fault-recovery-panel" class="fault-recovery hidden">
+          <h4>Fault recovery</h4>
+          <p id="fault-recovery-text" class="fault-recovery-text"></p>
+          <ol class="fault-recovery-steps">
+            <li>Fix the cause (release both pedals if needed, wait for readings to settle).</li>
+            <li>Click <strong>Clear fault</strong> — this acknowledges the fault and returns safety to <strong>READY</strong>.</li>
+            <li>Click <strong>Arm with brake</strong> and drive again.</li>
+          </ol>
+          <p class="config-hint">Or use <strong>New session</strong> to reset everything without refreshing the page.</p>
+        </div>
         <div class="free-action-row">
           <button id="btn-arm-with-brake" type="button" class="btn-primary-lg" disabled>
             Arm with brake
           </button>
           <button id="btn-disarm" type="button" class="btn-secondary">Disarm</button>
-          <button id="btn-ack" type="button" class="btn-secondary">Ack fault</button>
+          <button id="btn-ack" type="button" class="btn-secondary" title="Acknowledge fault and return to READY">
+            Clear fault
+          </button>
         </div>
       </div>
       <div id="session-controls" class="row session-controls">
         <button id="btn-start" class="btn-primary">Start</button>
         <button id="btn-stop" class="btn-secondary">Stop</button>
+        <button id="btn-reset-session" type="button" class="btn-secondary">New session</button>
         <button id="btn-arm-scenario" type="button" class="btn-secondary">Arm</button>
-        <button id="btn-ack-scenario" type="button" class="btn-secondary">Ack fault</button>
+        <button id="btn-ack-scenario" type="button" class="btn-secondary" title="Acknowledge fault and return to READY">
+          Clear fault
+        </button>
       </div>
       <div id="driving-controls" class="driving-controls">
         <h3 class="driving-title">Pedals</h3>
@@ -113,13 +128,12 @@
 
     <section id="tab-config" class="tab-panel hidden">
       <p class="config-intro">
-        Swap fitted parts from the component library, adjust sprockets, then
-        <strong>Save as new version</strong>. The new version appears in the Simulation vehicle dropdown.
-        You are not creating new parts here — use the dropdown in each row to pick a different motor, battery, etc.
+        Build and edit the component library, swap fitted parts on a vehicle, adjust sprockets, then
+        <strong>Save as new version</strong>. New vehicle versions appear in the Simulation dropdown.
       </p>
       <ol class="config-steps">
-        <li>Select the vehicle version to start from.</li>
-        <li>Change any component using the <em>Swap to</em> dropdowns below.</li>
+        <li>Use <strong>Component library</strong> below to edit or create motors, batteries, etc.</li>
+        <li>Select a vehicle version and change fitted parts with the <em>Swap to</em> dropdowns.</li>
         <li>Adjust sprocket teeth if needed.</li>
         <li>Click <strong>Save as new version</strong> (version number is auto-suggested).</li>
       </ol>
@@ -158,10 +172,34 @@
           <p class="config-hint">Total mass (dry + battery + driver): <span id="cfg-mass">—</span> kg</p>
         </div>
       </div>
+      <div class="config-components-panel">
+        <h3>Component library</h3>
+        <p class="config-hint">
+          Load a component to edit its JSON, or create a new one from a template. Save writes to the component library.
+        </p>
+        <div class="row config-component-toolbar">
+          <label>Type
+            <select id="component-type-select"></select>
+          </label>
+          <label>Component
+            <select id="component-id-select"></select>
+          </label>
+          <button id="btn-component-load" type="button">Load</button>
+          <button id="btn-component-new" type="button">New from template</button>
+          <label class="config-overwrite-label">
+            <input id="component-allow-overwrite" type="checkbox" checked />
+            Allow overwrite
+          </label>
+          <button id="btn-component-save" type="button">Save component</button>
+        </div>
+        <p id="component-editor-status" class="config-status hidden"></p>
+        <textarea id="component-json-editor" class="component-json-editor" spellcheck="false"
+          placeholder="Load or create a component to edit JSON here…"></textarea>
+      </div>
     </section>
   </main>
 
-  <script src="/static/app.js?v=8"></script>
-  <script src="/static/config.js?v=5"></script>
+  <script src="/static/app.js?v=9"></script>
+  <script src="/static/config.js?v=6"></script>
 </body>
 </html>

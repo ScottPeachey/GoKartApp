@@ -13,6 +13,29 @@ const state = {
   channelRowsBuilt: false,
 };
 
+const FAULT_HELP = {
+  THROTTLE_BRAKE_SIMULTANEOUS: "Throttle and brake were pressed together — release one pedal.",
+  THROTTLE_IMPLAUSIBLE: "Throttle changed too quickly — move the slider smoothly.",
+  THROTTLE_OUT_OF_RANGE: "Throttle reading out of range — return the slider to zero.",
+  BRAKE_SENSOR_FAULT: "Brake reading out of range — release the brake slider.",
+  WHEEL_SPEED_FAULT: "Wheel speed sensor fault.",
+  SENSOR_DISAGREEMENT: "Sensor readings disagree.",
+  PRECHARGE_TIMEOUT: "Precharge did not complete in time — try arming again with brake held.",
+  CONTACTOR_WELDED: "Contactor welded — critical fault; use New session.",
+  OVERVOLTAGE: "Pack voltage too high.",
+  UNDERVOLTAGE: "Pack voltage too low.",
+  OVERTEMP: "Motor or battery overtemperature.",
+};
+
+function describeFaults(faultCodes) {
+  if (!faultCodes) return "A safety fault was detected.";
+  return faultCodes
+    .split(",")
+    .filter(Boolean)
+    .map((code) => FAULT_HELP[code.trim()] || code.trim())
+    .join(" ");
+}
+
 const SAFETY_CLASSES = [
   "safety-off",
   "safety-boot",
@@ -39,8 +62,12 @@ async function api(path, options = {}) {
 function setFaultBanner(sample) {
   const banner = document.getElementById("fault-banner");
   const faults = sample.active_faults || "";
-  if (faults) {
-    banner.textContent = `FAULT: ${faults}`;
+  const safetyState = sample.safety_state || "";
+  if (faults || safetyState === "FAULT" || safetyState === "SAFE_SHUTDOWN") {
+    const detail = faults ? describeFaults(faults) : "Safety fault active.";
+    banner.textContent = safetyState === "SAFE_SHUTDOWN"
+      ? `SAFE SHUTDOWN: ${detail}`
+      : `FAULT: ${detail}`;
     banner.classList.remove("hidden");
   } else {
     banner.classList.add("hidden");
@@ -67,6 +94,36 @@ function updateDrivePanel(sample, speedKmh) {
   document.getElementById("soc-fill").style.width = `${soc * 100}%`;
   setFaultBanner(sample);
   updateFreeDriveGuide(safetyState);
+}
+
+function resetDriveUi() {
+  document.getElementById("throttle").value = "0";
+  document.getElementById("brake").value = "0";
+  document.getElementById("steering").value = "0";
+  setBrakeHold(false);
+  state.lastSample = {};
+  state.pendingLiveSample = null;
+  document.getElementById("speed-value").textContent = "0";
+  document.getElementById("drive-mode").textContent = "—";
+  document.getElementById("safety-state").textContent = "OFF";
+  document.getElementById("power-kw").textContent = "0.0 kW";
+  document.getElementById("steer-value").textContent = "0°";
+  document.getElementById("heading-value").textContent = "0°";
+  document.getElementById("soc-text").textContent = "—";
+  document.getElementById("soc-fill").style.width = "0%";
+  const safetyCard = document.getElementById("safety-card");
+  safetyCard.classList.remove(...SAFETY_CLASSES);
+  safetyCard.classList.add("safety-off");
+  document.getElementById("fault-banner").classList.add("hidden");
+  document.getElementById("fault-recovery-panel")?.classList.add("hidden");
+}
+
+async function resetSession() {
+  stopManualInputPolling();
+  await api("/api/sim/reset", { method: "POST" });
+  state.simRunning = false;
+  resetDriveUi();
+  updateFreeDriveGuide("OFF");
 }
 
 function simMode() {
@@ -399,9 +456,12 @@ function updateFreeDriveGuide(safetyState) {
     hint.innerHTML = "Press <strong>Start session</strong> to power up the kart and begin.";
     armBtn.disabled = true;
     driving.classList.add("locked");
+    document.getElementById("fault-recovery-panel")?.classList.add("hidden");
     setStep("session");
     return;
   }
+
+  document.getElementById("fault-recovery-panel")?.classList.add("hidden");
 
   switch (safetyState) {
     case "OFF":
@@ -433,10 +493,21 @@ function updateFreeDriveGuide(safetyState) {
       steps.forEach((el) => el.classList.add("done"));
       break;
     case "FAULT":
-      hint.innerHTML = "Fault active — click <strong>Ack fault</strong>, then repeat the arm sequence.";
+    case "SAFE_SHUTDOWN": {
+      const faults = state.lastSample.active_faults || "";
+      const recovery = document.getElementById("fault-recovery-panel");
+      const recoveryText = document.getElementById("fault-recovery-text");
+      if (recovery && recoveryText) {
+        recovery.classList.remove("hidden");
+        recoveryText.textContent = describeFaults(faults);
+      }
+      hint.innerHTML = safetyState === "SAFE_SHUTDOWN"
+        ? "<strong>Critical fault</strong> — system shut down. Click <strong>New session</strong> to start over."
+        : "Fault active — follow the steps below, then click <strong>Clear fault</strong>.";
       armBtn.disabled = true;
       driving.classList.add("locked");
       break;
+    }
     default:
       hint.textContent = `Safety state: ${safetyState}`;
       armBtn.disabled = true;
@@ -520,14 +591,29 @@ function setupControls() {
     updateFreeDriveGuide("OFF");
   });
 
+  document.getElementById("btn-reset-session").addEventListener("click", () => {
+    void resetSession();
+  });
+
   document.getElementById("btn-arm-with-brake").addEventListener("click", () => {
     void armWithBrake();
   });
   document.getElementById("btn-disarm").addEventListener("click", () => api("/api/sim/disarm", { method: "POST" }));
-  document.getElementById("btn-ack").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
+  document.getElementById("btn-ack").addEventListener("click", async () => {
+    document.getElementById("throttle").value = "0";
+    document.getElementById("brake").value = "0";
+    setBrakeHold(false);
+    await sendInputs();
+    await api("/api/sim/ack", { method: "POST" });
+  });
   document.getElementById("btn-brake-hold").addEventListener("click", () => setBrakeHold(!state.brakeHold));
   document.getElementById("btn-arm-scenario").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
-  document.getElementById("btn-ack-scenario").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
+  document.getElementById("btn-ack-scenario").addEventListener("click", async () => {
+    document.getElementById("throttle").value = "0";
+    document.getElementById("brake").value = "0";
+    await sendInputs();
+    await api("/api/sim/ack", { method: "POST" });
+  });
   document.getElementById("btn-refresh-sessions").addEventListener("click", () => {
     state.lastHistorySampleCount = null;
     void refreshHistoryView(true);

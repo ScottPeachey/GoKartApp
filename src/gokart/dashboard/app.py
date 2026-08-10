@@ -14,9 +14,14 @@ from pydantic import BaseModel, Field
 
 from gokart.config.editor import (
     VEHICLE_SLOTS,
+    SaveComponentRequest,
     SaveVehicleRequest,
     build_vehicle_detail,
     list_component_summaries,
+    list_component_types,
+    load_component_detail,
+    new_component_template,
+    save_component_record,
     save_vehicle_as_new_version,
 )
 from gokart.config.store import data_root, list_drive_modes, list_driver_profiles, list_vehicles
@@ -143,6 +148,39 @@ def create_app(
         except Exception as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    @app.get("/api/config/component-types")
+    def api_component_types() -> list[dict[str, str]]:
+        return list_component_types()
+
+    @app.get("/api/config/components/{component_type}/template")
+    def api_component_template(component_type: str) -> dict[str, Any]:
+        try:
+            return new_component_template(component_type, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/config/components/{component_type}/{component_id}")
+    def api_component_detail(component_type: str, component_id: str) -> dict[str, Any]:
+        try:
+            return load_component_detail(component_type, component_id, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/api/config/components/save")
+    def api_save_component(request: SaveComponentRequest) -> dict[str, Any]:
+        if sim_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop the simulation before saving component changes.",
+            )
+        result = save_component_record(request, root=data_root(), actor="dashboard")
+        if not result.validation_ok:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "Validation failed", "violations": result.violations},
+            )
+        return result.model_dump(mode="json")
+
     @app.get("/api/config/components/{component_type}")
     def api_components(component_type: str) -> list[dict[str, Any]]:
         try:
@@ -264,6 +302,11 @@ def create_app(
     def api_sim_disarm() -> dict[str, str]:
         sim_controller.disarm()
         return {"status": "disarmed"}
+
+    @app.post("/api/sim/reset")
+    def api_sim_reset() -> dict[str, str]:
+        sim_controller.reset()
+        return {"status": "reset"}
 
     @app.post("/api/sim/ack")
     def api_sim_ack() -> dict[str, str]:

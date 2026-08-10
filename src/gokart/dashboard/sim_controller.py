@@ -87,6 +87,16 @@ class SimController:
     def acknowledge_fault(self) -> None:
         self.controls.fault_ack_request = True
 
+    def reset(self) -> None:
+        """Stop any running simulation and clear dashboard session state."""
+        self.controls.stop_requested = True
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=3.0)
+        self.controls = RuntimeControls()
+        self.status = SimStatus()
+        self._recorder = None
+        self._thread = None
+
     def _run(
         self,
         *,

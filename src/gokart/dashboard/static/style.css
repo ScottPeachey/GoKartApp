@@ -441,3 +441,67 @@ th, td {
   background: rgba(255, 77, 79, 0.15);
   border: 1px solid var(--fault);
 }
+
+.fault-recovery {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 176, 32, 0.1);
+  border: 1px solid var(--warn);
+}
+
+.fault-recovery.hidden {
+  display: none;
+}
+
+.fault-recovery h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.fault-recovery-text {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.fault-recovery-steps {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: #c5d4e8;
+}
+
+.config-components-panel {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a3548;
+}
+
+.config-component-toolbar {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.config-overwrite-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.component-json-editor {
+  width: 100%;
+  min-height: 320px;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  background: #121a26;
+  color: var(--text);
+  border: 1px solid #2a3548;
+  border-radius: 8px;
+  resize: vertical;
+  box-sizing: border-box;
+}

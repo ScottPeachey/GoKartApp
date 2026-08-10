@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 from gokart.config.audit import AuditLog
 from gokart.config.hashing import content_hash
-from gokart.config.schemas.components import ComponentBase
+from gokart.config.schemas.components import COMPONENT_TYPE_MAP, ComponentBase
 from gokart.config.schemas.vehicle import ComponentRef, DrivetrainConfig, VehicleConfig
 from gokart.config.store import (
     ConfigStoreError,
@@ -21,9 +21,10 @@ from gokart.config.store import (
     list_vehicles,
     load_component,
     load_vehicle,
+    save_component,
     save_vehicle,
 )
-from gokart.config.validation import validate_vehicle_config
+from gokart.config.validation import validate_intra_component, validate_vehicle_config
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,33 @@ VEHICLE_SLOTS: tuple[VehicleSlot, ...] = (
     VehicleSlot("dcdc", "DC-DC converter", "dcdc", "dcdc", required=False),
     VehicleSlot("contactor", "Contactor", "contactor", "contactor", required=False),
 )
+
+
+COMPONENT_TYPE_LABELS: dict[str, str] = {
+    "motor": "Motor",
+    "motor_controller": "Motor controller",
+    "battery": "Battery pack",
+    "bms": "BMS",
+    "tyre": "Tyre",
+    "wheel": "Wheel",
+    "brake": "Brake",
+    "dcdc": "DC-DC converter",
+    "contactor": "Contactor",
+    "sensor": "Sensor",
+}
+
+
+class SaveComponentRequest(BaseModel):
+    data: dict[str, Any]
+    allow_overwrite: bool = False
+
+
+class SaveComponentResult(BaseModel):
+    id: str
+    component_type: str
+    content_hash: str
+    validation_ok: bool
+    violations: list[str] = Field(default_factory=list)
 
 
 class SaveVehicleRequest(BaseModel):
@@ -121,6 +149,111 @@ def list_component_summaries(
         component = load_component(component_type, path.stem, root=store_root)
         summaries.append(component_summary(component))
     return sorted(summaries, key=lambda item: item["id"])
+
+
+def list_component_types() -> list[dict[str, str]]:
+    return [
+        {"id": key, "label": COMPONENT_TYPE_LABELS.get(key, key)}
+        for key in sorted(COMPONENT_TYPE_MAP)
+    ]
+
+
+def load_component_detail(
+    component_type: str,
+    component_id: str,
+    *,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    component = load_component(component_type, component_id, root=data_root(root))
+    return component.model_dump(mode="json")
+
+
+def new_component_template(component_type: str, *, root: Path | None = None) -> dict[str, Any]:
+    if component_type not in COMPONENT_TYPE_MAP:
+        raise ConfigStoreError(f"Unknown component type: {component_type}")
+    store_root = data_root(root)
+    summaries = list_component_summaries(component_type, root=store_root)
+    if not summaries:
+        raise ConfigStoreError(f"No existing {component_type} components to use as a template")
+    base = load_component(component_type, summaries[0]["id"], root=store_root)
+    data = base.model_dump(mode="json")
+    data["id"] = f"new_{component_type}"
+    data["manufacturer"] = "New"
+    data["model"] = "Component"
+    data["notes"] = "Created in dashboard component editor"
+    return data
+
+
+def save_component_record(
+    request: SaveComponentRequest,
+    *,
+    root: Path | None = None,
+    actor: str = "dashboard",
+) -> SaveComponentResult:
+    store_root = data_root(root)
+    component_type = request.data.get("component_type")
+    if component_type not in COMPONENT_TYPE_MAP:
+        return SaveComponentResult(
+            id=str(request.data.get("id", "")),
+            component_type=str(component_type or ""),
+            content_hash="",
+            validation_ok=False,
+            violations=[f"Unknown component_type: {component_type}"],
+        )
+    model_cls = COMPONENT_TYPE_MAP[component_type]
+    try:
+        component: ComponentBase = model_cls.model_validate(request.data)
+    except Exception as exc:
+        return SaveComponentResult(
+            id=str(request.data.get("id", "")),
+            component_type=str(component_type),
+            content_hash="",
+            validation_ok=False,
+            violations=[str(exc)],
+        )
+
+    intra = validate_intra_component(component)
+    violations = [v.message for v in intra.violations]
+    if not intra.ok:
+        return SaveComponentResult(
+            id=component.id,
+            component_type=component_type,
+            content_hash="",
+            validation_ok=False,
+            violations=violations,
+        )
+
+    try:
+        digest = save_component(
+            component,
+            root=store_root,
+            allow_overwrite=request.allow_overwrite,
+        )
+    except ConfigStoreError as exc:
+        return SaveComponentResult(
+            id=component.id,
+            component_type=component_type,
+            content_hash="",
+            validation_ok=False,
+            violations=[str(exc)],
+        )
+
+    AuditLog().record(
+        actor=actor,
+        entity_type="component",
+        entity_id=f"{component_type}:{component.id}",
+        from_hash=None,
+        to_hash=digest,
+        diff_summary="saved from dashboard",
+        validation_ok=True,
+        validation_messages=[],
+    )
+    return SaveComponentResult(
+        id=component.id,
+        component_type=component_type,
+        content_hash=digest,
+        validation_ok=True,
+    )
 
 
 def _slot_ref(vehicle: VehicleConfig, slot: VehicleSlot) -> ComponentRef | None:

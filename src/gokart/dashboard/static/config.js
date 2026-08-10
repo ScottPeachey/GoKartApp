@@ -1,6 +1,7 @@
 const configState = {
   detail: null,
   componentOptions: {},
+  componentTypes: [],
   loading: false,
   vehicleCatalog: [],
 };
@@ -50,6 +51,115 @@ async function ensureComponentOptions(componentType) {
   const items = await api(`/api/config/components/${componentType}`);
   configState.componentOptions[componentType] = items;
   return items;
+}
+
+function clearComponentOptionsCache(componentType = null) {
+  if (componentType) {
+    delete configState.componentOptions[componentType];
+    return;
+  }
+  configState.componentOptions = {};
+}
+
+function setComponentEditorStatus(message, isError = false) {
+  const el = document.getElementById("component-editor-status");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove("hidden", "error", "success");
+  el.classList.add(isError ? "error" : "success");
+}
+
+async function loadComponentTypeSelect() {
+  const select = document.getElementById("component-type-select");
+  if (!select) return;
+  configState.componentTypes = await api("/api/config/component-types");
+  select.innerHTML = "";
+  for (const item of configState.componentTypes) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = item.label;
+    select.appendChild(option);
+  }
+  await refreshComponentIdSelect();
+}
+
+async function refreshComponentIdSelect() {
+  const typeSelect = document.getElementById("component-type-select");
+  const idSelect = document.getElementById("component-id-select");
+  if (!typeSelect || !idSelect) return;
+  const componentType = typeSelect.value;
+  const items = await ensureComponentOptions(componentType);
+  const previous = idSelect.value;
+  idSelect.innerHTML = "";
+  for (const item of items) {
+    const option = document.createElement("option");
+    option.value = item.id;
+    option.textContent = formatComponentOption(item);
+    idSelect.appendChild(option);
+  }
+  if (previous && [...idSelect.options].some((o) => o.value === previous)) {
+    idSelect.value = previous;
+  }
+}
+
+async function loadSelectedComponentIntoEditor() {
+  const typeSelect = document.getElementById("component-type-select");
+  const idSelect = document.getElementById("component-id-select");
+  const editor = document.getElementById("component-json-editor");
+  if (!typeSelect || !idSelect || !editor) return;
+  const detail = await api(`/api/config/components/${typeSelect.value}/${idSelect.value}`);
+  editor.value = JSON.stringify(detail, null, 2);
+  setComponentEditorStatus(`Loaded ${detail.id}`, false);
+}
+
+async function createComponentTemplate() {
+  const typeSelect = document.getElementById("component-type-select");
+  const editor = document.getElementById("component-json-editor");
+  if (!typeSelect || !editor) return;
+  const template = await api(`/api/config/components/${typeSelect.value}/template`);
+  editor.value = JSON.stringify(template, null, 2);
+  setComponentEditorStatus(`New ${typeSelect.value} template — edit the id and fields, then Save.`, false);
+}
+
+async function saveComponentEditor() {
+  const editor = document.getElementById("component-json-editor");
+  const allowOverwrite = document.getElementById("component-allow-overwrite")?.checked ?? true;
+  if (!editor) return;
+  let data;
+  try {
+    data = JSON.parse(editor.value);
+  } catch (error) {
+    setComponentEditorStatus(`Invalid JSON: ${error.message}`, true);
+    return;
+  }
+
+  try {
+    const result = await api("/api/config/components/save", {
+      method: "POST",
+      body: JSON.stringify({ data, allow_overwrite: allowOverwrite }),
+    });
+    clearComponentOptionsCache(data.component_type);
+    setComponentEditorStatus(`Saved ${result.component_type}/${result.id}`, false);
+    await refreshComponentIdSelect();
+    const idSelect = document.getElementById("component-id-select");
+    if (idSelect) idSelect.value = result.id;
+    if (configState.detail) {
+      await renderConfigSlots();
+    }
+  } catch (error) {
+    let message = error.message;
+    try {
+      const parsed = JSON.parse(message);
+      if (parsed.detail?.violations) {
+        message = parsed.detail.violations.join("; ");
+      } else if (typeof parsed.detail === "string") {
+        message = parsed.detail;
+      }
+    } catch (_ignored) {
+      /* use raw message */
+    }
+    setComponentEditorStatus(message, true);
+  }
 }
 
 async function renderConfigSlots() {
@@ -226,6 +336,20 @@ function setupConfigEditor() {
   document.getElementById("config-vehicle-select").addEventListener("change", () => {
     void loadConfigEditor();
   });
+
+  document.getElementById("btn-component-load")?.addEventListener("click", () => {
+    void loadSelectedComponentIntoEditor();
+  });
+  document.getElementById("btn-component-new")?.addEventListener("click", () => {
+    void createComponentTemplate();
+  });
+  document.getElementById("btn-component-save")?.addEventListener("click", () => {
+    void saveComponentEditor();
+  });
+  document.getElementById("component-type-select")?.addEventListener("change", () => {
+    void refreshComponentIdSelect();
+  });
+  void loadComponentTypeSelect();
 }
 
 window.loadConfigEditor = loadConfigEditor;

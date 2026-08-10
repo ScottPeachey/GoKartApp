@@ -71,6 +71,36 @@ def test_list_motors(client: TestClient) -> None:
     assert any(item["id"] == "v1_motor_5kw" for item in motors)
 
 
+def test_component_detail_and_save(client: TestClient) -> None:
+    detail = client.get("/api/config/components/motor/v1_motor_5kw")
+    assert detail.status_code == 200
+    payload = detail.json()
+    assert payload["id"] == "v1_motor_5kw"
+
+    template = client.get("/api/config/components/motor/template")
+    assert template.status_code == 200
+    new_data = template.json()
+    new_data["id"] = "test_motor_dashboard"
+    new_data["peak_power_w"] = 5200.0
+
+    response = client.post(
+        "/api/config/components/save",
+        json={"data": new_data, "allow_overwrite": False},
+    )
+    assert response.status_code == 200
+    assert response.json()["id"] == "test_motor_dashboard"
+
+    saved = client.get("/api/config/components/motor/test_motor_dashboard")
+    assert saved.status_code == 200
+    assert saved.json()["peak_power_w"] == 5200.0
+
+
+def test_sim_reset(client: TestClient) -> None:
+    response = client.post("/api/sim/reset")
+    assert response.status_code == 200
+    assert response.json()["status"] == "reset"
+
+
 def test_save_vehicle_version(client: TestClient) -> None:
     detail = client.get("/api/config/vehicles/Scott%20Kart%20V1/V1.0/detail").json()
     response = client.post(
