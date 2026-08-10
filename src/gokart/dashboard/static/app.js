@@ -483,16 +483,8 @@ function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
 
 function speedToPathColor(speedKmh, maxSpeedKmh) {
   const t = Math.min(1, Math.max(0, speedKmh / Math.max(maxSpeedKmh, 0.1)));
-  if (t < 0.5) {
-    const u = t * 2;
-    const g = Math.round(255 * u);
-    const b = Math.round(255 * (1 - u));
-    return `rgb(0,${g},${b})`;
-  }
-  const u = (t - 0.5) * 2;
-  const r = Math.round(255 * u);
-  const g = Math.round(255 * (1 - u));
-  return `rgb(${r},${g},0)`;
+  const hue = 240 * (1 - t);
+  return `hsl(${hue}, 82%, 48%)`;
 }
 
 function pathPlotTransform(xs, ys, canvas, margin = 20, markerPad = 7) {
@@ -549,7 +541,10 @@ function drawPathMarker(pathCtx, x, y, toPx, canvas) {
 }
 
 async function drawSessionChart(sessionId) {
-  const samples = await api(`/api/sessions/${sessionId}/samples?limit=5000`);
+  const [samples, session] = await Promise.all([
+    api(`/api/sessions/${sessionId}/samples?limit=5000`),
+    api(`/api/sessions/${sessionId}`),
+  ]);
   const canvas = document.getElementById("history-chart");
   const pathCanvas = document.getElementById("history-path");
   const ctx = canvas.getContext("2d");
@@ -560,7 +555,21 @@ async function drawSessionChart(sessionId) {
 
   const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
   const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
-  const maxSpeed = Math.max(...speeds, 1);
+  const peakSpeed = Math.max(...speeds, 0);
+  const maxSpeed = Math.max(peakSpeed, 1);
+  let pathColorMaxKmh = maxSpeed;
+  try {
+    const params = new URLSearchParams({
+      vehicle_name: session.vehicle_name,
+      vehicle_version: session.vehicle_version,
+      mode: session.drive_mode,
+      profile: session.driver_profile,
+    });
+    const limits = await api(`/api/config/effective-limits?${params}`);
+    pathColorMaxKmh = limits.max_speed_kmh;
+  } catch (_error) {
+    /* use session peak for older or incomplete session metadata */
+  }
   const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
   const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
   const panelHeight = (canvas.height - 50) / 2;
@@ -590,12 +599,16 @@ async function drawSessionChart(sessionId) {
   const boundsYs = useLiveMarker ? ys.concat(markerY) : ys;
   const { toPx } = pathPlotTransform(boundsXs, boundsYs, pathCanvas);
 
-  drawSpeedColoredPath(pathCtx, xs, ys, speeds, maxSpeed, toPx);
+  drawSpeedColoredPath(pathCtx, xs, ys, speeds, pathColorMaxKmh, toPx);
   drawPathMarker(pathCtx, markerX, markerY, toPx, pathCanvas);
 
   pathCtx.fillStyle = "#8aa0b8";
   pathCtx.font = "12px sans-serif";
-  pathCtx.fillText("Path trace — blue slow → green → red fast", 10, 16);
+  pathCtx.fillText(
+    `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit`,
+    10,
+    16,
+  );
 }
 
 function selectedVehicle() {
