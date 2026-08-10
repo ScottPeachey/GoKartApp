@@ -51,6 +51,7 @@
     <section class="tabs">
       <button class="tab active" data-tab="live">Live Channels</button>
       <button class="tab" data-tab="history">Session History</button>
+      <button class="tab" data-tab="config">Configuration</button>
     </section>
 
     <section id="tab-live" class="tab-panel">
@@ -67,8 +68,44 @@
       </div>
       <canvas id="history-chart" width="900" height="240"></canvas>
     </section>
+
+    <section id="tab-config" class="tab-panel hidden">
+      <p class="config-intro">
+        Pick parts and drivetrain settings, then save as a new vehicle version.
+        Hashes and JSON files are handled automatically.
+      </p>
+      <div class="row">
+        <label>Vehicle
+          <select id="config-vehicle-select"></select>
+        </label>
+        <label>New version
+          <input id="config-new-version" type="text" placeholder="auto" />
+        </label>
+        <button id="btn-config-save" type="button">Save as new version</button>
+      </div>
+      <div id="config-status" class="config-status hidden"></div>
+      <div class="config-layout">
+        <div class="config-slots">
+          <h3>Fitted components</h3>
+          <div id="config-slots-list"></div>
+        </div>
+        <div class="config-drivetrain">
+          <h3>Drivetrain</h3>
+          <div class="row">
+            <label>Motor sprocket teeth
+              <input id="cfg-motor-sprocket" type="number" min="1" step="1" />
+            </label>
+            <label>Axle sprocket teeth
+              <input id="cfg-axle-sprocket" type="number" min="1" step="1" />
+            </label>
+          </div>
+          <p class="config-hint">Total mass (dry + battery + driver): <span id="cfg-mass">—</span> kg</p>
+        </div>
+      </div>
+    </section>
   </main>
 
+  <script src="/static/config.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

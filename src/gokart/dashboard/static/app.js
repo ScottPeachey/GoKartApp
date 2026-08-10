@@ -66,17 +66,8 @@ function connectWebSocket() {
 
 async function loadConfig() {
   state.channels = await api("/api/channels");
-  state.vehicles = await api("/api/config/vehicles");
+  await refreshVehicleLists();
   const scenarios = await api("/api/config/scenarios");
-
-  const vehicleSelect = document.getElementById("vehicle-select");
-  vehicleSelect.innerHTML = "";
-  for (const vehicle of state.vehicles) {
-    const option = document.createElement("option");
-    option.value = `${vehicle.name}|${vehicle.version}`;
-    option.textContent = `${vehicle.name} ${vehicle.version}`;
-    vehicleSelect.appendChild(option);
-  }
 
   const scenarioSelect = document.getElementById("scenario-select");
   scenarioSelect.innerHTML = "";
@@ -87,6 +78,44 @@ async function loadConfig() {
     scenarioSelect.appendChild(option);
   }
 }
+
+async function refreshVehicleLists(selectName = null, selectVersion = null) {
+  state.vehicles = await api("/api/config/vehicles");
+
+  const vehicleSelect = document.getElementById("vehicle-select");
+  const previous = vehicleSelect.value;
+  vehicleSelect.innerHTML = "";
+  for (const vehicle of state.vehicles) {
+    const option = document.createElement("option");
+    option.value = `${vehicle.name}|${vehicle.version}`;
+    option.textContent = `${vehicle.name} ${vehicle.version}`;
+    vehicleSelect.appendChild(option);
+  }
+  if (selectName && selectVersion) {
+    vehicleSelect.value = `${selectName}|${selectVersion}`;
+  } else if (previous) {
+    vehicleSelect.value = previous;
+  }
+
+  const configSelect = document.getElementById("config-vehicle-select");
+  if (configSelect) {
+    const configPrevious = configSelect.value;
+    configSelect.innerHTML = "";
+    for (const vehicle of state.vehicles) {
+      const option = document.createElement("option");
+      option.value = `${vehicle.name}|${vehicle.version}`;
+      option.textContent = `${vehicle.name} ${vehicle.version}`;
+      configSelect.appendChild(option);
+    }
+    if (selectName && selectVersion) {
+      configSelect.value = `${selectName}|${selectVersion}`;
+    } else if (configPrevious) {
+      configSelect.value = configPrevious;
+    }
+  }
+}
+
+window.refreshVehicleLists = refreshVehicleLists;
 
 async function refreshSessions() {
   const sessions = await api("/api/sessions");
@@ -155,7 +184,11 @@ function setupTabs() {
       const tab = button.dataset.tab;
       document.getElementById("tab-live").classList.toggle("hidden", tab !== "live");
       document.getElementById("tab-history").classList.toggle("hidden", tab !== "history");
+      document.getElementById("tab-config").classList.toggle("hidden", tab !== "config");
       if (tab === "history") refreshSessions();
+      if (tab === "config" && typeof window.loadConfigEditor === "function") {
+        window.loadConfigEditor();
+      }
     });
   });
 }

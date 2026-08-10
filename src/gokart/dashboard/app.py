@@ -12,6 +12,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from gokart.config.editor import (
+    VEHICLE_SLOTS,
+    SaveVehicleRequest,
+    build_vehicle_detail,
+    list_component_summaries,
+    save_vehicle_as_new_version,
+)
 from gokart.config.store import data_root, list_drive_modes, list_driver_profiles, list_vehicles
 from gokart.dashboard.sim_controller import SimController
 from gokart.sim.scenarios import BUILTIN_SCENARIOS
@@ -83,6 +90,47 @@ def create_app(
     @app.get("/api/config/scenarios")
     def api_scenarios() -> list[str]:
         return sorted(BUILTIN_SCENARIOS)
+
+    @app.get("/api/config/slots")
+    def api_slots() -> list[dict[str, str | bool]]:
+        return [
+            {
+                "id": slot.slot_id,
+                "label": slot.label,
+                "component_type": slot.component_type,
+                "required": slot.required,
+            }
+            for slot in VEHICLE_SLOTS
+        ]
+
+    @app.get("/api/config/vehicles/{name}/{version}/detail")
+    def api_vehicle_detail(name: str, version: str) -> dict[str, Any]:
+        try:
+            return build_vehicle_detail(name, version, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/api/config/components/{component_type}")
+    def api_components(component_type: str) -> list[dict[str, Any]]:
+        try:
+            return list_component_summaries(component_type, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/config/vehicles/save")
+    def api_save_vehicle(request: SaveVehicleRequest) -> dict[str, Any]:
+        if sim_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop the simulation before saving configuration changes.",
+            )
+        result = save_vehicle_as_new_version(request, root=data_root(), actor="dashboard")
+        if not result.validation_ok:
+            raise HTTPException(
+                status_code=400,
+                detail={"message": "Validation failed", "violations": result.violations},
+            )
+        return result.model_dump(mode="json")
 
     @app.get("/api/sessions")
     def api_sessions(

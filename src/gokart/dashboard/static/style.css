@@ -143,3 +143,90 @@ th, td {
   border-radius: 8px;
   margin-top: 0.75rem;
 }
+
+.config-intro {
+  color: #8aa0b8;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.config-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 800px) {
+  .config-layout { grid-template-columns: 1fr; }
+}
+
+.config-slots, .config-drivetrain {
+  background: #121a26;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.config-slots h3, .config-drivetrain h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.config-slot-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 1.2fr;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2a3548;
+}
+
+.config-slot-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.config-slot-current {
+  font-size: 0.85rem;
+  color: #8aa0b8;
+}
+
+.config-slot-select {
+  width: 100%;
+  background: #1a2332;
+  color: var(--text);
+  border: 1px solid #2a3548;
+  border-radius: 6px;
+  padding: 0.35rem;
+}
+
+.config-hint {
+  font-size: 0.85rem;
+  color: #8aa0b8;
+  margin: 0.75rem 0 0;
+}
+
+#config-new-version {
+  background: #1a2332;
+  color: var(--text);
+  border: 1px solid #2a3548;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  width: 6rem;
+}
+
+.config-status {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.config-status.success {
+  background: rgba(61, 214, 198, 0.15);
+  border: 1px solid var(--accent);
+}
+
+.config-status.error {
+  background: rgba(255, 77, 79, 0.15);
+  border: 1px solid var(--fault);
+}

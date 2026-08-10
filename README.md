@@ -38,6 +38,10 @@ gokart dashboard
 gokart sweep run data/sweeps/sprocket_0_30.json
 ```
 
+In the dashboard, open the **Configuration** tab to swap components or change
+sprocket sizes. Saving creates a new vehicle version automatically (no JSON or
+hashes).
+
 ## Firmware (Phase 6+)
 
 Phase 6 adds the ESP32 firmware skeleton and a C port of the safety/limits/control
