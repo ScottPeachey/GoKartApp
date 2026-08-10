@@ -225,16 +225,18 @@ class TelemetryStore:
             rows = conn.execute(query, params).fetchall()
         return [self._row_to_info(row) for row in rows]
 
-    def load_samples(self, session_id: str) -> list[dict[str, Any]]:
+    def load_samples(self, session_id: str, *, limit: int | None = None) -> list[dict[str, Any]]:
+        query = """
+            SELECT payload FROM samples
+            WHERE session_id = ?
+            ORDER BY sample_index
+        """
+        params: list[Any] = [session_id]
+        if limit is not None:
+            query += " LIMIT ?"
+            params.append(limit)
         with self._connect() as conn:
-            rows = conn.execute(
-                """
-                SELECT payload FROM samples
-                WHERE session_id = ?
-                ORDER BY sample_index
-                """,
-                (session_id,),
-            ).fetchall()
+            rows = conn.execute(query, params).fetchall()
         return [json.loads(row["payload"]) for row in rows]
 
     def export_csv(self, session_id: str, path: Path) -> None:

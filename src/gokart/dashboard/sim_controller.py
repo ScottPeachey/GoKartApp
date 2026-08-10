@@ -157,6 +157,7 @@ class SimController:
                 controls=self.controls,
                 on_tick=on_tick,
                 recorder=self._recorder,
+                keep_records=False,
             )
             end_soc = result.final_state.battery.soc if result.final_state.battery else None
             self._recorder.close(end_soc=end_soc)

@@ -218,8 +218,8 @@ def create_app(
     def api_session_samples(session_id: str, limit: int = 5000) -> list[dict[str, Any]]:
         if telemetry_store.get_session(session_id) is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        samples = telemetry_store.load_samples(session_id)
-        return samples[:limit]
+        samples = telemetry_store.load_samples(session_id, limit=limit)
+        return samples
 
     @app.post("/api/sim/start")
     def api_sim_start(request: SimStartRequest) -> dict[str, Any]:
@@ -286,16 +286,19 @@ def create_app(
     async def ws_live(websocket: WebSocket) -> None:
         await websocket.accept()
         sub_id = telemetry_bus.subscribe(name="dashboard", maxsize=128)
+        sent_schema = False
         try:
             while True:
                 sample = await asyncio.to_thread(telemetry_bus.poll, sub_id, timeout_s=0.05)
                 if sample is not None:
-                    payload = {
+                    payload: dict[str, Any] = {
                         "type": "sample",
-                        "channels": channel_schema(),
                         "data": sample,
                         "speed_kmh": mps_to_kmh(float(sample.get("speed_mps", 0.0))),
                     }
+                    if not sent_schema:
+                        payload["channels"] = channel_schema()
+                        sent_schema = True
                     await websocket.send_json(payload)
                 else:
                     await asyncio.sleep(0.01)

@@ -17,6 +17,12 @@ class SteeringOutputs:
     yaw_rate_rad_s: float
 
 
+def steering_angle_rad(steering_input: float) -> float:
+    """Map normalized steering input (-1..1) to front wheel angle."""
+    clamped = max(-1.0, min(1.0, steering_input))
+    return math.radians(MAX_STEER_ANGLE_DEG) * clamped
+
+
 def step_steering(
     *,
     heading_rad: float,
@@ -28,8 +34,7 @@ def step_steering(
     dt: float,
 ) -> SteeringOutputs:
     """Advance heading and planar position from normalized steering input (-1..1)."""
-    clamped = max(-1.0, min(1.0, steering_input))
-    steer_rad = math.radians(MAX_STEER_ANGLE_DEG) * clamped
+    steer_rad = steering_angle_rad(steering_input)
     yaw_rate = 0.0
     if speed_mps > 0.05 and wheelbase_m > 0.0:
         yaw_rate = (speed_mps / wheelbase_m) * math.tan(steer_rad)

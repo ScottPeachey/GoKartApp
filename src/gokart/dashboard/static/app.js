@@ -3,10 +3,14 @@ const state = {
   lastSample: {},
   ws: null,
   vehicles: [],
-  inputPollTimer: null,
   brakeHold: false,
   simRunning: false,
   historyPollTimer: null,
+  historyRefreshInFlight: false,
+  lastHistorySampleCount: null,
+  pendingLiveSample: null,
+  liveUiScheduled: false,
+  channelRowsBuilt: false,
 };
 
 const SAFETY_CLASSES = [
@@ -74,15 +78,43 @@ function interactiveInputsEnabled() {
   return mode === "free" || mode === "manual";
 }
 
-function updateChannelsTable(sample) {
+function ensureChannelsTable() {
+  if (state.channelRowsBuilt) return;
   const tbody = document.querySelector("#channels-table tbody");
   tbody.innerHTML = "";
   for (const channel of state.channels) {
     const row = document.createElement("tr");
-    const value = sample[channel.name] ?? "";
-    row.innerHTML = `<td>${channel.name}</td><td>${value}</td><td>${channel.unit}</td>`;
+    row.dataset.channel = channel.name;
+    row.innerHTML = `<td>${channel.name}</td><td class="channel-value"></td><td>${channel.unit}</td>`;
     tbody.appendChild(row);
   }
+  state.channelRowsBuilt = true;
+}
+
+function updateChannelsTable(sample) {
+  ensureChannelsTable();
+  for (const row of document.querySelectorAll("#channels-table tbody tr")) {
+    const name = row.dataset.channel;
+    const cell = row.querySelector(".channel-value");
+    if (cell) cell.textContent = sample[name] ?? "";
+  }
+}
+
+function flushLiveUi() {
+  state.liveUiScheduled = false;
+  const sample = state.pendingLiveSample;
+  if (!sample) return;
+  state.lastSample = sample;
+  updateDrivePanel(sample, sample._speedKmh);
+  updateChannelsTable(sample);
+}
+
+function scheduleLiveUi(sample, speedKmh) {
+  sample._speedKmh = speedKmh;
+  state.pendingLiveSample = sample;
+  if (state.liveUiScheduled) return;
+  state.liveUiScheduled = true;
+  requestAnimationFrame(flushLiveUi);
 }
 
 function connectWebSocket() {
@@ -91,9 +123,11 @@ function connectWebSocket() {
   state.ws.onmessage = (event) => {
     const message = JSON.parse(event.data);
     if (message.type !== "sample") return;
-    state.lastSample = message.data;
-    updateDrivePanel(message.data, message.speed_kmh);
-    updateChannelsTable(message.data);
+    if (message.channels?.length) {
+      state.channels = message.channels;
+      state.channelRowsBuilt = false;
+    }
+    scheduleLiveUi(message.data, message.speed_kmh);
   };
   state.ws.onclose = () => setTimeout(connectWebSocket, 1000);
 }
@@ -162,39 +196,52 @@ async function refreshSessions() {
 }
 
 async function refreshHistoryView(forceSessionList = false) {
-  const select = document.getElementById("session-select");
-  const previousSessionId = select.value;
-  const tabVisible = !document.getElementById("tab-history").classList.contains("hidden");
+  if (state.historyRefreshInFlight) return;
+  state.historyRefreshInFlight = true;
+  try {
+    const select = document.getElementById("session-select");
+    const previousSessionId = select.value;
 
-  if (forceSessionList || tabVisible) {
-    const sessions = await api("/api/sessions");
-    select.innerHTML = "";
-    for (const session of sessions) {
-      const option = document.createElement("option");
-      option.value = session.session_id;
-      option.textContent = `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
-      select.appendChild(option);
+    if (forceSessionList) {
+      const sessions = await api("/api/sessions");
+      select.innerHTML = "";
+      for (const session of sessions) {
+        const option = document.createElement("option");
+        option.value = session.session_id;
+        option.textContent = `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
+        select.appendChild(option);
+      }
+      if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
+        select.value = previousSessionId;
+      } else if (sessions.length) {
+        select.value = sessions[0].session_id;
+      }
+      if (!sessions.length) return;
     }
-    if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
-      select.value = previousSessionId;
-    } else if (sessions.length) {
-      select.value = sessions[0].session_id;
-    }
-    if (!sessions.length) return;
-  }
 
-  const sessionId = select.value;
-  if (sessionId) {
+    const sessionId = select.value;
+    if (!sessionId) return;
+
+    const sessions = forceSessionList ? null : await api("/api/sessions");
+    const current = sessions?.find((s) => s.session_id === sessionId);
+    const sampleCount = current?.sample_count ?? null;
+    if (!forceSessionList && sampleCount !== null && sampleCount === state.lastHistorySampleCount) {
+      return;
+    }
+    state.lastHistorySampleCount = sampleCount;
     await drawSessionChart(sessionId);
+  } finally {
+    state.historyRefreshInFlight = false;
   }
 }
 
 function startHistoryPolling() {
   stopHistoryPolling();
+  state.lastHistorySampleCount = null;
   void refreshHistoryView(true);
   state.historyPollTimer = setInterval(() => {
     void refreshHistoryView(false);
-  }, 100);
+  }, 1000);
 }
 
 function stopHistoryPolling() {
@@ -398,12 +445,8 @@ function updateFreeDriveGuide(safetyState) {
 }
 
 function startManualInputPolling() {
-  stopManualInputPolling();
   if (!interactiveInputsEnabled()) return;
   void sendInputs();
-  state.inputPollTimer = setInterval(() => {
-    void sendInputs();
-  }, 100);
 }
 
 function updateSimModeUi() {
@@ -427,10 +470,7 @@ function updateSimModeUi() {
 }
 
 function stopManualInputPolling() {
-  if (state.inputPollTimer !== null) {
-    clearInterval(state.inputPollTimer);
-    state.inputPollTimer = null;
-  }
+  // Inputs are sent on slider change; nothing to stop.
 }
 
 function setupTabs() {
@@ -488,8 +528,12 @@ function setupControls() {
   document.getElementById("btn-brake-hold").addEventListener("click", () => setBrakeHold(!state.brakeHold));
   document.getElementById("btn-arm-scenario").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
   document.getElementById("btn-ack-scenario").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
-  document.getElementById("btn-refresh-sessions").addEventListener("click", refreshSessions);
+  document.getElementById("btn-refresh-sessions").addEventListener("click", () => {
+    state.lastHistorySampleCount = null;
+    void refreshHistoryView(true);
+  });
   document.getElementById("session-select").addEventListener("change", (event) => {
+    state.lastHistorySampleCount = null;
     drawSessionChart(event.target.value);
   });
 

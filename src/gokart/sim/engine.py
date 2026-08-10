@@ -178,6 +178,7 @@ def run_simulation(
     recorder: SessionRecorder | None = None,
     overlay: CalibrationOverlay | None = None,
     vehicle_config: VehicleConfig | None = None,
+    keep_records: bool = True,
 ) -> SimulationResult:
     root = data_root_path or data_root()
     if vehicle_config is not None:
@@ -230,6 +231,7 @@ def run_simulation(
         clock.start()
 
     records: list[SimTickRecord] = []
+    retain_records = keep_records and recorder is None
     if controls and (controls.manual or controls.free_mode):
         steps = 10_000_000
     else:
@@ -441,7 +443,8 @@ def run_simulation(
                 "derating_factor": safety_outputs.derating.power,
             },
         )
-        records.append(tick)
+        if retain_records:
+            records.append(tick)
         if on_tick is not None:
             on_tick(tick)
         if recorder is not None:

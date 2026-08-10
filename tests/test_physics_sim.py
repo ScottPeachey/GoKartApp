@@ -378,6 +378,42 @@ def test_free_mode_records_steering_in_session() -> None:
     assert any(abs(r.values["position_y_m"]) > 0.5 for r in late)
 
 
+def test_cornering_reduces_speed_vs_straight() -> None:
+    root = Path(__file__).resolve().parents[1]
+    scenario = Scenario(name="cornering", duration_s=1e9, auto_boot=True)
+
+    def run_with_steering(steering: float) -> float:
+        controls = RuntimeControls(manual=True)
+        peak = 0.0
+
+        def on_tick(tick) -> None:
+            nonlocal peak
+            t = tick.time_s
+            if t < 8.0:
+                controls.throttle = 1.0
+                controls.brake = 0.0
+                controls.steering = steering
+            else:
+                controls.stop_requested = True
+            if tick.values["safety_state"] == "DRIVING" and t >= 4.0:
+                peak = max(peak, tick.values["speed_mps"])
+
+        run_simulation(
+            "Scott Kart V1",
+            "V1.0",
+            scenario,
+            data_root_path=root / "data",
+            controls=controls,
+            on_tick=on_tick,
+        )
+        return peak
+
+    straight_peak = run_with_steering(0.0)
+    turning_peak = run_with_steering(1.0)
+    assert straight_peak > 5.0
+    assert turning_peak < straight_peak * 0.85
+
+
 def test_manual_mode_brake_does_not_disarm() -> None:
     root = Path(__file__).resolve().parents[1]
     controls = RuntimeControls(manual=True)

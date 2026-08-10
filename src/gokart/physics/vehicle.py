@@ -23,8 +23,12 @@ from gokart.physics.drivetrain import (
 )
 from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_motor
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
-from gokart.physics.steering import step_steering
-from gokart.physics.tyres import saturate_traction_force
+from gokart.physics.steering import step_steering, steering_angle_rad
+from gokart.physics.tyres import (
+    cornering_speed_limit_mps,
+    lateral_force_from_steering_n,
+    saturate_traction_friction_circle,
+)
 
 
 @dataclass(frozen=True)
@@ -219,7 +223,20 @@ class VehicleModel:
             drivetrain_out.wheel_torque_nm,
             self.drivetrain_params.wheel_radius_m,
         )
-        tyre_out = saturate_traction_force(force_req, self.mass_kg, grip, env.gradient_rad)
+        steer_rad = steering_angle_rad(inputs.steering)
+        lateral_force = lateral_force_from_steering_n(
+            state.speed_mps,
+            steer_rad,
+            self.config.wheelbase_m,
+            self.mass_kg,
+        )
+        tyre_out = saturate_traction_friction_circle(
+            force_req,
+            lateral_force,
+            self.mass_kg,
+            grip,
+            env.gradient_rad,
+        )
 
         brake_out = step_brakes(
             inputs.mechanical_brake,
@@ -239,6 +256,14 @@ class VehicleModel:
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
 
         new_speed = max(0.0, state.speed_mps + accel * dt)
+        corner_limit = cornering_speed_limit_mps(
+            steer_rad,
+            self.config.wheelbase_m,
+            grip,
+            env.gradient_rad,
+        )
+        if corner_limit is not None:
+            new_speed = min(new_speed, corner_limit)
         new_position = state.position_m + new_speed * dt
 
         steering_out = step_steering(
