@@ -9,6 +9,7 @@ const state = {
   historyPollTimer: null,
   historyRefreshInFlight: false,
   historyPollCount: 0,
+  liveSessionId: null,
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
@@ -326,7 +327,7 @@ async function refreshHistoryView(forceSessionList = false) {
     const select = document.getElementById("session-select");
     const previousSessionId = select.value;
     state.historyPollCount += 1;
-    const refreshList = forceSessionList || state.historyPollCount % 3 === 0;
+    const refreshList = forceSessionList || state.historyPollCount % 30 === 0;
 
     let sessions = [];
     if (refreshList) {
@@ -349,12 +350,15 @@ async function refreshHistoryView(forceSessionList = false) {
     if (state.simRunning) {
       try {
         const status = await api("/api/sim/status");
+        state.liveSessionId = status.session_id || null;
         if (status.session_id && [...select.options].some((o) => o.value === status.session_id)) {
           select.value = status.session_id;
         }
       } catch (_error) {
         /* keep current selection */
       }
+    } else {
+      state.liveSessionId = null;
     }
 
     const sessionId = select.value;
@@ -372,7 +376,7 @@ function startHistoryPolling() {
   void refreshHistoryView(true);
   state.historyPollTimer = setInterval(() => {
     void refreshHistoryView(false);
-  }, 1000);
+  }, 100);
 }
 
 function stopHistoryPolling() {
@@ -398,6 +402,63 @@ function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
+}
+
+function speedToPathColor(speedKmh, maxSpeedKmh) {
+  const t = Math.min(1, Math.max(0, speedKmh / Math.max(maxSpeedKmh, 0.1)));
+  if (t < 0.5) {
+    const u = t * 2;
+    const g = Math.round(255 * u);
+    const b = Math.round(255 * (1 - u));
+    return `rgb(0,${g},${b})`;
+  }
+  const u = (t - 0.5) * 2;
+  const r = Math.round(255 * u);
+  const g = Math.round(255 * (1 - u));
+  return `rgb(${r},${g},0)`;
+}
+
+function pathPlotTransform(xs, ys, canvas, margin = 20) {
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(maxX - minX, 1);
+  const spanY = Math.max(maxY - minY, 1);
+  const plotW = canvas.width - margin * 2;
+  const plotH = canvas.height - margin * 2;
+  const toPx = (x, y) => ({
+    px: margin + ((x - minX) / spanX) * plotW,
+    py: margin + plotH - ((y - minY) / spanY) * plotH,
+  });
+  return { toPx, minX, maxX, minY, maxY };
+}
+
+function drawSpeedColoredPath(pathCtx, xs, ys, speedsKmh, maxSpeedKmh, toPx) {
+  pathCtx.lineWidth = 2.5;
+  pathCtx.lineCap = "round";
+  pathCtx.lineJoin = "round";
+  for (let index = 1; index < xs.length; index += 1) {
+    const speed = (speedsKmh[index] + speedsKmh[index - 1]) / 2;
+    pathCtx.strokeStyle = speedToPathColor(speed, maxSpeedKmh);
+    pathCtx.beginPath();
+    const start = toPx(xs[index - 1], ys[index - 1]);
+    const end = toPx(xs[index], ys[index]);
+    pathCtx.moveTo(start.px, start.py);
+    pathCtx.lineTo(end.px, end.py);
+    pathCtx.stroke();
+  }
+}
+
+function drawPathMarker(pathCtx, x, y, toPx) {
+  const { px, py } = toPx(x, y);
+  pathCtx.beginPath();
+  pathCtx.fillStyle = "#ff3b30";
+  pathCtx.arc(px, py, 5, 0, Math.PI * 2);
+  pathCtx.fill();
+  pathCtx.strokeStyle = "#ffffff";
+  pathCtx.lineWidth = 1.5;
+  pathCtx.stroke();
 }
 
 async function drawSessionChart(sessionId) {
@@ -427,31 +488,24 @@ async function drawSessionChart(sessionId) {
 
   const xs = samples.map((s) => Number(s.position_x_m || 0));
   const ys = samples.map((s) => Number(s.position_y_m || 0));
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const spanX = Math.max(maxX - minX, 1);
-  const spanY = Math.max(maxY - minY, 1);
-  const margin = 20;
-  const plotW = pathCanvas.width - margin * 2;
-  const plotH = pathCanvas.height - margin * 2;
+  const { toPx } = pathPlotTransform(xs, ys, pathCanvas);
 
-  pathCtx.strokeStyle = "#3dd6c6";
-  pathCtx.lineWidth = 2;
-  pathCtx.beginPath();
-  xs.forEach((x, index) => {
-    const y = ys[index];
-    const px = margin + ((x - minX) / spanX) * plotW;
-    const py = margin + plotH - ((y - minY) / spanY) * plotH;
-    if (index === 0) pathCtx.moveTo(px, py);
-    else pathCtx.lineTo(px, py);
-  });
-  pathCtx.stroke();
+  drawSpeedColoredPath(pathCtx, xs, ys, speeds, maxSpeed, toPx);
+
+  const live = state.lastSample;
+  const liveX = Number(live.position_x_m);
+  const liveY = Number(live.position_y_m);
+  const useLiveMarker = state.simRunning
+    && state.liveSessionId === sessionId
+    && Number.isFinite(liveX)
+    && Number.isFinite(liveY);
+  const markerX = useLiveMarker ? liveX : xs[xs.length - 1];
+  const markerY = useLiveMarker ? liveY : ys[ys.length - 1];
+  drawPathMarker(pathCtx, markerX, markerY, toPx);
 
   pathCtx.fillStyle = "#8aa0b8";
   pathCtx.font = "12px sans-serif";
-  pathCtx.fillText("Path trace (plan view)", 10, 16);
+  pathCtx.fillText("Path trace — blue slow → green → red fast", 10, 16);
 }
 
 function selectedVehicle() {
