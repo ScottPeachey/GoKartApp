@@ -74,6 +74,28 @@ def test_csv_export_matches_sqlite(temp_store: TelemetryStore, tmp_path: Path) -
     assert float(csv_text[1].split(",")[CHANNEL_NAMES.index("speed_mps")]) == pytest.approx(1.0)
 
 
+def test_load_samples_limit_returns_latest_rows(temp_store: TelemetryStore) -> None:
+    recorder = SessionRecorder(
+        SessionMetadata(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            config_hash="limit-test",
+            driver_profile="Owner",
+            drive_mode="Default",
+        ),
+        store=temp_store,
+        log_every_n=1,
+    )
+    for index in range(5):
+        recorder.record_tick({"time_s": float(index), "speed_mps": float(index)})
+    recorder.close(end_soc=1.0)
+
+    latest = temp_store.load_samples(recorder.session_id, limit=2)
+    assert len(latest) == 2
+    assert latest[0]["speed_mps"] == pytest.approx(3.0)
+    assert latest[1]["speed_mps"] == pytest.approx(4.0)
+
+
 def test_bus_overflow_does_not_block_producer() -> None:
     bus = TelemetryBus()
     sub_id = bus.subscribe(name="slow", maxsize=2)

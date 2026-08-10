@@ -226,15 +226,25 @@ class TelemetryStore:
         return [self._row_to_info(row) for row in rows]
 
     def load_samples(self, session_id: str, *, limit: int | None = None) -> list[dict[str, Any]]:
+        params: list[Any] = [session_id]
+        if limit is not None:
+            query = """
+                SELECT payload FROM samples
+                WHERE session_id = ?
+                ORDER BY sample_index DESC
+                LIMIT ?
+            """
+            params.append(limit)
+            with self._connect() as conn:
+                rows = conn.execute(query, params).fetchall()
+            samples = [json.loads(row["payload"]) for row in reversed(rows)]
+            return samples
+
         query = """
             SELECT payload FROM samples
             WHERE session_id = ?
             ORDER BY sample_index
         """
-        params: list[Any] = [session_id]
-        if limit is not None:
-            query += " LIMIT ?"
-            params.append(limit)
         with self._connect() as conn:
             rows = conn.execute(query, params).fetchall()
         return [json.loads(row["payload"]) for row in rows]

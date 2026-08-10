@@ -8,7 +8,7 @@ const state = {
   simRunning: false,
   historyPollTimer: null,
   historyRefreshInFlight: false,
-  lastHistorySampleCount: null,
+  historyPollCount: 0,
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
@@ -270,9 +270,12 @@ async function refreshHistoryView(forceSessionList = false) {
   try {
     const select = document.getElementById("session-select");
     const previousSessionId = select.value;
+    state.historyPollCount += 1;
+    const refreshList = forceSessionList || state.historyPollCount % 3 === 0;
 
-    if (forceSessionList) {
-      const sessions = await api("/api/sessions");
+    let sessions = [];
+    if (refreshList) {
+      sessions = await api("/api/sessions");
       select.innerHTML = "";
       for (const session of sessions) {
         const option = document.createElement("option");
@@ -288,16 +291,20 @@ async function refreshHistoryView(forceSessionList = false) {
       if (!sessions.length) return;
     }
 
+    if (state.simRunning) {
+      try {
+        const status = await api("/api/sim/status");
+        if (status.session_id && [...select.options].some((o) => o.value === status.session_id)) {
+          select.value = status.session_id;
+        }
+      } catch (_error) {
+        /* keep current selection */
+      }
+    }
+
     const sessionId = select.value;
     if (!sessionId) return;
 
-    const sessions = forceSessionList ? null : await api("/api/sessions");
-    const current = sessions?.find((s) => s.session_id === sessionId);
-    const sampleCount = current?.sample_count ?? null;
-    if (!forceSessionList && sampleCount !== null && sampleCount === state.lastHistorySampleCount) {
-      return;
-    }
-    state.lastHistorySampleCount = sampleCount;
     await drawSessionChart(sessionId);
   } finally {
     state.historyRefreshInFlight = false;
@@ -306,7 +313,7 @@ async function refreshHistoryView(forceSessionList = false) {
 
 function startHistoryPolling() {
   stopHistoryPolling();
-  state.lastHistorySampleCount = null;
+  state.historyPollCount = 0;
   void refreshHistoryView(true);
   state.historyPollTimer = setInterval(() => {
     void refreshHistoryView(false);
@@ -634,11 +641,9 @@ function setupControls() {
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-refresh-sessions").addEventListener("click", () => {
-    state.lastHistorySampleCount = null;
     void refreshHistoryView(true);
   });
   document.getElementById("session-select").addEventListener("change", (event) => {
-    state.lastHistorySampleCount = null;
     drawSessionChart(event.target.value);
   });
 
