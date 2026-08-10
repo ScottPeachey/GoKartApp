@@ -186,15 +186,67 @@ function interactiveInputsEnabled() {
   return mode === "free" || mode === "manual";
 }
 
-function ensureChannelsTable() {
+const CHANNEL_UI = {
+  time_s: { icon: "⏱", label: "Time" },
+  position_m: { icon: "📍", label: "Distance" },
+  speed_mps: { icon: "🏎", label: "Speed" },
+  acceleration_mps2: { icon: "📈", label: "Acceleration" },
+  throttle: { icon: "🦶", label: "Throttle" },
+  brake: { icon: "🛑", label: "Brake" },
+  steering: { icon: "🎮", label: "Steering" },
+  steering_angle_deg: { icon: "↩", label: "Steer angle" },
+  heading_deg: { icon: "🧭", label: "Heading" },
+  position_x_m: { icon: "↔", label: "Position X" },
+  position_y_m: { icon: "↕", label: "Position Y" },
+  motor_rpm: { icon: "⚙", label: "Motor RPM" },
+  motor_torque_nm: { icon: "🔧", label: "Torque" },
+  motor_current_a: { icon: "⚡", label: "Motor current" },
+  battery_current_a: { icon: "🔋", label: "Battery current" },
+  pack_voltage_v: { icon: "🔌", label: "Pack voltage" },
+  soc: { icon: "🔋", label: "State of charge" },
+  power_w: { icon: "💡", label: "Power" },
+  traction_force_n: { icon: "🛞", label: "Traction" },
+  motor_temp_c: { icon: "🌡", label: "Motor temp" },
+  battery_temp_c: { icon: "🌡", label: "Battery temp" },
+  traction_limited: { icon: "🛞", label: "Traction limited" },
+  filtered_throttle: { icon: "🎚", label: "Filtered throttle" },
+  drive_mode: { icon: "🏁", label: "Drive mode" },
+  safety_state: { icon: "🛡", label: "Safety state" },
+  contactor_command: { icon: "🔀", label: "Contactor" },
+  torque_permitted: { icon: "✅", label: "Torque permitted" },
+  active_faults: { icon: "⚠", label: "Active faults" },
+  derating_factor: { icon: "📉", label: "Derating" },
+};
+
+function channelUiMeta(name) {
+  return CHANNEL_UI[name] || { icon: "📊", label: name.replace(/_/g, " ") };
+}
+
+function channelCardClass(name, value) {
+  if (name === "active_faults" && value) return "channel-fault";
+  if (name === "safety_state" && String(value).includes("FAULT")) return "channel-fault";
+  if (name === "safety_state" && String(value) === "DRIVING") return "channel-active";
+  if (name === "torque_permitted" && Number(value) > 0) return "channel-active";
+  if (name === "traction_limited" && Number(value) > 0) return "channel-warn";
+  return "";
+}
+
+function ensureChannelsGrid() {
   if (state.channelRowsBuilt) return;
-  const tbody = document.querySelector("#channels-table tbody");
-  tbody.innerHTML = "";
+  const grid = document.getElementById("channels-grid");
+  grid.innerHTML = "";
   for (const channel of state.channels) {
-    const row = document.createElement("tr");
-    row.dataset.channel = channel.name;
-    row.innerHTML = `<td>${channel.name}</td><td class="channel-value"></td><td>${channel.unit}</td>`;
-    tbody.appendChild(row);
+    const meta = channelUiMeta(channel.name);
+    const card = document.createElement("article");
+    card.className = "channel-card";
+    card.dataset.channel = channel.name;
+    card.innerHTML = `
+      <span class="channel-card-icon" aria-hidden="true">${meta.icon}</span>
+      <span class="channel-card-label">${meta.label}</span>
+      <span class="channel-card-value"></span>
+      <span class="channel-card-unit">${channel.unit}</span>
+    `;
+    grid.appendChild(card);
   }
   state.channelRowsBuilt = true;
 }
@@ -209,18 +261,23 @@ function formatChannelValue(value, channelType = "float", channelName = "") {
   return Number(stable).toFixed(decimals);
 }
 
-function updateChannelsTable(sample) {
-  ensureChannelsTable();
+function updateChannelsGrid(sample) {
+  ensureChannelsGrid();
   const typeByName = Object.fromEntries(
     state.channels.map((channel) => [channel.name, channel.type || "float"]),
   );
-  for (const row of document.querySelectorAll("#channels-table tbody tr")) {
-    const name = row.dataset.channel;
-    const cell = row.querySelector(".channel-value");
+  for (const card of document.querySelectorAll("#channels-grid .channel-card")) {
+    const name = card.dataset.channel;
+    const cell = card.querySelector(".channel-card-value");
     if (!cell) continue;
-    const text = formatChannelValue(sample[name], typeByName[name], name);
+    const raw = sample[name];
+    const text = formatChannelValue(raw, typeByName[name], name);
     if (cell.textContent !== text) {
       cell.textContent = text;
+    }
+    const nextClass = `channel-card ${channelCardClass(name, raw)}`.trim();
+    if (card.className !== nextClass) {
+      card.className = nextClass;
     }
   }
 }
@@ -231,7 +288,7 @@ function flushLiveUi() {
   if (!sample) return;
   state.lastSample = sample;
   updateDrivePanel(sample, sample._speedKmh);
-  updateChannelsTable(sample);
+  updateChannelsGrid(sample);
 }
 
 function scheduleLiveUi(sample, speedKmh) {

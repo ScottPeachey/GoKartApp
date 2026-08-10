@@ -139,6 +139,65 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   padding: 1rem;
 }
 
+.channels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0.75rem;
+}
+
+.channel-card {
+  background: #121a26;
+  border: 2px solid #2a3548;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 118px;
+}
+
+.channel-card-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.channel-card-label {
+  font-size: 0.7rem;
+  color: #8aa0b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.channel-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.channel-card-unit {
+  font-size: 0.75rem;
+  color: #6b829c;
+}
+
+.channel-card.channel-fault {
+  border-color: var(--fault);
+}
+
+.channel-card.channel-fault .channel-card-value {
+  color: var(--fault);
+  font-size: 1.1rem;
+}
+
+.channel-card.channel-active .channel-card-value {
+  color: var(--accent);
+}
+
+.channel-card.channel-warn .channel-card-value {
+  color: var(--warn);
+}
+
 .startup-panel {
   margin: 0.5rem 0;
   padding: 0.75rem;
