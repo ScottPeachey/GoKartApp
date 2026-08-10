@@ -25,6 +25,7 @@ from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_moto
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
 from gokart.physics.steering import step_steering, steering_angle_rad
 from gokart.physics.tyres import (
+    apply_cornering_speed_bleed,
     cornering_scrub_force_n,
     cornering_speed_limit_mps,
     lateral_force_from_steering_n,
@@ -265,14 +266,14 @@ class VehicleModel:
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
 
         new_speed = max(0.0, state.speed_mps + accel * dt)
-        corner_limit = cornering_speed_limit_mps(
+        new_speed = apply_cornering_speed_bleed(
+            new_speed,
             steer_rad,
             self.config.wheelbase_m,
             grip,
             env.gradient_rad,
+            dt,
         )
-        if corner_limit is not None:
-            new_speed = min(new_speed, corner_limit)
         new_position = state.position_m + new_speed * dt
 
         steering_out = step_steering(

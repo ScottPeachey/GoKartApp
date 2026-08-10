@@ -55,6 +55,9 @@ class VehicleDetailRequest(BaseModel):
     vehicle_version: str
 
 
+PHYSICS_REVISION = "cornering-v2"
+
+
 def create_app(
     *,
     bus: TelemetryBus | None = None,
@@ -82,7 +85,11 @@ def create_app(
 
     @app.get("/api/version")
     def api_version() -> dict[str, str]:
-        return {"dashboard": "0.2.0", "data_root": str(data_root())}
+        return {
+            "dashboard": "0.2.1",
+            "physics": PHYSICS_REVISION,
+            "data_root": str(data_root()),
+        }
 
     @app.get("/api/config/vehicles")
     def api_vehicles(include_detail: bool = True) -> list[dict[str, Any]]:

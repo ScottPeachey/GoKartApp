@@ -661,6 +661,15 @@ function setupControls() {
 async function init() {
   setupTabs();
   setupControls();
+  try {
+    const version = await api("/api/version");
+    const el = document.getElementById("app-version");
+    if (el) {
+      el.textContent = `(${version.dashboard}, physics ${version.physics || "?"})`;
+    }
+  } catch (_error) {
+    /* version badge is optional */
+  }
   await loadConfig();
   connectWebSocket();
 }

@@ -52,6 +52,16 @@ def saturate_traction_force(
     )
 
 
+def lateral_accel_from_bicycle_mps2(
+    speed_mps: float,
+    steer_rad: float,
+    wheelbase_m: float,
+) -> float:
+    if wheelbase_m <= 0.0 or abs(steer_rad) < 1e-6:
+        return 0.0
+    return speed_mps * speed_mps * math.tan(steer_rad) / wheelbase_m
+
+
 def lateral_force_from_steering_n(
     speed_mps: float,
     steer_rad: float,
@@ -59,10 +69,7 @@ def lateral_force_from_steering_n(
     mass_kg: float,
 ) -> float:
     """Lateral force demand from bicycle-model cornering at the given speed."""
-    if wheelbase_m <= 0.0 or abs(steer_rad) < 1e-6:
-        return 0.0
-    lat_accel = speed_mps * speed_mps * math.tan(steer_rad) / wheelbase_m
-    return mass_kg * lat_accel
+    return mass_kg * lateral_accel_from_bicycle_mps2(speed_mps, steer_rad, wheelbase_m)
 
 
 def max_lateral_accel_mps2(grip_coefficient: float, gradient_rad: float = 0.0) -> float:
@@ -82,6 +89,37 @@ def cornering_speed_limit_mps(
     if max_lat <= 0.0:
         return 0.0
     return math.sqrt(max_lat * wheelbase_m / math.tan(abs(steer_rad)))
+
+
+def apply_cornering_speed_bleed(
+    speed_mps: float,
+    steer_rad: float,
+    wheelbase_m: float,
+    grip_coefficient: float,
+    gradient_rad: float,
+    dt: float,
+) -> float:
+    """Reduce scalar speed when cornering demand exceeds available lateral grip."""
+    lat_accel = abs(lateral_accel_from_bicycle_mps2(speed_mps, steer_rad, wheelbase_m))
+    if lat_accel <= 1e-6:
+        return speed_mps
+
+    max_lat = max_lateral_accel_mps2(grip_coefficient, gradient_rad)
+    demand_ratio = lat_accel / max(max_lat, 1e-6)
+    speed_cap = cornering_speed_limit_mps(steer_rad, wheelbase_m, grip_coefficient, gradient_rad)
+    new_speed = min(speed_mps, speed_cap) if speed_cap is not None else speed_mps
+
+    if demand_ratio > 1.0:
+        bleed = min(1.0, (demand_ratio - 1.0) * 8.0 * dt)
+        if speed_cap is not None:
+            new_speed = max(speed_cap, new_speed * (1.0 - bleed))
+        else:
+            new_speed *= 1.0 - bleed
+    else:
+        scrub_accel = (demand_ratio * demand_ratio) * max_lat * 0.5
+        new_speed = max(0.0, new_speed - scrub_accel * dt)
+
+    return max(0.0, new_speed)
 
 
 def cornering_scrub_force_n(
