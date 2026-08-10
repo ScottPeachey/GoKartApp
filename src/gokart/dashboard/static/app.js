@@ -4,7 +4,24 @@ const state = {
   ws: null,
   vehicles: [],
   inputPollTimer: null,
+  shiftHeld: false,
+  chordQueue: [],
+  chordTimer: null,
+  brakeHold: false,
 };
+
+const CHORD_WINDOW_MS = 700;
+
+const SAFETY_CLASSES = [
+  "safety-off",
+  "safety-boot",
+  "safety-self_test",
+  "safety-ready",
+  "safety-armed",
+  "safety-driving",
+  "safety-fault",
+  "safety-safe_shutdown",
+];
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -31,8 +48,13 @@ function setFaultBanner(sample) {
 
 function updateDrivePanel(sample, speedKmh) {
   document.getElementById("speed-value").textContent = Math.round(speedKmh || 0);
-  document.getElementById("drive-mode").textContent = sample.drive_mode || "—";
-  document.getElementById("safety-state").textContent = sample.safety_state || "OFF";
+  const driveMode = sample.drive_mode || "—";
+  const safetyState = sample.safety_state || "OFF";
+  document.getElementById("drive-mode").textContent = driveMode;
+  document.getElementById("safety-state").textContent = safetyState;
+  const safetyCard = document.getElementById("safety-card");
+  safetyCard.classList.remove(...SAFETY_CLASSES);
+  safetyCard.classList.add(`safety-${String(safetyState).toLowerCase()}`);
   const powerKw = (Number(sample.power_w || 0) / 1000).toFixed(1);
   document.getElementById("power-kw").textContent = `${powerKw} kW`;
   const steerDeg = Number(sample.steering_angle_deg || 0);
@@ -224,13 +246,113 @@ function selectedVehicle() {
 
 async function sendInputs() {
   if (!interactiveInputsEnabled()) return;
+  const brake = state.brakeHold
+    ? 1.0
+    : Number(document.getElementById("brake").value) / 100;
   await api("/api/sim/inputs", {
     method: "POST",
     body: JSON.stringify({
       throttle: Number(document.getElementById("throttle").value) / 100,
-      brake: Number(document.getElementById("brake").value) / 100,
+      brake,
       steering: Number(document.getElementById("steering").value) / 100,
     }),
+  });
+}
+
+function setBrakeHold(active) {
+  state.brakeHold = active;
+  const btn = document.getElementById("btn-brake-hold");
+  if (btn) btn.classList.toggle("active", active);
+  const slider = document.getElementById("brake");
+  if (active) slider.value = "100";
+  else if (slider.value === "100") slider.value = "0";
+  void sendInputs();
+}
+
+async function runStartupAction(action) {
+  switch (action) {
+    case "power-on":
+      await api("/api/sim/power-on", { method: "POST" });
+      break;
+    case "arm":
+      await sendInputs();
+      await api("/api/sim/arm", { method: "POST" });
+      break;
+    case "disarm":
+      await api("/api/sim/disarm", { method: "POST" });
+      break;
+    case "ack":
+      await api("/api/sim/ack", { method: "POST" });
+      break;
+    case "brake-hold":
+      setBrakeHold(!state.brakeHold);
+      break;
+    default:
+      break;
+  }
+}
+
+function clearChordQueue() {
+  state.chordQueue = [];
+  if (state.chordTimer !== null) {
+    clearTimeout(state.chordTimer);
+    state.chordTimer = null;
+  }
+}
+
+async function flushChordQueue() {
+  const actions = [...state.chordQueue];
+  clearChordQueue();
+  if (!actions.length) return;
+  if (actions.length === 1) {
+    await runStartupAction(actions[0]);
+    return;
+  }
+  const wantsBrake = actions.includes("brake-hold");
+  const others = actions.filter((a) => a !== "brake-hold");
+  if (wantsBrake) setBrakeHold(true);
+  await Promise.all(others.map((action) => runStartupAction(action)));
+}
+
+function queueChordAction(action) {
+  if (!state.shiftHeld) {
+    void runStartupAction(action);
+    return;
+  }
+  if (!state.chordQueue.includes(action)) {
+    state.chordQueue.push(action);
+  }
+  if (state.chordTimer !== null) clearTimeout(state.chordTimer);
+  if (state.chordQueue.length >= 2) {
+    void flushChordQueue();
+    return;
+  }
+  state.chordTimer = setTimeout(() => {
+    void flushChordQueue();
+  }, CHORD_WINDOW_MS);
+}
+
+function setupChordKeys() {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Shift") state.shiftHeld = true;
+  });
+  document.addEventListener("keyup", (event) => {
+    if (event.key === "Shift") {
+      state.shiftHeld = false;
+      if (state.chordQueue.length === 1) {
+        void flushChordQueue();
+      } else {
+        clearChordQueue();
+      }
+    }
+  });
+}
+
+function wireChordButtons() {
+  document.querySelectorAll("[data-chord]").forEach((button) => {
+    button.addEventListener("click", () => {
+      queueChordAction(button.dataset.chord);
+    });
   });
 }
 
@@ -303,13 +425,11 @@ function setupControls() {
 
   document.getElementById("btn-stop").addEventListener("click", async () => {
     stopManualInputPolling();
+    setBrakeHold(false);
     await api("/api/sim/stop", { method: "POST" });
   });
-  document.getElementById("btn-arm").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
+  wireChordButtons();
   document.getElementById("btn-arm-scenario").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
-  document.getElementById("btn-power-on").addEventListener("click", () => api("/api/sim/power-on", { method: "POST" }));
-  document.getElementById("btn-disarm").addEventListener("click", () => api("/api/sim/disarm", { method: "POST" }));
-  document.getElementById("btn-ack").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
   document.getElementById("btn-ack-scenario").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
   document.getElementById("btn-refresh-sessions").addEventListener("click", refreshSessions);
   document.getElementById("session-select").addEventListener("change", (event) => {
@@ -324,6 +444,7 @@ function setupControls() {
 
 async function init() {
   setupTabs();
+  setupChordKeys();
   setupControls();
   await loadConfig();
   connectWebSocket();

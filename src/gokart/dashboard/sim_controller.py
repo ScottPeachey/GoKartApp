@@ -49,6 +49,8 @@ class SimController:
             if self.status.running:
                 raise RuntimeError("Simulation already running")
             self.controls = RuntimeControls(manual=manual, free_mode=free_mode)
+            if free_mode:
+                self.controls.power_on_request = True
             self.status = SimStatus(running=True)
             self._thread = threading.Thread(
                 target=self._run,
@@ -138,9 +140,13 @@ class SimController:
 
             def on_tick(tick) -> None:
                 self.status.last_sample = tick.to_row()
-                self.controls.arm_request = False
-                self.controls.power_on_request = False
-                self.controls.disarm_request = False
+                safety = str(tick.values.get("safety_state", "OFF"))
+                if safety != "READY":
+                    self.controls.arm_request = False
+                if safety != "OFF":
+                    self.controls.power_on_request = False
+                if safety != "DRIVING":
+                    self.controls.disarm_request = False
                 self.controls.fault_ack_request = False
 
             result = run_simulation(

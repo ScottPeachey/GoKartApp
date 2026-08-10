@@ -14,13 +14,23 @@
 
   <main>
     <section class="drive-panel">
-      <div class="speed-readout">
-        <span id="speed-value">0</span>
-        <span class="unit">km/h</span>
+      <div class="drive-panel-top">
+        <div class="speed-readout">
+          <span id="speed-value">0</span>
+          <span class="unit">km/h</span>
+        </div>
+        <div class="safety-banner">
+          <div id="safety-card" class="status-card safety-off">
+            <span class="status-card-label">Safety</span>
+            <span id="safety-state" class="status-card-value">OFF</span>
+          </div>
+          <div id="mode-card" class="status-card">
+            <span class="status-card-label">Drive mode</span>
+            <span id="drive-mode" class="status-card-value">—</span>
+          </div>
+        </div>
       </div>
       <div class="status-grid">
-        <div><span class="label">Mode</span><span id="drive-mode">—</span></div>
-        <div><span class="label">Safety</span><span id="safety-state">OFF</span></div>
         <div><span class="label">Power</span><span id="power-kw">0.0 kW</span></div>
         <div><span class="label">Steer</span><span id="steer-value">0°</span></div>
         <div><span class="label">Heading</span><span id="heading-value">0°</span></div>
@@ -45,12 +55,16 @@
         <label id="scenario-label">Scenario <select id="scenario-select"></select></label>
       </div>
       <div id="free-startup" class="startup-panel hidden">
-        <p class="config-hint">Startup: Power On → hold brake + Arm → release brake and drive.</p>
-        <div class="row">
-          <button id="btn-power-on" type="button">Power On</button>
-          <button id="btn-arm" type="button">Arm</button>
-          <button id="btn-disarm" type="button">Disarm</button>
-          <button id="btn-ack" type="button">Ack Fault</button>
+        <p class="config-hint">
+          Startup: <strong>Power On</strong> → hold <strong>Brake Hold</strong> + <strong>Arm</strong> → release brake and drive.
+          Hold <kbd>Shift</kbd> and click two buttons in a row to press them together (e.g. Brake Hold then Arm).
+        </p>
+        <div class="row startup-buttons">
+          <button id="btn-power-on" type="button" data-chord="power-on">Power On</button>
+          <button id="btn-brake-hold" type="button" data-chord="brake-hold">Brake Hold</button>
+          <button id="btn-arm" type="button" data-chord="arm">Arm</button>
+          <button id="btn-disarm" type="button" data-chord="disarm">Disarm</button>
+          <button id="btn-ack" type="button" data-chord="ack">Ack Fault</button>
         </div>
       </div>
       <div class="row">
