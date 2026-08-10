@@ -28,6 +28,17 @@ def test_vehicle_detail_endpoint(client: TestClient) -> None:
     assert payload["suggested_next_version"] == "V1.1"
 
 
+def test_vehicle_detail_query_endpoint(client: TestClient) -> None:
+    response = client.get(
+        "/api/config/vehicle-detail",
+        params={"vehicle_name": "Scott Kart V1", "vehicle_version": "V1.0"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slots"]["battery"]["component_id"] == "v1_pack_48v_40ah"
+    assert payload["drivetrain"]["motor_sprocket_teeth"] == 12
+
+
 def test_list_motors(client: TestClient) -> None:
     response = client.get("/api/config/components/motor")
     assert response.status_code == 200

@@ -13,7 +13,9 @@ function configVehicleParts() {
   if (!key || !key.includes("|")) {
     return null;
   }
-  const [name, version] = key.split("|");
+  const splitAt = key.indexOf("|");
+  const name = key.slice(0, splitAt);
+  const version = key.slice(splitAt + 1);
   if (!name || !version) return null;
   return { name, version };
 }
@@ -107,9 +109,11 @@ async function loadConfigEditor() {
   setConfigLoading(true);
   try {
     const { name, version } = parts;
-    configState.detail = await api(
-      `/api/config/vehicles/${encodeURIComponent(name)}/${encodeURIComponent(version)}/detail`,
-    );
+    const params = new URLSearchParams({
+      vehicle_name: name,
+      vehicle_version: version,
+    });
+    configState.detail = await api(`/api/config/vehicle-detail?${params.toString()}`);
     document.getElementById("config-new-version").placeholder =
       configState.detail.suggested_next_version;
     document.getElementById("cfg-motor-sprocket").value =
@@ -120,7 +124,14 @@ async function loadConfigEditor() {
     await renderConfigSlots();
     document.getElementById("config-status").classList.add("hidden");
   } catch (error) {
-    setConfigStatus(`Could not load vehicle: ${error.message}`, true);
+    let message = error.message;
+    try {
+      const parsed = JSON.parse(message);
+      message = parsed.detail || message;
+    } catch (_ignored) {
+      /* use raw message */
+    }
+    setConfigStatus(`Could not load vehicle: ${message}`, true);
     document.getElementById("config-slots-list").innerHTML =
       '<p class="config-hint">Failed to load components. Click Reload or refresh the page.</p>';
     document.getElementById("cfg-mass").textContent = "—";

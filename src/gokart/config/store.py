@@ -128,8 +128,15 @@ def load_vehicle(
     *,
     root: Path | None = None,
 ) -> VehicleConfig:
-    path = _vehicle_path(data_root(root), name, version)
-    return VehicleConfig.model_validate(_read_json(path))
+    store_root = data_root(root)
+    path = _vehicle_path(store_root, name, version)
+    if path.exists():
+        return VehicleConfig.model_validate(_read_json(path))
+    for candidate in list_vehicles(root=store_root):
+        data = _read_json(candidate)
+        if data.get("name") == name and data.get("version") == version:
+            return VehicleConfig.model_validate(data)
+    raise ConfigStoreError(f"Vehicle not found: {name} {version}")
 
 
 def list_vehicles(*, root: Path | None = None) -> list[Path]:

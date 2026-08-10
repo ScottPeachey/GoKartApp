@@ -105,6 +105,13 @@ def create_app(
             for slot in VEHICLE_SLOTS
         ]
 
+    @app.get("/api/config/vehicle-detail")
+    def api_vehicle_detail_query(vehicle_name: str, vehicle_version: str) -> dict[str, Any]:
+        try:
+            return build_vehicle_detail(vehicle_name, vehicle_version, root=data_root())
+        except Exception as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
     @app.get("/api/config/vehicles/{name}/{version}/detail")
     def api_vehicle_detail(name: str, version: str) -> dict[str, Any]:
         try:
