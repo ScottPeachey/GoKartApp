@@ -1016,22 +1016,30 @@ function startManualInputPolling() {
   }, 100);
 }
 
-function updateSimModeUi() {
+function syncDrivingControlsState() {
   const mode = simMode();
-  const free = mode === "free";
   const interactive = interactiveInputsEnabled();
-  document.getElementById("scenario-label").classList.toggle("hidden", free);
-  document.getElementById("free-drive-panel").classList.toggle("hidden", !free);
-  document.getElementById("steering-label").classList.toggle("hidden", !interactive);
-  document.getElementById("btn-brake-hold").classList.toggle("hidden", !free);
-  document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
-  document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
-
   const driving = document.getElementById("driving-controls");
-  driving.classList.toggle("hidden", !interactive);
+  document.getElementById("btn-brake-hold").classList.toggle("hidden", mode !== "free");
+
+  if (!interactive) {
+    driving.classList.add("locked");
+    return;
+  }
   if (mode === "manual") {
     driving.classList.toggle("locked", !state.simRunning);
   }
+}
+
+function updateSimModeUi() {
+  const mode = simMode();
+  const free = mode === "free";
+  document.getElementById("scenario-label").classList.toggle("hidden", free);
+  document.getElementById("free-drive-panel").classList.toggle("hidden", !free);
+  document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
+  document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
+
+  syncDrivingControlsState();
 
   const startBtn = document.getElementById("btn-start");
   const stopBtn = document.getElementById("btn-stop");
