@@ -12,8 +12,8 @@
     <div id="fault-banner" class="fault-banner hidden"></div>
   </header>
 
-  <main>
-    <section class="drive-panel">
+  <div class="cockpit-sticky">
+    <section class="cockpit-panel">
       <div class="drive-panel-top">
         <div class="speed-readout">
           <span id="speed-value">0</span>
@@ -39,8 +39,21 @@
           <span id="soc-text">—</span>
         </div>
       </div>
+      <div id="driving-controls" class="driving-controls">
+        <h3 class="driving-title">Pedals</h3>
+        <div class="row sliders">
+          <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
+          <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
+          <label id="steering-label" class="hidden">Steering
+            <input type="range" id="steering" min="-100" max="100" value="0" />
+          </label>
+        </div>
+        <button id="btn-brake-hold" type="button" class="btn-toggle hidden">Brake hold: OFF</button>
+      </div>
     </section>
+  </div>
 
+  <main class="page-body">
     <section class="controls">
       <h2>Simulation</h2>
       <div class="row">
@@ -96,17 +109,6 @@
           Clear fault
         </button>
       </div>
-      <div id="driving-controls" class="driving-controls">
-        <h3 class="driving-title">Pedals</h3>
-        <div class="row sliders">
-          <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
-          <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
-          <label id="steering-label" class="hidden">Steering
-            <input type="range" id="steering" min="-100" max="100" value="0" />
-          </label>
-        </div>
-        <button id="btn-brake-hold" type="button" class="btn-toggle hidden">Brake hold: OFF</button>
-      </div>
     </section>
 
     <section class="tabs">
@@ -125,7 +127,10 @@
         <select id="session-select"></select>
       </div>
       <canvas id="history-chart" width="900" height="280"></canvas>
-      <canvas id="history-path" width="900" height="220"></canvas>
+      <div class="history-path-stack">
+        <canvas id="history-path" width="900" height="220"></canvas>
+        <canvas id="history-marker" width="900" height="220" class="history-marker-overlay"></canvas>
+      </div>
     </section>
 
     <section id="tab-config" class="tab-panel hidden">
@@ -228,7 +233,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=21"></script>
+  <script src="/static/app.js?v=22"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

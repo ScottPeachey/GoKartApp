@@ -14,6 +14,13 @@ const state = {
   liveUiScheduled: false,
   channelRowsBuilt: false,
   channelStableValues: {},
+  historySessionListKey: "",
+  historySamplesFingerprint: "",
+  historyMarkerFingerprint: "",
+  historyPathTransform: null,
+  historyPathColorMaxKmh: null,
+  historyLimitsCacheKey: "",
+  historyLimitsCacheValue: null,
 };
 
 const CHANNEL_DISPLAY = {
@@ -289,6 +296,7 @@ function flushLiveUi() {
   state.lastSample = sample;
   updateDrivePanel(sample, sample._speedKmh);
   updateChannelsGrid(sample);
+  updateHistoryMarkerFromLive();
 }
 
 function scheduleLiveUi(sample, speedKmh) {
@@ -450,6 +458,136 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 
 window.refreshVehicleLists = refreshVehicleLists;
 
+function sessionOptionLabel(session) {
+  return `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
+}
+
+function updateSessionSelect(sessions, select, previousSessionId) {
+  const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}`).join("|");
+  if (listKey === state.historySessionListKey && select.options.length === sessions.length) {
+    for (const session of sessions) {
+      const option = select.querySelector(`option[value="${session.session_id}"]`);
+      if (!option) continue;
+      const label = sessionOptionLabel(session);
+      if (option.textContent !== label) {
+        option.textContent = label;
+      }
+    }
+    return;
+  }
+
+  state.historySessionListKey = listKey;
+  select.innerHTML = "";
+  for (const session of sessions) {
+    const option = document.createElement("option");
+    option.value = session.session_id;
+    option.textContent = sessionOptionLabel(session);
+    select.appendChild(option);
+  }
+  if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
+    select.value = previousSessionId;
+  } else if (sessions.length) {
+    select.value = sessions[0].session_id;
+  }
+}
+
+function resolvePathMarker(sessionId, samples) {
+  const xs = samples.map((s) => Number(s.position_x_m || 0));
+  const ys = samples.map((s) => Number(s.position_y_m || 0));
+  const live = state.lastSample;
+  const liveX = Number(live.position_x_m);
+  const liveY = Number(live.position_y_m);
+  const useLiveMarker = state.simRunning
+    && state.liveSessionId === sessionId
+    && Number.isFinite(liveX)
+    && Number.isFinite(liveY);
+  return {
+    x: useLiveMarker ? liveX : xs[xs.length - 1],
+    y: useLiveMarker ? liveY : ys[ys.length - 1],
+    useLiveMarker,
+    xs,
+    ys,
+  };
+}
+
+function historySamplesFingerprint(sessionId, samples) {
+  const last = samples[samples.length - 1];
+  return [
+    sessionId,
+    samples.length,
+    last?.time_s ?? "",
+    last?.position_x_m ?? "",
+    last?.position_y_m ?? "",
+    last?.speed_mps ?? "",
+  ].join("|");
+}
+
+function historyMarkerFingerprint(marker) {
+  return `${marker.x.toFixed(2)}|${marker.y.toFixed(2)}`;
+}
+
+function makePathToPx(transform, canvas) {
+  const { minX, minY, spanX, spanY, inset, plotW, plotH } = transform;
+  return (x, y) => ({
+    px: inset + ((x - minX) / spanX) * plotW,
+    py: inset + plotH - ((y - minY) / spanY) * plotH,
+  });
+}
+
+function buildPathTransform(boundsXs, boundsYs, canvas) {
+  const minX = Math.min(...boundsXs);
+  const maxX = Math.max(...boundsXs);
+  const minY = Math.min(...boundsYs);
+  const maxY = Math.max(...boundsYs);
+  const spanX = Math.max(maxX - minX, 1);
+  const spanY = Math.max(maxY - minY, 1);
+  const inset = 27;
+  const plotW = canvas.width - inset * 2;
+  const plotH = canvas.height - inset * 2;
+  return { minX, maxX, minY, maxY, spanX, spanY, inset, plotW, plotH };
+}
+
+async function resolvePathColorMaxKmh(session, peakSpeedKmh) {
+  const cacheKey = [
+    session.vehicle_name,
+    session.vehicle_version,
+    session.drive_mode,
+    session.driver_profile,
+  ].join("|");
+  if (state.historyLimitsCacheKey === cacheKey && state.historyLimitsCacheValue) {
+    return state.historyLimitsCacheValue;
+  }
+  try {
+    const params = new URLSearchParams({
+      vehicle_name: session.vehicle_name,
+      vehicle_version: session.vehicle_version,
+      mode: session.drive_mode,
+      profile: session.driver_profile,
+    });
+    const limits = await api(`/api/config/effective-limits?${params}`);
+    state.historyLimitsCacheKey = cacheKey;
+    state.historyLimitsCacheValue = limits.max_speed_kmh;
+    return limits.max_speed_kmh;
+  } catch (_error) {
+    return peakSpeedKmh;
+  }
+}
+
+function drawPathMarkerOverlay(markerX, markerY) {
+  const markerCanvas = document.getElementById("history-marker");
+  if (!markerCanvas || !state.historyPathTransform) return;
+  const markerCtx = markerCanvas.getContext("2d");
+  markerCtx.clearRect(0, 0, markerCanvas.width, markerCanvas.height);
+  const toPx = makePathToPx(state.historyPathTransform, markerCanvas);
+  drawPathMarker(markerCtx, markerX, markerY, toPx, markerCanvas);
+}
+
+function invalidateHistoryDrawCache() {
+  state.historySamplesFingerprint = "";
+  state.historyMarkerFingerprint = "";
+  state.historyPathTransform = null;
+}
+
 async function refreshSessions() {
   await refreshHistoryView(true);
 }
@@ -466,18 +604,7 @@ async function refreshHistoryView(forceSessionList = false) {
     let sessions = [];
     if (refreshList) {
       sessions = await api("/api/sessions");
-      select.innerHTML = "";
-      for (const session of sessions) {
-        const option = document.createElement("option");
-        option.value = session.session_id;
-        option.textContent = `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
-        select.appendChild(option);
-      }
-      if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
-        select.value = previousSessionId;
-      } else if (sessions.length) {
-        select.value = sessions[0].session_id;
-      }
+      updateSessionSelect(sessions, select, previousSessionId);
       if (!sessions.length) return;
     }
 
@@ -518,6 +645,7 @@ function stopHistoryPolling() {
     clearInterval(state.historyPollTimer);
     state.historyPollTimer = null;
   }
+  invalidateHistoryDrawCache();
 }
 
 function isHistoryTabActive() {
@@ -542,23 +670,6 @@ function speedToPathColor(speedKmh, maxSpeedKmh) {
   const t = Math.min(1, Math.max(0, speedKmh / Math.max(maxSpeedKmh, 0.1)));
   const hue = 240 * (1 - t);
   return `hsl(${hue}, 82%, 48%)`;
-}
-
-function pathPlotTransform(xs, ys, canvas, margin = 20, markerPad = 7) {
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const spanX = Math.max(maxX - minX, 1);
-  const spanY = Math.max(maxY - minY, 1);
-  const inset = margin + markerPad;
-  const plotW = canvas.width - inset * 2;
-  const plotH = canvas.height - inset * 2;
-  const toPx = (x, y) => ({
-    px: inset + ((x - minX) / spanX) * plotW,
-    py: inset + plotH - ((y - minY) / spanY) * plotH,
-  });
-  return { toPx, minX, maxX, minY, maxY, inset, plotW, plotH };
 }
 
 function clampPathMarkerPx(px, py, canvas, radius = 5) {
@@ -598,74 +709,89 @@ function drawPathMarker(pathCtx, x, y, toPx, canvas) {
 }
 
 async function drawSessionChart(sessionId) {
+  if (!isHistoryTabActive()) return;
+
   const [samples, session] = await Promise.all([
     api(`/api/sessions/${sessionId}/samples?limit=5000`),
     api(`/api/sessions/${sessionId}`),
   ]);
+  if (!samples.length) {
+    invalidateHistoryDrawCache();
+    return;
+  }
+
+  const marker = resolvePathMarker(sessionId, samples);
+  const samplesFingerprint = historySamplesFingerprint(sessionId, samples);
+  const markerFingerprint = historyMarkerFingerprint(marker);
+  const samplesChanged = samplesFingerprint !== state.historySamplesFingerprint;
+  const markerChanged = markerFingerprint !== state.historyMarkerFingerprint;
+
+  if (!samplesChanged && !markerChanged) {
+    return;
+  }
+
   const canvas = document.getElementById("history-chart");
   const pathCanvas = document.getElementById("history-path");
+  const markerCanvas = document.getElementById("history-marker");
   const ctx = canvas.getContext("2d");
   const pathCtx = pathCanvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
-  if (!samples.length) return;
 
-  const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
-  const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
-  const peakSpeed = Math.max(...speeds, 0);
-  const maxSpeed = Math.max(peakSpeed, 1);
-  let pathColorMaxKmh = maxSpeed;
-  try {
-    const params = new URLSearchParams({
-      vehicle_name: session.vehicle_name,
-      vehicle_version: session.vehicle_version,
-      mode: session.drive_mode,
-      profile: session.driver_profile,
-    });
-    const limits = await api(`/api/config/effective-limits?${params}`);
-    pathColorMaxKmh = limits.max_speed_kmh;
-  } catch (_error) {
-    /* use session peak for older or incomplete session metadata */
+  if (samplesChanged) {
+    const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
+    const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
+    const peakSpeed = Math.max(...speeds, 0);
+    const maxSpeed = Math.max(peakSpeed, 1);
+    const pathColorMaxKmh = await resolvePathColorMaxKmh(session, maxSpeed);
+    const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
+    const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
+    const panelHeight = (canvas.height - 50) / 2;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
+    plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
+    ctx.fillStyle = "#8aa0b8";
+    ctx.font = "12px sans-serif";
+    ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
+    ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+
+    const boundsXs = marker.useLiveMarker ? marker.xs.concat(marker.x) : marker.xs;
+    const boundsYs = marker.useLiveMarker ? marker.ys.concat(marker.y) : marker.ys;
+    state.historyPathTransform = buildPathTransform(boundsXs, boundsYs, pathCanvas);
+    state.historyPathColorMaxKmh = pathColorMaxKmh;
+
+    pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+    const toPx = makePathToPx(state.historyPathTransform, pathCanvas);
+    drawSpeedColoredPath(pathCtx, marker.xs, marker.ys, speeds, pathColorMaxKmh, toPx);
+    pathCtx.fillStyle = "#8aa0b8";
+    pathCtx.font = "12px sans-serif";
+    pathCtx.fillText(
+      `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit`,
+      10,
+      16,
+    );
   }
-  const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
-  const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
-  const panelHeight = (canvas.height - 50) / 2;
 
-  plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
-  plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
+  if (markerChanged || samplesChanged) {
+    drawPathMarkerOverlay(marker.x, marker.y);
+  }
 
-  ctx.fillStyle = "#8aa0b8";
-  ctx.font = "12px sans-serif";
-  ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
-  ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+  state.historySamplesFingerprint = samplesFingerprint;
+  state.historyMarkerFingerprint = markerFingerprint;
+}
 
-  const xs = samples.map((s) => Number(s.position_x_m || 0));
-  const ys = samples.map((s) => Number(s.position_y_m || 0));
+function updateHistoryMarkerFromLive() {
+  if (!isHistoryTabActive() || !state.historyPathTransform) return;
+  const sessionId = document.getElementById("session-select").value;
+  if (!sessionId) return;
+  const liveX = Number(state.lastSample.position_x_m);
+  const liveY = Number(state.lastSample.position_y_m);
+  if (!state.simRunning || state.liveSessionId !== sessionId) return;
+  if (!Number.isFinite(liveX) || !Number.isFinite(liveY)) return;
 
-  const live = state.lastSample;
-  const liveX = Number(live.position_x_m);
-  const liveY = Number(live.position_y_m);
-  const useLiveMarker = state.simRunning
-    && state.liveSessionId === sessionId
-    && Number.isFinite(liveX)
-    && Number.isFinite(liveY);
-  const markerX = useLiveMarker ? liveX : xs[xs.length - 1];
-  const markerY = useLiveMarker ? liveY : ys[ys.length - 1];
-
-  const boundsXs = useLiveMarker ? xs.concat(markerX) : xs;
-  const boundsYs = useLiveMarker ? ys.concat(markerY) : ys;
-  const { toPx } = pathPlotTransform(boundsXs, boundsYs, pathCanvas);
-
-  drawSpeedColoredPath(pathCtx, xs, ys, speeds, pathColorMaxKmh, toPx);
-  drawPathMarker(pathCtx, markerX, markerY, toPx, pathCanvas);
-
-  pathCtx.fillStyle = "#8aa0b8";
-  pathCtx.font = "12px sans-serif";
-  pathCtx.fillText(
-    `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit`,
-    10,
-    16,
-  );
+  const markerFingerprint = historyMarkerFingerprint({ x: liveX, y: liveY });
+  if (markerFingerprint === state.historyMarkerFingerprint) return;
+  drawPathMarkerOverlay(liveX, liveY);
+  state.historyMarkerFingerprint = markerFingerprint;
 }
 
 function selectedVehicle() {
@@ -855,8 +981,10 @@ function setupTabs() {
       document.getElementById("tab-live").classList.toggle("hidden", tab !== "live");
       document.getElementById("tab-history").classList.toggle("hidden", tab !== "history");
       document.getElementById("tab-config").classList.toggle("hidden", tab !== "config");
-      if (tab === "history") startHistoryPolling();
-      else stopHistoryPolling();
+      if (tab === "history") {
+        invalidateHistoryDrawCache();
+        startHistoryPolling();
+      } else stopHistoryPolling();
       if (tab === "config" && typeof window.loadConfigEditor === "function") {
         window.loadConfigEditor();
       }
@@ -931,7 +1059,8 @@ function setupControls() {
     void refreshHistoryView(true);
   });
   document.getElementById("session-select").addEventListener("change", (event) => {
-    drawSessionChart(event.target.value);
+    invalidateHistoryDrawCache();
+    void drawSessionChart(event.target.value);
   });
 
   for (const id of ["throttle", "steering"]) {
