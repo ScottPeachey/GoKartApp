@@ -495,20 +495,29 @@ function speedToPathColor(speedKmh, maxSpeedKmh) {
   return `rgb(${r},${g},0)`;
 }
 
-function pathPlotTransform(xs, ys, canvas, margin = 20) {
+function pathPlotTransform(xs, ys, canvas, margin = 20, markerPad = 7) {
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
   const maxY = Math.max(...ys);
   const spanX = Math.max(maxX - minX, 1);
   const spanY = Math.max(maxY - minY, 1);
-  const plotW = canvas.width - margin * 2;
-  const plotH = canvas.height - margin * 2;
+  const inset = margin + markerPad;
+  const plotW = canvas.width - inset * 2;
+  const plotH = canvas.height - inset * 2;
   const toPx = (x, y) => ({
-    px: margin + ((x - minX) / spanX) * plotW,
-    py: margin + plotH - ((y - minY) / spanY) * plotH,
+    px: inset + ((x - minX) / spanX) * plotW,
+    py: inset + plotH - ((y - minY) / spanY) * plotH,
   });
-  return { toPx, minX, maxX, minY, maxY };
+  return { toPx, minX, maxX, minY, maxY, inset, plotW, plotH };
+}
+
+function clampPathMarkerPx(px, py, canvas, radius = 5) {
+  const pad = radius + 2;
+  return {
+    px: Math.max(pad, Math.min(canvas.width - pad, px)),
+    py: Math.max(pad, Math.min(canvas.height - pad, py)),
+  };
 }
 
 function drawSpeedColoredPath(pathCtx, xs, ys, speedsKmh, maxSpeedKmh, toPx) {
@@ -527,8 +536,9 @@ function drawSpeedColoredPath(pathCtx, xs, ys, speedsKmh, maxSpeedKmh, toPx) {
   }
 }
 
-function drawPathMarker(pathCtx, x, y, toPx) {
-  const { px, py } = toPx(x, y);
+function drawPathMarker(pathCtx, x, y, toPx, canvas) {
+  let { px, py } = toPx(x, y);
+  ({ px, py } = clampPathMarkerPx(px, py, canvas));
   pathCtx.beginPath();
   pathCtx.fillStyle = "#ff3b30";
   pathCtx.arc(px, py, 5, 0, Math.PI * 2);
@@ -565,9 +575,6 @@ async function drawSessionChart(sessionId) {
 
   const xs = samples.map((s) => Number(s.position_x_m || 0));
   const ys = samples.map((s) => Number(s.position_y_m || 0));
-  const { toPx } = pathPlotTransform(xs, ys, pathCanvas);
-
-  drawSpeedColoredPath(pathCtx, xs, ys, speeds, maxSpeed, toPx);
 
   const live = state.lastSample;
   const liveX = Number(live.position_x_m);
@@ -578,7 +585,13 @@ async function drawSessionChart(sessionId) {
     && Number.isFinite(liveY);
   const markerX = useLiveMarker ? liveX : xs[xs.length - 1];
   const markerY = useLiveMarker ? liveY : ys[ys.length - 1];
-  drawPathMarker(pathCtx, markerX, markerY, toPx);
+
+  const boundsXs = useLiveMarker ? xs.concat(markerX) : xs;
+  const boundsYs = useLiveMarker ? ys.concat(markerY) : ys;
+  const { toPx } = pathPlotTransform(boundsXs, boundsYs, pathCanvas);
+
+  drawSpeedColoredPath(pathCtx, xs, ys, speeds, maxSpeed, toPx);
+  drawPathMarker(pathCtx, markerX, markerY, toPx, pathCanvas);
 
   pathCtx.fillStyle = "#8aa0b8";
   pathCtx.font = "12px sans-serif";
