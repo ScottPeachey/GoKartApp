@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=3" />
+  <link rel="stylesheet" href="/static/style.css?v=4" />
 </head>
 <body>
   <header>
@@ -15,22 +15,29 @@
   <div class="cockpit-sticky">
     <section class="cockpit-panel">
       <div class="cockpit-top">
-        <div class="speed-readout">
-          <span id="speed-value">0</span>
-          <span class="unit">km/h</span>
-        </div>
-        <div class="cockpit-metrics">
-          <div class="metric-pill">
-            <span class="label">Power</span>
-            <span id="power-kw">0.0 kW</span>
+        <div class="cockpit-primary">
+          <div class="speed-readout">
+            <span id="speed-value">0</span>
+            <span class="unit">km/h</span>
           </div>
-          <div class="metric-pill">
-            <span class="label">Steer</span>
-            <span id="steer-value">0°</span>
+          <div class="cockpit-metrics">
+            <div class="metric-pill">
+              <span class="label">Power</span>
+              <span id="power-kw">0.0 kW</span>
+            </div>
+            <div class="metric-pill">
+              <span class="label">Steer</span>
+              <span id="steer-value">0°</span>
+            </div>
+            <div class="metric-pill">
+              <span class="label">Heading</span>
+              <span id="heading-value">0°</span>
+            </div>
           </div>
-          <div class="metric-pill">
-            <span class="label">Heading</span>
-            <span id="heading-value">0°</span>
+          <div class="cockpit-soc">
+            <span class="label">SOC</span>
+            <div class="soc-bar"><div id="soc-fill"></div></div>
+            <span id="soc-text">—</span>
           </div>
         </div>
         <div class="safety-banner">
@@ -45,11 +52,6 @@
         </div>
       </div>
       <div class="cockpit-bottom">
-        <div class="cockpit-soc">
-          <span class="label">SOC</span>
-          <div class="soc-bar"><div id="soc-fill"></div></div>
-          <span id="soc-text">—</span>
-        </div>
         <div id="driving-controls" class="driving-controls">
           <div class="cockpit-sliders">
             <label class="cockpit-slider">Throttle
