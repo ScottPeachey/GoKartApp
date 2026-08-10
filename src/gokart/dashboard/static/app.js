@@ -1019,12 +1019,19 @@ function startManualInputPolling() {
 function updateSimModeUi() {
   const mode = simMode();
   const free = mode === "free";
+  const interactive = interactiveInputsEnabled();
   document.getElementById("scenario-label").classList.toggle("hidden", free);
   document.getElementById("free-drive-panel").classList.toggle("hidden", !free);
-  document.getElementById("steering-label").classList.toggle("hidden", !free);
+  document.getElementById("steering-label").classList.toggle("hidden", !interactive);
   document.getElementById("btn-brake-hold").classList.toggle("hidden", !free);
   document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
   document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
+
+  const driving = document.getElementById("driving-controls");
+  driving.classList.toggle("hidden", !interactive);
+  if (mode === "manual") {
+    driving.classList.toggle("locked", !state.simRunning);
+  }
 
   const startBtn = document.getElementById("btn-start");
   const stopBtn = document.getElementById("btn-stop");
@@ -1089,6 +1096,7 @@ function setupControls() {
     });
     state.simRunning = true;
     if (interactiveInputsEnabled()) startManualInputPolling();
+    updateSimModeUi();
     updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
   });
 
@@ -1097,6 +1105,7 @@ function setupControls() {
     setBrakeHold(false);
     state.simRunning = false;
     await api("/api/sim/stop", { method: "POST" });
+    updateSimModeUi();
     updateFreeDriveGuide("OFF");
   });
 

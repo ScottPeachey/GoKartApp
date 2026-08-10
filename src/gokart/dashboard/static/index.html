@@ -14,10 +14,24 @@
 
   <div class="cockpit-sticky">
     <section class="cockpit-panel">
-      <div class="drive-panel-top">
+      <div class="cockpit-top">
         <div class="speed-readout">
           <span id="speed-value">0</span>
           <span class="unit">km/h</span>
+        </div>
+        <div class="cockpit-metrics">
+          <div class="metric-pill">
+            <span class="label">Power</span>
+            <span id="power-kw">0.0 kW</span>
+          </div>
+          <div class="metric-pill">
+            <span class="label">Steer</span>
+            <span id="steer-value">0°</span>
+          </div>
+          <div class="metric-pill">
+            <span class="label">Heading</span>
+            <span id="heading-value">0°</span>
+          </div>
         </div>
         <div class="safety-banner">
           <div id="safety-card" class="status-card safety-off">
@@ -30,25 +44,26 @@
           </div>
         </div>
       </div>
-      <div class="status-grid">
-        <div><span class="label">Power</span><span id="power-kw">0.0 kW</span></div>
-        <div><span class="label">Steer</span><span id="steer-value">0°</span></div>
-        <div><span class="label">Heading</span><span id="heading-value">0°</span></div>
-        <div><span class="label">SOC</span>
+      <div class="cockpit-bottom">
+        <div class="cockpit-soc">
+          <span class="label">SOC</span>
           <div class="soc-bar"><div id="soc-fill"></div></div>
           <span id="soc-text">—</span>
         </div>
-      </div>
-      <div id="driving-controls" class="driving-controls">
-        <h3 class="driving-title">Pedals</h3>
-        <div class="row sliders">
-          <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
-          <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
-          <label id="steering-label" class="hidden">Steering
-            <input type="range" id="steering" min="-100" max="100" value="0" />
-          </label>
+        <div id="driving-controls" class="driving-controls">
+          <div class="cockpit-sliders">
+            <label class="cockpit-slider">Throttle
+              <input type="range" id="throttle" min="0" max="100" value="0" />
+            </label>
+            <label class="cockpit-slider">Brake
+              <input type="range" id="brake" min="0" max="100" value="0" />
+            </label>
+            <label id="steering-label" class="cockpit-slider hidden">Steering
+              <input type="range" id="steering" min="-100" max="100" value="0" />
+            </label>
+            <button id="btn-brake-hold" type="button" class="btn-toggle btn-brake-hold hidden">Brake hold: OFF</button>
+          </div>
         </div>
-        <button id="btn-brake-hold" type="button" class="btn-toggle hidden">Brake hold: OFF</button>
       </div>
     </section>
   </div>
@@ -237,7 +252,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=24"></script>
+  <script src="/static/app.js?v=25"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
