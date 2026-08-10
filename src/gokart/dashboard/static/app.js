@@ -646,6 +646,10 @@ function setupControls() {
     document.getElementById(id).addEventListener("input", sendInputs);
   }
   document.getElementById("brake").addEventListener("input", onBrakeSliderInput);
+  document.getElementById("steering").addEventListener("dblclick", () => {
+    document.getElementById("steering").value = "0";
+    void sendInputs();
+  });
   updateSimModeUi();
 }
 
