@@ -117,21 +117,25 @@
       <button class="tab" data-tab="config">Configuration</button>
     </section>
 
-    <section id="tab-live" class="tab-panel">
-      <div id="channels-grid" class="channels-grid" aria-live="polite"></div>
-    </section>
+    <div id="telemetry-split" class="telemetry-split">
+      <section id="tab-live" class="tab-panel telemetry-panel">
+        <h3 class="telemetry-panel-title">Live Channels</h3>
+        <div id="channels-grid" class="channels-grid" aria-live="polite"></div>
+      </section>
 
-    <section id="tab-history" class="tab-panel hidden">
-      <div class="row">
-        <button id="btn-refresh-sessions">Refresh</button>
-        <select id="session-select"></select>
-      </div>
-      <canvas id="history-chart" width="900" height="280"></canvas>
-      <div class="history-path-stack">
-        <canvas id="history-path" width="900" height="220"></canvas>
-        <canvas id="history-marker" width="900" height="220" class="history-marker-overlay"></canvas>
-      </div>
-    </section>
+      <section id="tab-history" class="tab-panel telemetry-panel hidden">
+        <h3 class="telemetry-panel-title">Session History</h3>
+        <div class="row">
+          <button id="btn-refresh-sessions">Refresh</button>
+          <select id="session-select"></select>
+        </div>
+        <canvas id="history-chart" width="900" height="280"></canvas>
+        <div class="history-path-stack">
+          <canvas id="history-path" width="900" height="220"></canvas>
+          <canvas id="history-marker" width="900" height="220" class="history-marker-overlay"></canvas>
+        </div>
+      </section>
+    </div>
 
     <section id="tab-config" class="tab-panel hidden">
       <p class="config-intro">
@@ -233,7 +237,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=23"></script>
+  <script src="/static/app.js?v=24"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

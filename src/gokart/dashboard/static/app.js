@@ -657,7 +657,70 @@ function stopHistoryPolling() {
 }
 
 function isHistoryTabActive() {
-  return !document.getElementById("tab-history").classList.contains("hidden");
+  const tab = activeTabName();
+  if (tab === "config") return false;
+  if (isSplitTelemetryView()) return true;
+  return tab === "history";
+}
+
+const SPLIT_TELEMETRY_MQ = window.matchMedia("(min-width: 1200px)");
+
+function isSplitTelemetryView() {
+  return SPLIT_TELEMETRY_MQ.matches;
+}
+
+function activeTabName() {
+  return document.querySelector(".tab.active")?.dataset.tab || "live";
+}
+
+function syncTelemetryPanels(tab) {
+  const live = document.getElementById("tab-live");
+  const history = document.getElementById("tab-history");
+  const split = document.getElementById("telemetry-split");
+  const config = document.getElementById("tab-config");
+  const tabsBar = document.querySelector(".tabs");
+
+  if (tab === "config") {
+    split.classList.add("hidden");
+    config.classList.remove("hidden");
+    tabsBar?.classList.remove("split-telemetry-active");
+    stopHistoryPolling();
+    return;
+  }
+
+  split.classList.remove("hidden");
+  config.classList.add("hidden");
+
+  if (isSplitTelemetryView()) {
+    split.classList.add("layout-split");
+    live.classList.remove("hidden");
+    history.classList.remove("hidden");
+    tabsBar?.classList.add("split-telemetry-active");
+    rebuildChannelsGrid();
+    if (state.lastSample && Object.keys(state.lastSample).length) {
+      updateChannelsGrid(state.lastSample);
+    }
+    invalidateHistoryDrawCache();
+    startHistoryPolling();
+    return;
+  }
+
+  split.classList.remove("layout-split");
+  tabsBar?.classList.remove("split-telemetry-active");
+  live.classList.toggle("hidden", tab !== "live");
+  history.classList.toggle("hidden", tab !== "history");
+  if (tab === "history") {
+    invalidateHistoryDrawCache();
+    startHistoryPolling();
+  } else {
+    stopHistoryPolling();
+  }
+  if (tab === "live") {
+    rebuildChannelsGrid();
+    if (state.lastSample && Object.keys(state.lastSample).length) {
+      updateChannelsGrid(state.lastSample);
+    }
+  }
 }
 
 function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
@@ -985,24 +1048,15 @@ function setupTabs() {
     button.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach((el) => el.classList.remove("active"));
       button.classList.add("active");
-      const tab = button.dataset.tab;
-      document.getElementById("tab-live").classList.toggle("hidden", tab !== "live");
-      document.getElementById("tab-history").classList.toggle("hidden", tab !== "history");
-      document.getElementById("tab-config").classList.toggle("hidden", tab !== "config");
-      if (tab === "live") {
-        rebuildChannelsGrid();
-        if (state.lastSample && Object.keys(state.lastSample).length) {
-          updateChannelsGrid(state.lastSample);
-        }
-      }
-      if (tab === "history") {
-        invalidateHistoryDrawCache();
-        startHistoryPolling();
-      } else stopHistoryPolling();
-      if (tab === "config" && typeof window.loadConfigEditor === "function") {
+      syncTelemetryPanels(button.dataset.tab);
+      if (button.dataset.tab === "config" && typeof window.loadConfigEditor === "function") {
         window.loadConfigEditor();
       }
     });
+  });
+
+  SPLIT_TELEMETRY_MQ.addEventListener("change", () => {
+    syncTelemetryPanels(activeTabName());
   });
 }
 
@@ -1102,6 +1156,7 @@ async function init() {
   }
   await loadConfig();
   connectWebSocket();
+  syncTelemetryPanels(activeTabName());
 }
 
 init();

@@ -82,6 +82,49 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   pointer-events: none;
 }
 
+.telemetry-split {
+  display: grid;
+  gap: 1rem;
+}
+
+.telemetry-panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+  display: none;
+}
+
+.telemetry-split.layout-split .telemetry-panel-title {
+  display: block;
+}
+
+#history-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (min-width: 1200px) {
+  .telemetry-split.layout-split {
+    grid-template-columns: 1fr 2fr;
+    align-items: start;
+  }
+
+  .telemetry-split.layout-split .telemetry-panel {
+    min-width: 0;
+  }
+
+  .telemetry-split.layout-split #tab-live .channels-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs.split-telemetry-active .tab[data-tab="live"],
+  .tabs.split-telemetry-active .tab[data-tab="history"] {
+    color: var(--accent);
+    background: var(--panel);
+  }
+}
+
 .drive-panel {
   background: var(--panel);
   border-radius: 12px;
