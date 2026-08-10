@@ -4,13 +4,9 @@ const state = {
   ws: null,
   vehicles: [],
   inputPollTimer: null,
-  shiftHeld: false,
-  chordQueue: [],
-  chordTimer: null,
   brakeHold: false,
+  simRunning: false,
 };
-
-const CHORD_WINDOW_MS = 700;
 
 const SAFETY_CLASSES = [
   "safety-off",
@@ -65,6 +61,7 @@ function updateDrivePanel(sample, speedKmh) {
   document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
   document.getElementById("soc-fill").style.width = `${soc * 100}%`;
   setFaultBanner(sample);
+  updateFreeDriveGuide(safetyState);
 }
 
 function simMode() {
@@ -265,98 +262,85 @@ async function sendInputs() {
 function setBrakeHold(active) {
   state.brakeHold = active;
   const btn = document.getElementById("btn-brake-hold");
-  if (btn) btn.classList.toggle("active", active);
+  if (btn) {
+    btn.classList.toggle("active", active);
+    btn.textContent = active ? "Brake hold: ON" : "Brake hold: OFF";
+  }
   const slider = document.getElementById("brake");
   if (active) slider.value = "100";
   else if (slider.value === "100") slider.value = "0";
   void sendInputs();
 }
 
-async function runStartupAction(action) {
-  switch (action) {
-    case "power-on":
-      await api("/api/sim/power-on", { method: "POST" });
+async function armWithBrake() {
+  setBrakeHold(true);
+  await sendInputs();
+  await api("/api/sim/arm", { method: "POST" });
+}
+
+function updateFreeDriveGuide(safetyState) {
+  if (simMode() !== "free") return;
+
+  const hint = document.getElementById("free-drive-hint");
+  const armBtn = document.getElementById("btn-arm-with-brake");
+  const driving = document.getElementById("driving-controls");
+  const steps = document.querySelectorAll(".free-step");
+
+  const setStep = (active, doneBefore) => {
+    steps.forEach((el) => {
+      const step = el.dataset.step;
+      el.classList.toggle("active", step === active);
+      const order = ["session", "boot", "arm", "drive"];
+      el.classList.toggle("done", order.indexOf(step) < order.indexOf(active));
+    });
+  };
+
+  if (!state.simRunning) {
+    hint.innerHTML = "Press <strong>Start session</strong> to power up the kart and begin.";
+    armBtn.disabled = true;
+    driving.classList.add("locked");
+    setStep("session");
+    return;
+  }
+
+  switch (safetyState) {
+    case "OFF":
+    case "BOOT":
+    case "SELF_TEST":
+      hint.textContent = "System is booting… wait for the safety state to show READY.";
+      armBtn.disabled = true;
+      driving.classList.add("locked");
+      setStep("boot");
       break;
-    case "arm":
-      await sendInputs();
-      await api("/api/sim/arm", { method: "POST" });
+    case "READY":
+      hint.innerHTML = "Safety is <strong>READY</strong>. Click <strong>Arm with brake</strong> — brake is applied automatically.";
+      armBtn.disabled = false;
+      driving.classList.add("locked");
+      setStep("arm");
       break;
-    case "disarm":
-      await api("/api/sim/disarm", { method: "POST" });
+    case "ARMED":
+      hint.innerHTML = "Precharge complete. <strong>Release the brake</strong> (toggle brake hold or lower the slider), then use throttle.";
+      armBtn.disabled = true;
+      driving.classList.remove("locked");
+      setStep("drive");
       break;
-    case "ack":
-      await api("/api/sim/ack", { method: "POST" });
+    case "DRIVING":
+      hint.innerHTML = "You're driving. Use the pedals below — steering slider turns the front wheels.";
+      armBtn.disabled = true;
+      driving.classList.remove("locked");
+      setStep("drive");
+      steps.forEach((el) => el.classList.add("done"));
       break;
-    case "brake-hold":
-      setBrakeHold(!state.brakeHold);
+    case "FAULT":
+      hint.innerHTML = "Fault active — click <strong>Ack fault</strong>, then repeat the arm sequence.";
+      armBtn.disabled = true;
+      driving.classList.add("locked");
       break;
     default:
-      break;
+      hint.textContent = `Safety state: ${safetyState}`;
+      armBtn.disabled = true;
+      driving.classList.add("locked");
   }
-}
-
-function clearChordQueue() {
-  state.chordQueue = [];
-  if (state.chordTimer !== null) {
-    clearTimeout(state.chordTimer);
-    state.chordTimer = null;
-  }
-}
-
-async function flushChordQueue() {
-  const actions = [...state.chordQueue];
-  clearChordQueue();
-  if (!actions.length) return;
-  if (actions.length === 1) {
-    await runStartupAction(actions[0]);
-    return;
-  }
-  const wantsBrake = actions.includes("brake-hold");
-  const others = actions.filter((a) => a !== "brake-hold");
-  if (wantsBrake) setBrakeHold(true);
-  await Promise.all(others.map((action) => runStartupAction(action)));
-}
-
-function queueChordAction(action) {
-  if (!state.shiftHeld) {
-    void runStartupAction(action);
-    return;
-  }
-  if (!state.chordQueue.includes(action)) {
-    state.chordQueue.push(action);
-  }
-  if (state.chordTimer !== null) clearTimeout(state.chordTimer);
-  if (state.chordQueue.length >= 2) {
-    void flushChordQueue();
-    return;
-  }
-  state.chordTimer = setTimeout(() => {
-    void flushChordQueue();
-  }, CHORD_WINDOW_MS);
-}
-
-function setupChordKeys() {
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Shift") state.shiftHeld = true;
-  });
-  document.addEventListener("keyup", (event) => {
-    if (event.key === "Shift") {
-      state.shiftHeld = false;
-      if (state.chordQueue.length === 1) {
-        void flushChordQueue();
-      } else {
-        clearChordQueue();
-      }
-    }
-  });
-}
-
-function wireChordButtons() {
-  document.querySelectorAll("[data-chord]").forEach((button) => {
-    button.addEventListener("click", () => {
-      queueChordAction(button.dataset.chord);
-    });
-  });
 }
 
 function startManualInputPolling() {
@@ -371,16 +355,21 @@ function startManualInputPolling() {
 function updateSimModeUi() {
   const mode = simMode();
   const free = mode === "free";
-  const manual = mode === "manual";
   document.getElementById("scenario-label").classList.toggle("hidden", free);
-  document.getElementById("free-startup").classList.toggle("hidden", !free);
+  document.getElementById("free-drive-panel").classList.toggle("hidden", !free);
   document.getElementById("steering-label").classList.toggle("hidden", !free);
+  document.getElementById("btn-brake-hold").classList.toggle("hidden", !free);
   document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
   document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
-  document.getElementById("btn-arm").classList.toggle("hidden", !free);
-  document.getElementById("btn-ack").classList.toggle("hidden", !free);
-  document.getElementById("btn-disarm").classList.toggle("hidden", !free);
-  document.getElementById("btn-power-on").classList.toggle("hidden", !free);
+
+  const startBtn = document.getElementById("btn-start");
+  const stopBtn = document.getElementById("btn-stop");
+  startBtn.textContent = free ? "Start session" : "Start";
+  stopBtn.textContent = free ? "End session" : "Stop";
+  startBtn.classList.toggle("btn-primary", free);
+  startBtn.classList.toggle("btn-primary-lg", free);
+
+  updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
 }
 
 function stopManualInputPolling() {
@@ -420,18 +409,28 @@ function setupControls() {
         scenario: document.getElementById("scenario-select").value,
         manual: mode === "manual",
         free_mode: mode === "free",
-        speedup: mode === "free" ? 5.0 : 5.0,
+        speedup: 5.0,
       }),
     });
+    state.simRunning = true;
     if (interactiveInputsEnabled()) startManualInputPolling();
+    updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
   });
 
   document.getElementById("btn-stop").addEventListener("click", async () => {
     stopManualInputPolling();
     setBrakeHold(false);
+    state.simRunning = false;
     await api("/api/sim/stop", { method: "POST" });
+    updateFreeDriveGuide("OFF");
   });
-  wireChordButtons();
+
+  document.getElementById("btn-arm-with-brake").addEventListener("click", () => {
+    void armWithBrake();
+  });
+  document.getElementById("btn-disarm").addEventListener("click", () => api("/api/sim/disarm", { method: "POST" }));
+  document.getElementById("btn-ack").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
+  document.getElementById("btn-brake-hold").addEventListener("click", () => setBrakeHold(!state.brakeHold));
   document.getElementById("btn-arm-scenario").addEventListener("click", () => api("/api/sim/arm", { method: "POST" }));
   document.getElementById("btn-ack-scenario").addEventListener("click", () => api("/api/sim/ack", { method: "POST" }));
   document.getElementById("btn-refresh-sessions").addEventListener("click", refreshSessions);
@@ -447,7 +446,6 @@ function setupControls() {
 
 async function init() {
   setupTabs();
-  setupChordKeys();
   setupControls();
   await loadConfig();
   connectWebSocket();

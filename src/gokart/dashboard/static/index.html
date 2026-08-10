@@ -54,31 +54,38 @@
         </label>
         <label id="scenario-label">Scenario <select id="scenario-select"></select></label>
       </div>
-      <div id="free-startup" class="startup-panel hidden">
-        <p class="config-hint">
-          Startup: <strong>Power On</strong> → hold <strong>Brake Hold</strong> + <strong>Arm</strong> → release brake and drive.
-          Hold <kbd>Shift</kbd> and click two buttons in a row to press them together (e.g. Brake Hold then Arm).
-        </p>
-        <div class="row startup-buttons">
-          <button id="btn-power-on" type="button" data-chord="power-on">Power On</button>
-          <button id="btn-brake-hold" type="button" data-chord="brake-hold">Brake Hold</button>
-          <button id="btn-arm" type="button" data-chord="arm">Arm</button>
-          <button id="btn-disarm" type="button" data-chord="disarm">Disarm</button>
-          <button id="btn-ack" type="button" data-chord="ack">Ack Fault</button>
+      <div id="free-drive-panel" class="free-drive-panel hidden">
+        <ol class="free-steps" id="free-steps">
+          <li data-step="session" class="free-step">① Start session</li>
+          <li data-step="boot" class="free-step">② System boots to READY</li>
+          <li data-step="arm" class="free-step">③ Arm with brake held</li>
+          <li data-step="drive" class="free-step">④ Release brake &amp; drive</li>
+        </ol>
+        <p id="free-drive-hint" class="free-hint">Press <strong>Start session</strong> below to begin.</p>
+        <div class="free-action-row">
+          <button id="btn-arm-with-brake" type="button" class="btn-primary-lg" disabled>
+            Arm with brake
+          </button>
+          <button id="btn-disarm" type="button" class="btn-secondary">Disarm</button>
+          <button id="btn-ack" type="button" class="btn-secondary">Ack fault</button>
         </div>
       </div>
-      <div class="row">
-        <button id="btn-start">Start</button>
-        <button id="btn-stop">Stop</button>
-        <button id="btn-arm-scenario" type="button">Arm</button>
-        <button id="btn-ack-scenario" type="button">Ack Fault</button>
+      <div id="session-controls" class="row session-controls">
+        <button id="btn-start" class="btn-primary">Start</button>
+        <button id="btn-stop" class="btn-secondary">Stop</button>
+        <button id="btn-arm-scenario" type="button" class="btn-secondary">Arm</button>
+        <button id="btn-ack-scenario" type="button" class="btn-secondary">Ack fault</button>
       </div>
-      <div class="row sliders">
-        <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
-        <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
-        <label id="steering-label" class="hidden">Steering
-          <input type="range" id="steering" min="-100" max="100" value="0" />
-        </label>
+      <div id="driving-controls" class="driving-controls">
+        <h3 class="driving-title">Pedals</h3>
+        <div class="row sliders">
+          <label>Throttle <input type="range" id="throttle" min="0" max="100" value="0" /></label>
+          <label>Brake <input type="range" id="brake" min="0" max="100" value="0" /></label>
+          <label id="steering-label" class="hidden">Steering
+            <input type="range" id="steering" min="-100" max="100" value="0" />
+          </label>
+        </div>
+        <button id="btn-brake-hold" type="button" class="btn-toggle hidden">Brake hold: OFF</button>
       </div>
     </section>
 
@@ -154,7 +161,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=4"></script>
-  <script src="/static/config.js?v=4"></script>
+  <script src="/static/app.js?v=5"></script>
+  <script src="/static/config.js?v=5"></script>
 </body>
 </html>
