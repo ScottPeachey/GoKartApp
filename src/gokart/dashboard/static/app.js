@@ -155,6 +155,17 @@ function setFaultBanner(sample) {
   }
 }
 
+function formatLapTime(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) return "—";
+  const mins = Math.floor(value / 60);
+  const secs = value - mins * 60;
+  if (mins > 0) {
+    return `${mins}:${secs.toFixed(1).padStart(4, "0")}`;
+  }
+  return `${secs.toFixed(1)}s`;
+}
+
 function updateDrivePanel(sample, speedKmh) {
   document.getElementById("speed-value").textContent = Math.round(speedKmh || 0);
   const driveMode = sample.drive_mode || "—";
@@ -173,6 +184,20 @@ function updateDrivePanel(sample, speedKmh) {
   const soc = Number(sample.soc || 0);
   document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
   document.getElementById("soc-fill").style.width = `${soc * 100}%`;
+
+  const lapNumber = Number(sample.lap_number || 0);
+  const lapTime = Number(sample.lap_time_s || 0);
+  const bestLap = Number(sample.best_lap_time_s || 0);
+  const hasTrackLap = lapNumber > 0 || lapTime > 0 || bestLap > 0;
+  document.getElementById("lap-pill").classList.toggle("hidden", !hasTrackLap);
+  document.getElementById("lap-time-pill").classList.toggle("hidden", !hasTrackLap);
+  document.getElementById("best-lap-pill").classList.toggle("hidden", !hasTrackLap || bestLap <= 0);
+  if (hasTrackLap) {
+    document.getElementById("lap-number").textContent = lapNumber > 0 ? String(Math.round(lapNumber)) : "—";
+    document.getElementById("lap-time").textContent = formatLapTime(lapTime);
+    document.getElementById("best-lap-time").textContent = formatLapTime(bestLap);
+  }
+
   setFaultBanner(sample);
   updateFreeDriveGuide(safetyState);
 }
@@ -229,6 +254,12 @@ const CHANNEL_UI = {
   heading_deg: { icon: "🧭", label: "Heading" },
   position_x_m: { icon: "↔", label: "Position X" },
   position_y_m: { icon: "↕", label: "Position Y" },
+  track_s_m: { icon: "🛣", label: "Track distance" },
+  track_lateral_m: { icon: "↔", label: "Track offset" },
+  lap_number: { icon: "🏁", label: "Lap" },
+  lap_time_s: { icon: "⏱", label: "Lap time" },
+  last_lap_time_s: { icon: "⏱", label: "Last lap" },
+  best_lap_time_s: { icon: "🏆", label: "Best lap" },
   motor_rpm: { icon: "⚙", label: "Motor RPM" },
   motor_torque_nm: { icon: "🔧", label: "Torque" },
   motor_current_a: { icon: "⚡", label: "Motor current" },
@@ -1038,6 +1069,9 @@ function drawPathMarker(pathCtx, x, y, toPx, canvas) {
 async function drawSessionChart(sessionId) {
   if (!isHistoryTabActive()) return;
 
+  await applySessionTrack(sessionId);
+  await renderSessionLaps(sessionId);
+
   const [samples, session] = await Promise.all([
     api(`/api/sessions/${sessionId}/samples?limit=5000`),
     api(`/api/sessions/${sessionId}`),
@@ -1355,20 +1389,77 @@ function setStartFinishEditMode(active) {
 async function loadTrackCatalog() {
   try {
     const tracks = await api("/api/tracks");
-    const select = document.getElementById("track-select");
-    const current = select.value;
-    select.innerHTML = '<option value="">No track</option>';
-    for (const track of tracks) {
-      const option = document.createElement("option");
-      option.value = track.id;
-      option.textContent = `${track.name} (${Math.round(track.length_m)} m)`;
-      select.appendChild(option);
-    }
-    if (current && [...select.options].some((option) => option.value === current)) {
-      select.value = current;
+    for (const selectId of ["track-select", "sim-track-select"]) {
+      const select = document.getElementById(selectId);
+      if (!select) continue;
+      const current = select.value;
+      const emptyLabel = selectId === "sim-track-select"
+        ? "No track (free plane)"
+        : "No track";
+      select.innerHTML = `<option value="">${emptyLabel}</option>`;
+      for (const track of tracks) {
+        const option = document.createElement("option");
+        option.value = track.id;
+        option.textContent = `${track.name} (${Math.round(track.length_m)} m)`;
+        select.appendChild(option);
+      }
+      if (current && [...select.options].some((option) => option.value === current)) {
+        select.value = current;
+      }
     }
   } catch (_error) {
     /* track list is optional */
+  }
+}
+
+function syncTrackSelectValue(trackId) {
+  for (const selectId of ["track-select", "sim-track-select"]) {
+    const select = document.getElementById(selectId);
+    if (!select) continue;
+    if (trackId && [...select.options].some((option) => option.value === trackId)) {
+      select.value = trackId;
+    } else if (!trackId) {
+      select.value = "";
+    }
+  }
+}
+
+async function renderSessionLaps(sessionId) {
+  const panel = document.getElementById("session-laps-panel");
+  const body = document.querySelector("#session-laps-table tbody");
+  if (!panel || !body) return;
+  try {
+    const laps = await api(`/api/sessions/${encodeURIComponent(sessionId)}/laps`);
+    body.innerHTML = "";
+    if (!laps.length) {
+      panel.classList.add("hidden");
+      return;
+    }
+    panel.classList.remove("hidden");
+    for (const lap of laps) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${lap.lap_number}</td>
+        <td>${formatLapTime(lap.lap_time_s)}</td>
+        <td>${Number(lap.completed_at_time_s).toFixed(1)}</td>
+      `;
+      body.appendChild(row);
+    }
+  } catch (_error) {
+    panel.classList.add("hidden");
+  }
+}
+
+async function applySessionTrack(sessionId) {
+  if (!sessionId) return;
+  try {
+    const session = await api(`/api/sessions/${encodeURIComponent(sessionId)}`);
+    if (session.track_id) {
+      syncTrackSelectValue(session.track_id);
+      await loadSelectedTrack(true);
+    }
+  } catch (_error) {
+    /* optional */
   }
 }
 
@@ -1540,6 +1631,7 @@ function setupControls() {
         manual: mode === "manual",
         free_mode: mode === "free",
         speedup: 5.0,
+        track_id: document.getElementById("sim-track-select")?.value || null,
       }),
     });
     state.simRunning = true;
@@ -1589,6 +1681,11 @@ function setupControls() {
   });
   document.getElementById("track-select").addEventListener("change", () => {
     setStartFinishEditMode(false);
+    syncTrackSelectValue(document.getElementById("track-select").value);
+    void loadSelectedTrack(true);
+  });
+  document.getElementById("sim-track-select")?.addEventListener("change", (event) => {
+    syncTrackSelectValue(event.target.value);
     void loadSelectedTrack(true);
   });
   document.getElementById("track-direction-select").addEventListener("change", (event) => {

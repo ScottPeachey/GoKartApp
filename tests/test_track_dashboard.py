@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import time
 from pathlib import Path
 
 import pytest
@@ -80,4 +81,41 @@ def test_save_direction_api(client: TestClient) -> None:
     )
     assert again.status_code == 200
     assert again.json()["direction"] == "counterclockwise"
+
+
+def test_sim_start_with_track_id(client: TestClient) -> None:
+    response = client.post(
+        "/api/sim/start",
+        json={
+            "vehicle_name": "Scott Kart V1",
+            "vehicle_version": "V1.0",
+            "scenario": "standing_start_30s",
+            "free_mode": True,
+            "track_id": "test-hairpin",
+            "speedup": 50.0,
+        },
+    )
+    assert response.status_code == 200
+
+    session_id = None
+    for _ in range(50):
+        status = client.get("/api/sim/status").json()
+        session_id = status.get("session_id")
+        if session_id:
+            break
+        time.sleep(0.05)
+    assert session_id
+
+    client.post("/api/sim/stop")
+    for _ in range(50):
+        status = client.get("/api/sim/status").json()
+        if not status.get("running"):
+            break
+        time.sleep(0.05)
+    client.post("/api/sim/reset")
+
+    session = client.get(f"/api/sessions/{session_id}").json()
+    assert session["track_id"] == "test-hairpin"
+    laps = client.get(f"/api/sessions/{session_id}/laps").json()
+    assert isinstance(laps, list)
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=7" />
+  <link rel="stylesheet" href="/static/style.css?v=8" />
 </head>
 <body>
   <header>
@@ -32,6 +32,18 @@
             <div class="metric-pill">
               <span class="label">Heading</span>
               <span id="heading-value">0°</span>
+            </div>
+            <div class="metric-pill" id="lap-pill">
+              <span class="label">Lap</span>
+              <span id="lap-number">—</span>
+            </div>
+            <div class="metric-pill" id="lap-time-pill">
+              <span class="label">Lap time</span>
+              <span id="lap-time">—</span>
+            </div>
+            <div class="metric-pill hidden" id="best-lap-pill">
+              <span class="label">Best</span>
+              <span id="best-lap-time">—</span>
             </div>
           </div>
           <div class="cockpit-soc">
@@ -87,6 +99,11 @@
       <div class="row">
         <label>Drive mode <select id="drive-mode-select"></select></label>
         <label>Driver profile <select id="driver-profile-select"></select></label>
+        <label>Track
+          <select id="sim-track-select">
+            <option value="">No track (free plane)</option>
+          </select>
+        </label>
       </div>
       <p id="effective-limits" class="config-hint">Effective max speed: —</p>
       <div id="free-drive-panel" class="free-drive-panel hidden">
@@ -145,6 +162,15 @@
         <div class="row">
           <button id="btn-refresh-sessions">Refresh</button>
           <select id="session-select"></select>
+        </div>
+        <div id="session-laps-panel" class="session-laps hidden">
+          <h4>Laps</h4>
+          <table id="session-laps-table" class="session-laps-table">
+            <thead>
+              <tr><th>Lap</th><th>Time</th><th>At (s)</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
         <div class="row history-track-controls">
           <label>Track
@@ -274,7 +300,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=30"></script>
+  <script src="/static/app.js?v=31"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

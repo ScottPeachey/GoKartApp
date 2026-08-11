@@ -230,6 +230,29 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   margin-bottom: 0.5rem;
 }
 
+.session-laps {
+  margin: 0.75rem 0;
+}
+
+.session-laps-table {
+  width: 100%;
+  max-width: 420px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.session-laps-table th,
+.session-laps-table td {
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #2a3544;
+}
+
+.session-laps-table th {
+  color: #8aa0b8;
+  font-weight: 600;
+}
+
 #btn-edit-start-finish.active {
   background: var(--accent);
   color: #0b1118;

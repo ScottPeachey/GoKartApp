@@ -63,6 +63,7 @@ class SimStartRequest(BaseModel):
     manual: bool = False
     free_mode: bool = False
     speedup: float = Field(default=1.0, ge=0.0)
+    track_id: str | None = None
 
 
 class SaveDriveSettingRequest(BaseModel):
@@ -321,6 +322,7 @@ def create_app(
                 "driver_profile": session.driver_profile,
                 "drive_mode": session.drive_mode,
                 "scenario_name": session.scenario_name,
+                "track_id": session.track_id,
                 "sample_count": session.sample_count,
                 "start_soc": session.start_soc,
                 "end_soc": session.end_soc,
@@ -343,6 +345,7 @@ def create_app(
             "driver_profile": session.driver_profile,
             "drive_mode": session.drive_mode,
             "scenario_name": session.scenario_name,
+            "track_id": session.track_id,
             "sample_count": session.sample_count,
             "start_soc": session.start_soc,
             "end_soc": session.end_soc,
@@ -354,6 +357,20 @@ def create_app(
             raise HTTPException(status_code=404, detail="Session not found")
         samples = telemetry_store.load_samples(session_id, limit=limit)
         return samples
+
+    @app.get("/api/sessions/{session_id}/laps")
+    def api_session_laps(session_id: str) -> list[dict[str, Any]]:
+        if telemetry_store.get_session(session_id) is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        laps = telemetry_store.list_laps(session_id)
+        return [
+            {
+                "lap_number": lap.lap_number,
+                "lap_time_s": lap.lap_time_s,
+                "completed_at_time_s": lap.completed_at_time_s,
+            }
+            for lap in laps
+        ]
 
     @app.post("/api/sim/start")
     def api_sim_start(request: SimStartRequest) -> dict[str, Any]:
@@ -367,6 +384,7 @@ def create_app(
                 manual=request.manual,
                 free_mode=request.free_mode,
                 speedup=request.speedup,
+                track_id=request.track_id,
             )
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc

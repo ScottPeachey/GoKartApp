@@ -11,6 +11,7 @@ from gokart.config.store import data_root, load_drive_mode, load_driver_profile,
 from gokart.sim.engine import run_simulation
 from gokart.sim.runtime import RuntimeControls
 from gokart.sim.scenarios import Scenario, load_scenario
+from gokart.track.store import load_track
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.recorder import SessionMetadata, SessionRecorder
 
@@ -46,6 +47,7 @@ class SimController:
         manual: bool = False,
         free_mode: bool = False,
         speedup: float = 1.0,
+        track_id: str | None = None,
     ) -> str:
         with self._lock:
             if self.status.running:
@@ -65,6 +67,7 @@ class SimController:
                     "speedup": speedup,
                     "manual": manual,
                     "free_mode": free_mode,
+                    "track_id": track_id,
                 },
                 daemon=True,
             )
@@ -114,8 +117,10 @@ class SimController:
         speedup: float,
         manual: bool,
         free_mode: bool,
+        track_id: str | None,
     ) -> None:
         try:
+            track = load_track(track_id) if track_id else None
             base = load_scenario(scenario_name)
             mode_name = drive_mode or base.mode_name
             profile_name = driver_profile or base.profile_name
@@ -163,6 +168,7 @@ class SimController:
                     driver_profile=profile.name,
                     drive_mode=mode.name,
                     scenario_name=scenario.name,
+                    track_id=track.id if track else None,
                 ),
                 store=self._store,
                 bus=self.bus,
@@ -190,7 +196,20 @@ class SimController:
                 on_tick=on_tick,
                 recorder=self._recorder,
                 keep_records=False,
+                track=track,
             )
+            if result.completed_laps:
+                self._store.save_laps(
+                    self._recorder.session_id,
+                    [
+                        {
+                            "lap_number": lap.lap_number,
+                            "lap_time_s": lap.lap_time_s,
+                            "completed_at_time_s": lap.completed_at_time_s,
+                        }
+                        for lap in result.completed_laps
+                    ],
+                )
             end_soc = result.final_state.battery.soc if result.final_state.battery else None
             self._recorder.close(end_soc=end_soc)
         except Exception as exc:  # noqa: BLE001 - surface to dashboard

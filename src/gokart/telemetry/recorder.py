@@ -24,6 +24,7 @@ class SessionMetadata:
     driver_profile: str
     drive_mode: str
     scenario_name: str | None = None
+    track_id: str | None = None
     calibration_hash: str | None = None
     source: str = "sim"
     firmware_version: str = FIRMWARE_VERSION_SIM
@@ -63,6 +64,7 @@ class SessionRecorder:
             scenario_name=metadata.scenario_name,
             start_soc=start_soc,
             notes=metadata.notes,
+            track_id=metadata.track_id,
         )
 
     @property

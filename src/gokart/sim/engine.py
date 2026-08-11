@@ -34,6 +34,8 @@ from gokart.sim.clock import SimClock
 from gokart.sim.fault_injection import FaultInjector
 from gokart.sim.runtime import RuntimeControls
 from gokart.sim.scenarios import Scenario
+from gokart.sim.track_context import TrackSimulationContext
+from gokart.track.model import Track
 from gokart.telemetry.channels import CHANNEL_NAMES
 from gokart.telemetry.recorder import SessionRecorder
 
@@ -56,6 +58,7 @@ class SimTickRecord:
 class SimulationResult:
     records: list[SimTickRecord]
     final_state: VehicleState
+    completed_laps: list[Any] = field(default_factory=list)
 
 
 def _adc_from_pedal(value: float) -> int:
@@ -179,6 +182,7 @@ def run_simulation(
     overlay: CalibrationOverlay | None = None,
     vehicle_config: VehicleConfig | None = None,
     keep_records: bool = True,
+    track: Track | None = None,
 ) -> SimulationResult:
     root = data_root_path or data_root()
     if vehicle_config is not None:
@@ -217,6 +221,13 @@ def run_simulation(
     control_state = ControlState()
     vehicle_state = vehicle_model.initial_state()
     vehicle_state.speed_mps = initial_speed_mps
+    track_context: TrackSimulationContext | None = None
+    if track is not None:
+        track_context = TrackSimulationContext(track)
+        spawn_x, spawn_y, spawn_heading = track_context.spawn_pose()
+        vehicle_state.position_x_m = spawn_x
+        vehicle_state.position_y_m = spawn_y
+        vehicle_state.heading_rad = spawn_heading
 
     control_params = ControlParams(
         mode=mode,
@@ -269,6 +280,12 @@ def run_simulation(
             throttle, brake = scenario.driver_inputs_at(time_s)
             steering = 0.0
         env = scenario.environment
+        if track_context is not None:
+            env = track_context.environment_at(
+                vehicle_state.position_x_m,
+                vehicle_state.position_y_m,
+                env,
+            )
 
         power_on = False
         if controls and controls.power_on_request and manual_mode and safety_state == SafetyState.OFF:
@@ -418,6 +435,15 @@ def run_simulation(
             dt_s,
         )
 
+        track_values: dict[str, float] = {}
+        if track_context is not None:
+            track_values = track_context.tick(
+                time_s,
+                physics_out.position_x_m,
+                physics_out.position_y_m,
+                physics_out.speed_mps,
+            )
+
         tick = SimTickRecord(
             time_s=time_s,
             values={
@@ -431,6 +457,7 @@ def run_simulation(
                 "heading_deg": physics_out.heading_deg,
                 "position_x_m": physics_out.position_x_m,
                 "position_y_m": physics_out.position_y_m,
+                **track_values,
                 "motor_rpm": physics_out.motor_rpm,
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
@@ -461,7 +488,12 @@ def run_simulation(
         if speedup > 0:
             clock.tick(dt_s)
 
-    return SimulationResult(records=records, final_state=vehicle_state)
+    completed_laps = track_context.completed_laps if track_context is not None else []
+    return SimulationResult(
+        records=records,
+        final_state=vehicle_state,
+        completed_laps=completed_laps,
+    )
 
 
 def write_csv(path: Path, records: list[SimTickRecord]) -> None:

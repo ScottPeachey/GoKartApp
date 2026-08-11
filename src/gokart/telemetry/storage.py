@@ -26,10 +26,19 @@ class SessionInfo:
     driver_profile: str
     drive_mode: str
     scenario_name: str | None
+    track_id: str | None
     start_soc: float | None
     end_soc: float | None
     sample_count: int
     notes: str | None
+
+
+@dataclass(frozen=True)
+class LapInfo:
+    session_id: str
+    lap_number: int
+    lap_time_s: float
+    completed_at_time_s: float
 
 
 class TelemetryStore:
@@ -92,7 +101,28 @@ class TelemetryStore:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS laps (
+                    session_id TEXT NOT NULL,
+                    lap_number INTEGER NOT NULL,
+                    lap_time_s REAL NOT NULL,
+                    completed_at_time_s REAL NOT NULL,
+                    PRIMARY KEY (session_id, lap_number),
+                    FOREIGN KEY (session_id) REFERENCES sessions(id)
+                )
+                """
+            )
+            self._ensure_column(conn, "sessions", "track_id", "TEXT")
             conn.commit()
+
+    @staticmethod
+    def _ensure_column(conn: sqlite3.Connection, table: str, column: str, coltype: str) -> None:
+        columns = {
+            row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if column not in columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
 
     def register_config_hash(self, config_hash: str) -> None:
         with self._connect() as conn:
@@ -118,6 +148,7 @@ class TelemetryStore:
         scenario_name: str | None,
         start_soc: float | None,
         notes: str | None = None,
+        track_id: str | None = None,
     ) -> None:
         self.register_config_hash(config_hash)
         with self._connect() as conn:
@@ -126,8 +157,8 @@ class TelemetryStore:
                 INSERT INTO sessions (
                     id, started_at, source, vehicle_name, vehicle_version,
                     config_hash, calibration_hash, firmware_version,
-                    driver_profile, drive_mode, scenario_name, start_soc, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    driver_profile, drive_mode, scenario_name, start_soc, notes, track_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
@@ -143,6 +174,7 @@ class TelemetryStore:
                     scenario_name,
                     start_soc,
                     notes,
+                    track_id,
                 ),
             )
             conn.commit()
@@ -193,6 +225,48 @@ class TelemetryStore:
                 (ended_at, end_soc, session_id),
             )
             conn.commit()
+
+    def save_laps(self, session_id: str, laps: list[dict[str, float | int]]) -> None:
+        if not laps:
+            return
+        with self._connect() as conn:
+            conn.executemany(
+                """
+                INSERT OR REPLACE INTO laps (session_id, lap_number, lap_time_s, completed_at_time_s)
+                VALUES (?, ?, ?, ?)
+                """,
+                [
+                    (
+                        session_id,
+                        int(lap["lap_number"]),
+                        float(lap["lap_time_s"]),
+                        float(lap["completed_at_time_s"]),
+                    )
+                    for lap in laps
+                ],
+            )
+            conn.commit()
+
+    def list_laps(self, session_id: str) -> list[LapInfo]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT session_id, lap_number, lap_time_s, completed_at_time_s
+                FROM laps
+                WHERE session_id = ?
+                ORDER BY lap_number
+                """,
+                (session_id,),
+            ).fetchall()
+        return [
+            LapInfo(
+                session_id=row["session_id"],
+                lap_number=int(row["lap_number"]),
+                lap_time_s=float(row["lap_time_s"]),
+                completed_at_time_s=float(row["completed_at_time_s"]),
+            )
+            for row in rows
+        ]
 
     def get_session(self, session_id: str) -> SessionInfo | None:
         with self._connect() as conn:
@@ -273,6 +347,7 @@ class TelemetryStore:
             driver_profile=row["driver_profile"],
             drive_mode=row["drive_mode"],
             scenario_name=row["scenario_name"],
+            track_id=row["track_id"] if "track_id" in row.keys() else None,
             start_soc=row["start_soc"],
             end_soc=row["end_soc"],
             sample_count=int(row["sample_count"]),
