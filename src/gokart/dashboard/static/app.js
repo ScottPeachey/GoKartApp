@@ -205,6 +205,78 @@ function updateDrivePanel(sample, speedKmh) {
   updateFreeDriveGuide(safetyState);
 }
 
+const STEER_MAX_DEG = 28;
+
+function updateSliderReadouts() {
+  const throttle = Number(document.getElementById("throttle")?.value || 0);
+  const brake = Number(document.getElementById("brake")?.value || 0);
+  const steering = Number(document.getElementById("steering")?.value || 0);
+  const throttleReadout = document.getElementById("throttle-readout");
+  const brakeReadout = document.getElementById("brake-readout");
+  const steeringReadout = document.getElementById("steering-readout");
+  if (throttleReadout) throttleReadout.textContent = `${Math.round(throttle)}%`;
+  if (brakeReadout) brakeReadout.textContent = `${Math.round(brake)}%`;
+  if (steeringReadout) {
+    const steerDeg = (steering / 100) * STEER_MAX_DEG;
+    const prefix = steerDeg > 0 ? "+" : "";
+    steeringReadout.textContent = `${prefix}${steerDeg.toFixed(0)}°`;
+  }
+}
+
+function resetLiveHistoryState() {
+  state.historyViewSessionId = "";
+  state.historySamplesFingerprint = "";
+  state.historyMarkerFingerprint = "";
+}
+
+function resetLivePathLayer() {
+  const pathColorMaxKmh = state.historyPathLayer?.pathColorMaxKmh ?? 45;
+  state.historyPathLayer = {
+    marker: { x: 0, y: 0, heading: 0, xs: [], ys: [], useLiveMarker: false },
+    speeds: [],
+    pathColorMaxKmh,
+  };
+}
+
+async function waitForLiveSessionId(maxAttempts = 40) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const status = await api("/api/sim/status");
+    if (status.session_id) {
+      return status.session_id;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 50));
+  }
+  return null;
+}
+
+async function beginLiveSession() {
+  const sessionId = await waitForLiveSessionId();
+  if (!sessionId) return;
+
+  state.liveSessionId = sessionId;
+  resetLiveHistoryState();
+  resetLivePathLayer();
+
+  const trackId = document.getElementById("sim-track-select")?.value
+    || document.getElementById("track-select")?.value;
+  if (trackId) {
+    if (!state.track.data || state.track.id !== trackId) {
+      syncTrackSelectValue(trackId);
+      await loadSelectedTrack(true, false);
+    }
+    ensureTrackMapVisible(false);
+  }
+
+  const sessions = await api("/api/sessions");
+  const sessionSelect = document.getElementById("session-select");
+  updateSessionSelect(sessions, sessionSelect, sessionId);
+  sessionSelect.value = sessionId;
+  resetLiveHistoryState();
+  ensureTrackMapVisible(false);
+  await drawSessionChart(sessionId);
+  updateHistoryMarkerFromLive();
+}
+
 function resetDriveUi() {
   document.getElementById("throttle").value = "0";
   document.getElementById("brake").value = "0";
@@ -226,23 +298,29 @@ function resetDriveUi() {
   document.getElementById("fault-banner").classList.add("hidden");
   document.getElementById("fault-recovery-panel")?.classList.add("hidden");
   state.channelStableValues = {};
+  updateSliderReadouts();
 }
 
 async function resetSession() {
   stopManualInputPolling();
   await api("/api/sim/reset", { method: "POST" });
   state.simRunning = false;
+  state.liveSessionId = null;
   resetDriveUi();
   updateFreeDriveGuide("OFF");
-  state.historyViewSessionId = "";
-  state.historySamplesFingerprint = "";
-  state.historyMarkerFingerprint = "";
-  const trackId = document.getElementById("sim-track-select")?.value || document.getElementById("track-select")?.value;
+  resetLiveHistoryState();
+  resetLivePathLayer();
+
+  const trackId = document.getElementById("sim-track-select")?.value
+    || document.getElementById("track-select")?.value;
   if (trackId) {
     syncTrackSelectValue(trackId);
-    await loadSelectedTrack(true);
-  } else {
+    if (!state.track.data || state.track.id !== trackId) {
+      await loadSelectedTrack(true, false);
+    }
     ensureTrackMapVisible(true);
+  } else {
+    invalidateHistoryDrawCache();
   }
 }
 
@@ -1255,12 +1333,22 @@ async function drawSessionChart(sessionId) {
 
 function updateHistoryMarkerFromLive() {
   if (!isHistoryTabActive() || !state.historyPathBaseTransform) return;
-  const sessionId = document.getElementById("session-select").value;
-  if (!sessionId) return;
+  if (!state.simRunning || !state.liveSessionId) return;
+
+  const sessionSelect = document.getElementById("session-select");
+  if (sessionSelect.value !== state.liveSessionId) {
+    if ([...sessionSelect.options].some((option) => option.value === state.liveSessionId)) {
+      sessionSelect.value = state.liveSessionId;
+      resetLiveHistoryState();
+    } else {
+      return;
+    }
+  }
+
   const liveX = Number(state.lastSample.position_x_m);
   const liveY = Number(state.lastSample.position_y_m);
   const liveHeading = Number(state.lastSample.heading_deg);
-  if (!state.simRunning || state.liveSessionId !== sessionId) return;
+  const liveSpeedKmh = Number(state.lastSample.speed_mps || 0) * 3.6;
   if (!Number.isFinite(liveX) || !Number.isFinite(liveY)) return;
 
   const markerFingerprint = historyMarkerFingerprint({
@@ -1269,15 +1357,35 @@ function updateHistoryMarkerFromLive() {
     heading: liveHeading,
   });
   if (markerFingerprint === state.historyMarkerFingerprint) return;
+
   if (state.historyPathLayer) {
+    const marker = state.historyPathLayer.marker;
+    const xs = marker.xs.slice();
+    const ys = marker.ys.slice();
+    const speeds = state.historyPathLayer.speeds.slice();
+    const lastX = xs.length ? xs[xs.length - 1] : null;
+    const lastY = ys.length ? ys[ys.length - 1] : null;
+    const moved = lastX === null || Math.hypot(liveX - lastX, liveY - lastY) > 0.05;
+    if (moved) {
+      xs.push(liveX);
+      ys.push(liveY);
+      speeds.push(liveSpeedKmh);
+    }
     state.historyPathLayer.marker = {
-      ...state.historyPathLayer.marker,
+      ...marker,
       x: liveX,
       y: liveY,
       heading: liveHeading,
       useLiveMarker: true,
+      xs,
+      ys,
     };
+    state.historyPathLayer.speeds = speeds;
+    if (moved) {
+      schedulePathRedraw();
+    }
   }
+
   drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
   state.historyMarkerFingerprint = markerFingerprint;
 }
@@ -1315,6 +1423,7 @@ function setBrakeHold(active) {
   } else if (slider.value === "100") {
     slider.value = "0";
   }
+  updateSliderReadouts();
   void sendInputs();
 }
 
@@ -1771,6 +1880,7 @@ function setupControls() {
     });
     state.simRunning = true;
     if (interactiveInputsEnabled()) startManualInputPolling();
+    await beginLiveSession();
     updateSimModeUi();
     updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
   });
@@ -1779,6 +1889,7 @@ function setupControls() {
     stopManualInputPolling();
     setBrakeHold(false);
     state.simRunning = false;
+    state.liveSessionId = null;
     await api("/api/sim/stop", { method: "POST" });
     updateSimModeUi();
     updateFreeDriveGuide("OFF");
@@ -1804,6 +1915,7 @@ function setupControls() {
   document.getElementById("btn-ack-scenario").addEventListener("click", async () => {
     document.getElementById("throttle").value = "0";
     document.getElementById("brake").value = "0";
+    updateSliderReadouts();
     await sendInputs();
     await api("/api/sim/ack", { method: "POST" });
   });
@@ -1834,13 +1946,21 @@ function setupControls() {
   setupPathMapInteractions();
 
   for (const id of ["throttle", "steering"]) {
-    document.getElementById(id).addEventListener("input", sendInputs);
+    document.getElementById(id).addEventListener("input", () => {
+      updateSliderReadouts();
+      sendInputs();
+    });
   }
-  document.getElementById("brake").addEventListener("input", onBrakeSliderInput);
+  document.getElementById("brake").addEventListener("input", () => {
+    updateSliderReadouts();
+    onBrakeSliderInput();
+  });
   document.getElementById("steering").addEventListener("dblclick", () => {
     document.getElementById("steering").value = "0";
+    updateSliderReadouts();
     void sendInputs();
   });
+  updateSliderReadouts();
   updateSimModeUi();
 }
 

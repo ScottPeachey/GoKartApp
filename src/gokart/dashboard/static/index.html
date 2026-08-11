@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=8" />
+  <link rel="stylesheet" href="/static/style.css?v=9" />
 </head>
 <body>
   <header>
@@ -66,13 +66,25 @@
       <div class="cockpit-bottom">
         <div id="driving-controls" class="driving-controls">
           <div class="cockpit-sliders">
-            <label class="cockpit-slider">Throttle
+            <label class="cockpit-slider">
+              <span class="cockpit-slider-head">
+                <span>Throttle</span>
+                <span id="throttle-readout" class="slider-readout">0%</span>
+              </span>
               <input type="range" id="throttle" min="0" max="100" value="0" />
             </label>
-            <label class="cockpit-slider">Brake
+            <label class="cockpit-slider">
+              <span class="cockpit-slider-head">
+                <span>Brake</span>
+                <span id="brake-readout" class="slider-readout">0%</span>
+              </span>
               <input type="range" id="brake" min="0" max="100" value="0" />
             </label>
-            <label id="steering-label" class="cockpit-slider">Steering
+            <label id="steering-label" class="cockpit-slider">
+              <span class="cockpit-slider-head">
+                <span>Steering</span>
+                <span id="steering-readout" class="slider-readout">0°</span>
+              </span>
               <input type="range" id="steering" min="-100" max="100" value="0" />
             </label>
             <button id="btn-brake-hold" type="button" class="btn-toggle btn-brake-hold hidden">Brake hold: OFF</button>
@@ -300,7 +312,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=33"></script>
+  <script src="/static/app.js?v=35"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

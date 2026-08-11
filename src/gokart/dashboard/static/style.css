@@ -136,6 +136,22 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   letter-spacing: 0.04em;
 }
 
+.cockpit-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.slider-readout {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
 .cockpit-slider input[type="range"] {
   width: 100%;
 }
