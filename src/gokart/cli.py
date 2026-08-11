@@ -230,6 +230,41 @@ def cmd_telemetry_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_track_import(args: argparse.Namespace) -> int:
+    from gokart.track.importer import import_geojson_track
+    from gokart.track.store import save_track
+
+    track = import_geojson_track(
+        Path(args.file),
+        track_id=args.id,
+        target_length_m=args.length,
+        width_m=args.width,
+        direction=args.direction,
+        fetch_elevation=not args.no_elevation,
+    )
+    path = save_track(track, allow_overwrite=args.force)
+    print(
+        f"Imported track '{track.name}' ({track.id}): "
+        f"{track.length_m:.0f} m, width {track.width_m:.0f} m, "
+        f"scale {track.scale:.4f}"
+    )
+    print(f"Wrote {path}")
+    return 0
+
+
+def cmd_track_list(_args: argparse.Namespace) -> int:
+    from gokart.track.store import list_tracks, load_track
+
+    paths = list_tracks()
+    if not paths:
+        print("No tracks found.")
+        return 0
+    for path in paths:
+        track = load_track(path.stem)
+        print(f"  {track.id}: {track.name} ({track.length_m:.0f} m)")
+    return 0
+
+
 def cmd_firmware_golden(args: argparse.Namespace) -> int:
     import subprocess
 
@@ -331,6 +366,35 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--vehicle", default="Scott Kart V1", help="Vehicle name metadata")
     ingest.add_argument("--version", default="V1.0", help="Vehicle version metadata")
     ingest.set_defaults(func=cmd_telemetry_ingest)
+
+    track = sub.add_parser("track", help="Track import commands")
+    track_sub = track.add_subparsers(dest="track_command", required=True)
+
+    track_import = track_sub.add_parser("import", help="Import a GeoJSON circuit as a kart track")
+    track_import.add_argument("file", help="Path to GeoJSON file")
+    track_import.add_argument("--id", help="Track id (defaults to slugified name)")
+    track_import.add_argument(
+        "--length",
+        type=float,
+        help="Target lap length in metres (default: auto-scale to 1000–1600 m)",
+    )
+    track_import.add_argument("--width", type=float, default=10.0, help="Track width in metres")
+    track_import.add_argument(
+        "--direction",
+        choices=["clockwise", "counterclockwise"],
+        default="clockwise",
+        help="Racing direction",
+    )
+    track_import.add_argument(
+        "--no-elevation",
+        action="store_true",
+        help="Skip elevation fetch (flat track)",
+    )
+    track_import.add_argument("--force", action="store_true", help="Allow overwrite existing track")
+    track_import.set_defaults(func=cmd_track_import)
+
+    track_list = track_sub.add_parser("list", help="List imported tracks")
+    track_list.set_defaults(func=cmd_track_list)
 
     firmware = sub.add_parser("firmware", help="Firmware development commands")
     firmware_sub = firmware.add_subparsers(dest="firmware_command", required=True)
