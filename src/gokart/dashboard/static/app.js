@@ -1293,7 +1293,7 @@ async function sendInputs() {
     body: JSON.stringify({
       throttle: Number(document.getElementById("throttle").value) / 100,
       brake,
-      steering: Number(document.getElementById("steering").value) / 100,
+      steering: -Number(document.getElementById("steering").value) / 100,
     }),
   });
 }
