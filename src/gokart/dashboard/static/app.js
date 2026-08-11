@@ -1907,6 +1907,7 @@ function setupControls() {
     document.getElementById("throttle").value = "0";
     document.getElementById("brake").value = "0";
     setBrakeHold(false);
+    updateSliderReadouts();
     await sendInputs();
     await api("/api/sim/ack", { method: "POST" });
   });
