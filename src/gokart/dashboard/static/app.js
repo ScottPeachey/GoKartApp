@@ -546,11 +546,11 @@ function historyMarkerFingerprint(marker) {
   return `${marker.x.toFixed(2)}|${marker.y.toFixed(2)}|${Number(marker.heading || 0).toFixed(1)}`;
 }
 
-function makePathToPx(transform, canvas) {
-  const { minX, minY, spanX, spanY, inset, plotW, plotH } = transform;
+function makePathToPx(transform) {
+  const { minX, minY, scale, offsetX, offsetY, drawH } = transform;
   return (x, y) => ({
-    px: inset + ((x - minX) / spanX) * plotW,
-    py: inset + plotH - ((y - minY) / spanY) * plotH,
+    px: offsetX + (x - minX) * scale,
+    py: offsetY + drawH - (y - minY) * scale,
   });
 }
 
@@ -564,7 +564,27 @@ function buildPathTransform(boundsXs, boundsYs, canvas) {
   const inset = 27;
   const plotW = canvas.width - inset * 2;
   const plotH = canvas.height - inset * 2;
-  return { minX, maxX, minY, maxY, spanX, spanY, inset, plotW, plotH };
+  const scale = Math.min(plotW / spanX, plotH / spanY);
+  const drawW = spanX * scale;
+  const drawH = spanY * scale;
+  const offsetX = inset + (plotW - drawW) / 2;
+  const offsetY = inset + (plotH - drawH) / 2;
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    spanX,
+    spanY,
+    inset,
+    plotW,
+    plotH,
+    scale,
+    offsetX,
+    offsetY,
+    drawW,
+    drawH,
+  };
 }
 
 function collectPathBounds(marker) {
@@ -585,10 +605,11 @@ function collectPathBounds(marker) {
 }
 
 function pxToWorld(px, py, transform) {
-  const { minX, minY, spanX, spanY, inset, plotW, plotH } = transform;
-  const x = minX + ((px - inset) / plotW) * spanX;
-  const y = minY + ((inset + plotH - py) / plotH) * spanY;
-  return { x, y };
+  const { minX, minY, scale, offsetX, offsetY, drawH } = transform;
+  return {
+    x: minX + (px - offsetX) / scale,
+    y: minY + (offsetY + drawH - py) / scale,
+  };
 }
 
 function findNearestCenterlinePoint(centerline, x, y) {
@@ -691,7 +712,7 @@ function drawPathMarkerOverlay(markerX, markerY, headingDeg, dims) {
   if (!markerCanvas || !state.historyPathTransform) return;
   const markerCtx = markerCanvas.getContext("2d");
   markerCtx.clearRect(0, 0, markerCanvas.width, markerCanvas.height);
-  const toPx = makePathToPx(state.historyPathTransform, markerCanvas);
+  const toPx = makePathToPx(state.historyPathTransform);
   drawKartMarker(
     markerCtx,
     markerX,
@@ -706,9 +727,7 @@ function drawPathMarkerOverlay(markerX, markerY, headingDeg, dims) {
 
 function drawKartMarker(markerCtx, x, y, headingDeg, dims, toPx, canvas, transform) {
   let { px, py } = toPx(x, y);
-  const metersPerPxX = transform.spanX / Math.max(transform.plotW, 1);
-  const metersPerPxY = transform.spanY / Math.max(transform.plotH, 1);
-  const metersPerPx = (metersPerPxX + metersPerPxY) / 2;
+  const metersPerPx = Math.max(transform.scale, 1e-6);
   const lengthPx = Math.max(dims.wheelbase_m / metersPerPx, 8);
   const widthPx = Math.max(dims.track_m / metersPerPx, 5);
   ({ px, py } = clampPathMarkerPx(px, py, canvas, Math.max(lengthPx, widthPx)));
@@ -970,7 +989,7 @@ async function drawSessionChart(sessionId) {
     state.historyPathColorMaxKmh = pathColorMaxKmh;
 
     pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
-    const toPx = makePathToPx(state.historyPathTransform, pathCanvas);
+    const toPx = makePathToPx(state.historyPathTransform);
     drawTrackUnderlay(pathCtx, state.track.data, toPx);
     drawSpeedColoredPath(pathCtx, marker.xs, marker.ys, speeds, pathColorMaxKmh, toPx);
     drawStartFinishLine(pathCtx, state.track.data, toPx);

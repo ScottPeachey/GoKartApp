@@ -207,6 +207,11 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   position: relative;
   width: 100%;
   max-width: 900px;
+  min-height: 280px;
+  margin-top: 0.5rem;
+  background: #121a26;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .history-path-stack.edit-start-finish #history-path {
@@ -256,7 +261,12 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 #history-chart {
   display: block;
   width: 100%;
+  max-width: 100%;
+  max-height: 220px;
   height: auto;
+  background: #121a26;
+  border-radius: 8px;
+  margin-top: 0.75rem;
 }
 
 @media (min-width: 1200px) {
@@ -641,14 +651,6 @@ th, td {
   text-align: left;
   padding: 0.4rem 0.5rem;
   border-bottom: 1px solid #2a3548;
-}
-
-#history-chart {
-  width: 100%;
-  max-width: 100%;
-  background: #121a26;
-  border-radius: 8px;
-  margin-top: 0.75rem;
 }
 
 .config-intro {
