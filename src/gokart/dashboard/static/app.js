@@ -15,8 +15,11 @@ const state = {
   channelRowsBuilt: false,
   channelStableValues: {},
   historySessionListKey: "",
+  historyViewSessionId: "",
   historySamplesFingerprint: "",
   historyMarkerFingerprint: "",
+  historyChartLastDrawMs: 0,
+  pathRedrawScheduled: false,
   historyPathTransform: null,
   historyPathBaseTransform: null,
   historyPathLayer: null,
@@ -231,6 +234,16 @@ async function resetSession() {
   state.simRunning = false;
   resetDriveUi();
   updateFreeDriveGuide("OFF");
+  state.historyViewSessionId = "";
+  state.historySamplesFingerprint = "";
+  state.historyMarkerFingerprint = "";
+  const trackId = document.getElementById("sim-track-select")?.value || document.getElementById("track-select")?.value;
+  if (trackId) {
+    syncTrackSelectValue(trackId);
+    await loadSelectedTrack(true);
+  } else {
+    ensureTrackMapVisible(true);
+  }
 }
 
 function simMode() {
@@ -629,6 +642,64 @@ function resetPathView() {
   state.pathView.panY = 0;
 }
 
+function buildPathTransformFromTrack(track, canvas) {
+  const bbox = track.bbox;
+  return buildPathTransform(
+    [Number(bbox.x_min), Number(bbox.x_max)],
+    [Number(bbox.y_min), Number(bbox.y_max)],
+    canvas,
+  );
+}
+
+function decimatePathSeries(xs, ys, speeds, maxPoints = 1200) {
+  if (xs.length <= maxPoints) {
+    return { xs, ys, speeds };
+  }
+  const step = Math.ceil(xs.length / maxPoints);
+  const dx = [];
+  const dy = [];
+  const ds = [];
+  for (let index = 0; index < xs.length; index += step) {
+    dx.push(xs[index]);
+    dy.push(ys[index]);
+    ds.push(speeds[index] ?? 0);
+  }
+  const lastIndex = xs.length - 1;
+  if (dx[dx.length - 1] !== xs[lastIndex]) {
+    dx.push(xs[lastIndex]);
+    dy.push(ys[lastIndex]);
+    ds.push(speeds[lastIndex] ?? 0);
+  }
+  return { xs: dx, ys: dy, speeds: ds };
+}
+
+function schedulePathRedraw() {
+  if (state.pathRedrawScheduled) return;
+  state.pathRedrawScheduled = true;
+  requestAnimationFrame(() => {
+    state.pathRedrawScheduled = false;
+    redrawPathLayer();
+  });
+}
+
+function ensureTrackMapVisible(resetView = false) {
+  const pathCanvas = document.getElementById("history-path");
+  if (!pathCanvas || !state.track.data) return false;
+  state.historyPathBaseTransform = buildPathTransformFromTrack(state.track.data, pathCanvas);
+  if (resetView) {
+    resetPathView();
+  }
+  if (!state.historyPathLayer) {
+    state.historyPathLayer = {
+      marker: { x: 0, y: 0, heading: 0, xs: [], ys: [], useLiveMarker: false },
+      speeds: [],
+      pathColorMaxKmh: 45,
+    };
+  }
+  schedulePathRedraw();
+  return true;
+}
+
 function zoomPathViewAt(canvasX, canvasY, factor) {
   const base = state.historyPathBaseTransform;
   if (!base) return;
@@ -667,7 +738,15 @@ function redrawPathLayer() {
 
   pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
   drawTrackUnderlay(pathCtx, state.track.data, toPx);
-  drawSpeedColoredPath(pathCtx, layer.marker.xs, layer.marker.ys, layer.speeds, layer.pathColorMaxKmh, toPx);
+  const pathSeries = decimatePathSeries(layer.marker.xs, layer.marker.ys, layer.speeds);
+  drawSpeedColoredPath(
+    pathCtx,
+    pathSeries.xs,
+    pathSeries.ys,
+    pathSeries.speeds,
+    layer.pathColorMaxKmh,
+    toPx,
+  );
   drawStartFinishLine(pathCtx, state.track.data, toPx);
   pathCtx.fillStyle = "#8aa0b8";
   pathCtx.font = "12px sans-serif";
@@ -874,8 +953,10 @@ function drawKartMarker(markerCtx, x, y, headingDeg, dims, toPx, canvas, transfo
 }
 
 function invalidateHistoryDrawCache() {
+  state.historyViewSessionId = "";
   state.historySamplesFingerprint = "";
   state.historyMarkerFingerprint = "";
+  state.historyChartLastDrawMs = 0;
   state.historyPathTransform = null;
   state.historyPathBaseTransform = null;
   state.historyPathLayer = null;
@@ -925,21 +1006,28 @@ async function refreshHistoryView(forceSessionList = false) {
   }
 }
 
+function historyPollIntervalMs() {
+  return state.simRunning ? 400 : 250;
+}
+
 function startHistoryPolling() {
   stopHistoryPolling();
   state.historyPollCount = 0;
   void refreshHistoryView(true);
-  state.historyPollTimer = setInterval(() => {
-    void refreshHistoryView(false);
-  }, 100);
+  const scheduleNextPoll = () => {
+    state.historyPollTimer = window.setTimeout(() => {
+      void refreshHistoryView(false);
+      scheduleNextPoll();
+    }, historyPollIntervalMs());
+  };
+  scheduleNextPoll();
 }
 
 function stopHistoryPolling() {
   if (state.historyPollTimer !== null) {
-    clearInterval(state.historyPollTimer);
+    clearTimeout(state.historyPollTimer);
     state.historyPollTimer = null;
   }
-  invalidateHistoryDrawCache();
 }
 
 function isHistoryTabActive() {
@@ -986,7 +1074,6 @@ function syncTelemetryPanels(tab) {
     if (state.lastSample && Object.keys(state.lastSample).length) {
       updateChannelsGrid(state.lastSample);
     }
-    invalidateHistoryDrawCache();
     startHistoryPolling();
     return;
   }
@@ -996,7 +1083,6 @@ function syncTelemetryPanels(tab) {
   live.classList.toggle("hidden", tab !== "live");
   history.classList.toggle("hidden", tab !== "history");
   if (tab === "history") {
-    invalidateHistoryDrawCache();
     startHistoryPolling();
   } else {
     stopHistoryPolling();
@@ -1072,12 +1158,21 @@ async function drawSessionChart(sessionId) {
   await applySessionTrack(sessionId);
   await renderSessionLaps(sessionId);
 
+  const sessionChanged = sessionId !== state.historyViewSessionId;
+  if (sessionChanged) {
+    state.historyViewSessionId = sessionId;
+    state.historySamplesFingerprint = "";
+    state.historyMarkerFingerprint = "";
+  }
+
   const [samples, session] = await Promise.all([
     api(`/api/sessions/${sessionId}/samples?limit=5000`),
     api(`/api/sessions/${sessionId}`),
   ]);
+
+  const pathCanvas = document.getElementById("history-path");
   if (!samples.length) {
-    invalidateHistoryDrawCache();
+    ensureTrackMapVisible(sessionChanged);
     return;
   }
 
@@ -1094,10 +1189,8 @@ async function drawSessionChart(sessionId) {
   }
 
   const canvas = document.getElementById("history-chart");
-  const pathCanvas = document.getElementById("history-path");
   const markerCanvas = document.getElementById("history-marker");
   const ctx = canvas.getContext("2d");
-  const pathCtx = pathCanvas.getContext("2d");
 
   if (samplesChanged) {
     const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
@@ -1105,28 +1198,44 @@ async function drawSessionChart(sessionId) {
     const peakSpeed = Math.max(...speeds, 0);
     const maxSpeed = Math.max(peakSpeed, 1);
     const pathColorMaxKmh = await resolvePathColorMaxKmh(session, maxSpeed);
-    const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
-    const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
-    const panelHeight = (canvas.height - 50) / 2;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
-    plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
-    ctx.fillStyle = "#8aa0b8";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
-    ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+    if (state.track.data && pathCanvas) {
+      state.historyPathBaseTransform = buildPathTransformFromTrack(state.track.data, pathCanvas);
+    } else if (pathCanvas) {
+      const bounds = collectPathBounds(marker);
+      state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
+    }
+    if (sessionChanged) {
+      resetPathView();
+    }
 
-    const bounds = collectPathBounds(marker);
-    state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
-    resetPathView();
     state.historyPathColorMaxKmh = pathColorMaxKmh;
     state.historyPathLayer = {
       marker,
       speeds,
       pathColorMaxKmh,
     };
-    redrawPathLayer();
+
+    const now = performance.now();
+    const shouldDrawCharts = sessionChanged
+      || !state.simRunning
+      || now - state.historyChartLastDrawMs > 750;
+    if (shouldDrawCharts) {
+      const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
+      const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
+      const panelHeight = (canvas.height - 50) / 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
+      plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
+      ctx.fillStyle = "#8aa0b8";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
+      ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+      state.historyChartLastDrawMs = now;
+    }
+
+    schedulePathRedraw();
   }
 
   if (markerChanged && !samplesChanged) {
@@ -1454,16 +1563,16 @@ async function applySessionTrack(sessionId) {
   if (!sessionId) return;
   try {
     const session = await api(`/api/sessions/${encodeURIComponent(sessionId)}`);
-    if (session.track_id) {
+    if (session.track_id && session.track_id !== state.track.id) {
       syncTrackSelectValue(session.track_id);
-      await loadSelectedTrack(true);
+      await loadSelectedTrack(true, false);
     }
   } catch (_error) {
     /* optional */
   }
 }
 
-async function loadSelectedTrack(force = false) {
+async function loadSelectedTrack(force = false, redrawSession = true) {
   const trackId = document.getElementById("track-select").value;
   const directionSelect = document.getElementById("track-direction-select");
   if (!trackId) {
@@ -1482,9 +1591,16 @@ async function loadSelectedTrack(force = false) {
   state.track.data = await api(`/api/tracks/${encodeURIComponent(trackId)}`);
   state.track.id = trackId;
   syncTrackDirectionControls();
-  invalidateHistoryDrawCache();
+  syncTrackSelectValue(trackId);
   const sessionId = document.getElementById("session-select").value;
-  if (sessionId) await drawSessionChart(sessionId);
+  if (sessionId && redrawSession) {
+    invalidateHistoryDrawCache();
+    await drawSessionChart(sessionId);
+  } else if (!sessionId) {
+    ensureTrackMapVisible(true);
+  } else {
+    ensureTrackMapVisible(false);
+  }
 }
 
 function syncTrackDirectionControls() {
@@ -1533,6 +1649,26 @@ function setupPathMapInteractions() {
   const pathCanvas = document.getElementById("history-path");
   if (!stack || !pathCanvas) return;
 
+  const releasePathPan = (event) => {
+    if (!state.pathPan.active) return;
+    if (event && event.pointerId !== state.pathPan.pointerId) return;
+    try {
+      if (event?.pointerId != null) {
+        stack.releasePointerCapture(event.pointerId);
+      }
+    } catch (_error) {
+      /* pointer may already be released */
+    }
+    state.pathPan.active = false;
+    state.pathPan.pointerId = null;
+    stack.classList.remove("is-panning");
+    if (state.pathPan.moved) {
+      window.setTimeout(() => {
+        state.pathPan.moved = false;
+      }, 0);
+    }
+  };
+
   stack.addEventListener(
     "wheel",
     (event) => {
@@ -1544,18 +1680,6 @@ function setupPathMapInteractions() {
     },
     { passive: false },
   );
-
-  const endPan = (event) => {
-    if (!state.pathPan.active || event.pointerId !== state.pathPan.pointerId) return;
-    state.pathPan.active = false;
-    state.pathPan.pointerId = null;
-    stack.classList.remove("is-panning");
-    if (state.pathPan.moved) {
-      window.setTimeout(() => {
-        state.pathPan.moved = false;
-      }, 0);
-    }
-  };
 
   stack.addEventListener("pointerdown", (event) => {
     if (!state.historyPathBaseTransform) return;
@@ -1588,8 +1712,10 @@ function setupPathMapInteractions() {
     redrawPathLayer();
   });
 
-  stack.addEventListener("pointerup", endPan);
-  stack.addEventListener("pointercancel", endPan);
+  stack.addEventListener("pointerup", releasePathPan);
+  stack.addEventListener("pointercancel", releasePathPan);
+  window.addEventListener("pointerup", releasePathPan);
+  window.addEventListener("pointercancel", releasePathPan);
 
   pathCanvas.addEventListener("click", (event) => {
     void handleTrackCanvasClick(event);
@@ -1622,6 +1748,11 @@ function setupControls() {
     const vehicle = selectedVehicle();
     const mode = simMode();
     const driveSettings = selectedDriveSettings();
+    const trackId = document.getElementById("sim-track-select")?.value;
+    if (trackId) {
+      syncTrackSelectValue(trackId);
+      await loadSelectedTrack(true);
+    }
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
@@ -1723,6 +1854,11 @@ async function init() {
   }
   await loadConfig();
   await loadTrackCatalog();
+  const initialTrackId = document.getElementById("sim-track-select")?.value;
+  if (initialTrackId) {
+    syncTrackSelectValue(initialTrackId);
+    await loadSelectedTrack(true);
+  }
   connectWebSocket();
   syncTelemetryPanels(activeTabName());
 }
