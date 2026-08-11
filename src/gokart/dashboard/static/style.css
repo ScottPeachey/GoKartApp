@@ -41,7 +41,7 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   position: sticky;
   top: 0;
   z-index: 30;
-  padding: 0.75rem 1.5rem 0;
+  padding: 0.5rem 1.5rem 0;
   background: linear-gradient(var(--bg) 88%, transparent);
   backdrop-filter: blur(6px);
 }
@@ -49,71 +49,101 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 .cockpit-panel {
   background: var(--panel);
   border-radius: 12px;
-  padding: 0.85rem 1rem;
+  padding: 0.55rem 0.75rem;
   border: 1px solid #2a3548;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
-.cockpit-top {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  align-items: center;
-  justify-content: space-between;
+.cockpit-layout {
+  display: grid;
+  grid-template-columns: 4.75rem minmax(0, 1fr) auto minmax(0, 1.35fr) minmax(210px, 0.95fr);
+  grid-template-rows: auto auto;
+  gap: 0.35rem 0.55rem;
+  align-items: stretch;
 }
 
-.cockpit-primary {
+.cockpit-speed-col {
+  grid-row: 1 / 3;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.65rem;
-  flex: 1 1 480px;
-  min-width: 0;
+  justify-content: center;
 }
 
 .cockpit-metrics {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  grid-column: 2 / 4;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.35rem, 1fr));
+  gap: 0.25rem;
+  align-content: center;
+}
+
+.cockpit-status-col {
+  grid-column: 4 / 6;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.cockpit-soc {
+  grid-column: 2;
+  grid-row: 2;
+  width: auto;
+  min-width: 0;
+  max-width: 5.5rem;
+  align-self: center;
+}
+
+.cockpit-controls-col {
+  grid-column: 5;
+  grid-row: 2;
+  min-width: 0;
 }
 
 .metric-pill {
   background: #121a26;
   border: 1px solid #2a3548;
-  border-radius: 8px;
-  padding: 0.35rem 0.65rem;
-  min-width: 68px;
+  border-radius: 6px;
+  padding: 0.18rem 0.35rem;
+  min-width: 0;
+  text-align: center;
 }
 
 .metric-pill .label {
   display: block;
-  font-size: 0.62rem;
-  margin-bottom: 0.1rem;
+  font-size: 0.52rem;
+  margin-bottom: 0.02rem;
+  line-height: 1.1;
 }
 
 .metric-pill span:last-child {
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.1;
 }
 
-.cockpit-soc {
-  flex: 0 0 168px;
-  width: 168px;
-  margin-left: 0.15rem;
+.cockpit-soc .label {
+  font-size: 0.52rem;
+  margin-bottom: 0.05rem;
 }
 
 .cockpit-soc .soc-bar {
-  margin: 0.2rem 0 0.15rem;
+  margin: 0.12rem 0;
+}
+
+.cockpit-soc #soc-text {
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 .axle-physics-panel {
-  flex: 1 1 280px;
-  min-width: 240px;
-  max-width: 360px;
+  grid-column: 3 / 5;
+  grid-row: 2;
+  min-width: 0;
+  max-width: none;
   background: #121a26;
   border: 1px solid #2a3548;
   border-radius: 8px;
-  padding: 0.45rem 0.55rem;
+  padding: 0.32rem 0.45rem;
 }
 
 .axle-physics-panel.inactive {
@@ -125,8 +155,8 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   justify-content: space-between;
   align-items: baseline;
   gap: 0.5rem;
-  margin-bottom: 0.35rem;
-  font-size: 0.68rem;
+  margin-bottom: 0.22rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #8aa0b8;
@@ -136,13 +166,13 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   color: var(--accent);
   text-transform: none;
   letter-spacing: 0;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   text-align: right;
 }
 
 .load-split-bar {
   display: flex;
-  height: 10px;
+  height: 7px;
   border-radius: 999px;
   overflow: hidden;
   background: #0b1118;
@@ -166,35 +196,35 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.2rem;
-  font-size: 0.68rem;
+  margin-top: 0.12rem;
+  font-size: 0.58rem;
   color: #8aa0b8;
 }
 
 .load-split-title {
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  font-size: 0.62rem;
+  font-size: 0.55rem;
 }
 
 .axle-grip-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-  margin-top: 0.45rem;
+  gap: 0.3rem 0.45rem;
+  margin-top: 0.28rem;
 }
 
 .axle-grip-card {
   display: flex;
   flex-direction: column;
-  gap: 0.18rem;
+  gap: 0.1rem;
 }
 
 .axle-grip-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   color: #8aa0b8;
 }
 
@@ -204,7 +234,7 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 }
 
 .grip-meter {
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
   background: #0b1118;
   border: 1px solid #2a3548;
@@ -230,14 +260,8 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 }
 
 .grip-caption {
-  font-size: 0.64rem;
+  font-size: 0.55rem;
   color: #8aa0b8;
-}
-
-.cockpit-bottom {
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid #2a3548;
 }
 
 .cockpit-panel .driving-controls {
@@ -249,16 +273,16 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 
 .cockpit-sliders {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  gap: 0.5rem 0.75rem;
-  align-items: end;
+  grid-template-columns: 1fr;
+  gap: 0.22rem;
+  align-items: stretch;
 }
 
 .cockpit-slider {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.72rem;
+  gap: 0.08rem;
+  font-size: 0.58rem;
   color: #8aa0b8;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -268,7 +292,7 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .slider-readout {
@@ -276,45 +300,59 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   font-variant-numeric: tabular-nums;
   text-transform: none;
   letter-spacing: 0;
-  min-width: 3.5rem;
+  min-width: 2.5rem;
   text-align: right;
+  font-size: 0.68rem;
 }
 
 .cockpit-slider input[type="range"] {
   width: 100%;
+  margin: 0;
 }
 
 .btn-brake-hold {
-  align-self: end;
-  margin: 0;
-  font-size: 0.8rem;
-  padding: 0.45rem 0.65rem;
+  align-self: start;
+  margin: 0.15rem 0 0;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.5rem;
   white-space: nowrap;
 }
 
 .cockpit-panel .speed-readout {
-  font-size: 2.75rem;
+  font-size: 1.85rem;
+  line-height: 0.95;
 }
 
 .cockpit-panel .speed-readout .unit {
-  font-size: 1rem;
+  display: block;
+  font-size: 0.62rem;
+  margin-left: 0;
+  margin-top: 0.08rem;
 }
 
 .cockpit-panel .status-card {
-  min-width: 120px;
-  padding: 0.55rem 0.75rem;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border-width: 1px;
+  border-radius: 8px;
+}
+
+.cockpit-panel .status-card-label {
+  font-size: 0.52rem;
+  margin-bottom: 0.05rem;
 }
 
 .cockpit-panel .status-card-value {
-  font-size: 1.2rem;
+  font-size: 0.88rem;
 }
 
 .cockpit-panel #mode-card .status-card-value {
-  font-size: 1rem;
+  font-size: 0.78rem;
 }
 
 .cockpit-panel .safety-banner {
   justify-content: flex-end;
+  gap: 0.35rem;
 }
 
 .cockpit-panel .driving-controls.locked {
@@ -322,19 +360,71 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   pointer-events: none;
 }
 
-@media (max-width: 720px) {
-  .cockpit-primary {
-    flex-basis: 100%;
+@media (max-width: 1100px) {
+  .cockpit-layout {
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+  }
+
+  .cockpit-speed-col {
+    grid-row: 1;
+    grid-column: 1;
+    align-self: start;
   }
 
   .cockpit-metrics {
-    flex-wrap: wrap;
+    grid-column: 2 / 4;
+    grid-row: 1;
+  }
+
+  .cockpit-status-col {
+    grid-column: 1 / 4;
+    grid-row: 2;
+  }
+
+  .cockpit-panel .safety-banner {
+    justify-content: flex-start;
   }
 
   .cockpit-soc {
-    flex: 1 1 140px;
-    width: auto;
-    margin-left: 0;
+    grid-column: 1;
+    grid-row: 3;
+    max-width: none;
+  }
+
+  .axle-physics-panel {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .cockpit-controls-col {
+    grid-column: 3;
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 720px) {
+  .cockpit-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cockpit-speed-col {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .cockpit-metrics {
+    grid-column: 1 / -1;
+  }
+
+  .cockpit-status-col {
+    grid-column: 1 / -1;
+  }
+
+  .cockpit-soc,
+  .axle-physics-panel,
+  .cockpit-controls-col {
+    grid-column: 1 / -1;
   }
 
   .cockpit-sliders {
@@ -343,7 +433,6 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 
   .btn-brake-hold {
     grid-column: 1 / -1;
-    justify-self: start;
   }
 }
 

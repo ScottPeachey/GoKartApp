@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=12" />
+  <link rel="stylesheet" href="/static/style.css?v=13" />
 </head>
 <body>
   <header>
@@ -14,129 +14,131 @@
 
   <div class="cockpit-sticky">
     <section class="cockpit-panel">
-      <div class="cockpit-top">
-        <div class="cockpit-primary">
+      <div class="cockpit-layout">
+        <div class="cockpit-speed-col">
           <div class="speed-readout">
             <span id="speed-value">0</span>
             <span class="unit">km/h</span>
           </div>
-          <div class="cockpit-metrics">
-            <div class="metric-pill">
-              <span class="label">Power</span>
-              <span id="power-kw">0.0 kW</span>
-            </div>
-            <div class="metric-pill">
-              <span class="label">Steer</span>
-              <span id="steer-value">0°</span>
-            </div>
-            <div class="metric-pill">
-              <span class="label">Heading</span>
-              <span id="heading-value">0°</span>
-            </div>
-            <div class="metric-pill" id="elevation-pill">
-              <span class="label">Elev</span>
-              <span id="elevation-value">—</span>
-            </div>
-            <div class="metric-pill">
-              <span class="label">Pitch</span>
-              <span id="pitch-value">0°</span>
-            </div>
-            <div class="metric-pill">
-              <span class="label">Roll</span>
-              <span id="roll-value">0°</span>
-            </div>
-            <div class="metric-pill" id="lap-pill">
-              <span class="label">Lap</span>
-              <span id="lap-number">—</span>
-            </div>
-            <div class="metric-pill" id="lap-time-pill">
-              <span class="label">Lap time</span>
-              <span id="lap-time">—</span>
-            </div>
-            <div class="metric-pill hidden" id="best-lap-pill">
-              <span class="label">Best</span>
-              <span id="best-lap-time">—</span>
-            </div>
+        </div>
+        <div class="cockpit-metrics">
+          <div class="metric-pill">
+            <span class="label">Power</span>
+            <span id="power-kw">0.0 kW</span>
           </div>
-          <div class="cockpit-soc">
-            <span class="label">SOC</span>
-            <div class="soc-bar"><div id="soc-fill"></div></div>
-            <span id="soc-text">—</span>
+          <div class="metric-pill">
+            <span class="label">Steer</span>
+            <span id="steer-value">0°</span>
           </div>
-          <div id="axle-physics-panel" class="axle-physics-panel inactive">
-            <div class="axle-physics-head">
-              <span>4-wheel physics</span>
-              <span id="load-transfer-hint" class="load-transfer-hint">—</span>
+          <div class="metric-pill">
+            <span class="label">Heading</span>
+            <span id="heading-value">0°</span>
+          </div>
+          <div class="metric-pill" id="elevation-pill">
+            <span class="label">Elev</span>
+            <span id="elevation-value">—</span>
+          </div>
+          <div class="metric-pill">
+            <span class="label">Pitch</span>
+            <span id="pitch-value">0°</span>
+          </div>
+          <div class="metric-pill">
+            <span class="label">Roll</span>
+            <span id="roll-value">0°</span>
+          </div>
+          <div class="metric-pill" id="lap-pill">
+            <span class="label">Lap</span>
+            <span id="lap-number">—</span>
+          </div>
+          <div class="metric-pill" id="lap-time-pill">
+            <span class="label">Lap time</span>
+            <span id="lap-time">—</span>
+          </div>
+          <div class="metric-pill hidden" id="best-lap-pill">
+            <span class="label">Best</span>
+            <span id="best-lap-time">—</span>
+          </div>
+        </div>
+        <div class="cockpit-status-col">
+          <div class="safety-banner">
+            <div id="safety-card" class="status-card safety-off">
+              <span class="status-card-label">Safety</span>
+              <span id="safety-state" class="status-card-value">OFF</span>
             </div>
-            <div class="load-split-bar" aria-label="Front/rear weight balance">
-              <div id="front-load-segment" class="load-segment front" style="width: 50%"></div>
-              <div id="rear-load-segment" class="load-segment rear" style="width: 50%"></div>
-            </div>
-            <div class="load-split-labels">
-              <span id="front-load-pct">F 50%</span>
-              <span class="load-split-title">Weight balance</span>
-              <span id="rear-load-pct">R 50%</span>
-            </div>
-            <div class="axle-grip-grid">
-              <div class="axle-grip-card">
-                <div class="axle-grip-head">
-                  <span>Front axle</span>
-                  <span id="front-load-value" class="axle-force">—</span>
-                </div>
-                <div class="grip-meter" title="Lateral grip usage">
-                  <div id="front-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
-                </div>
-                <span id="front-grip-label" class="grip-caption">Lateral —</span>
-              </div>
-              <div class="axle-grip-card">
-                <div class="axle-grip-head">
-                  <span>Rear axle</span>
-                  <span id="rear-load-value" class="axle-force">—</span>
-                </div>
-                <div class="grip-meter" title="Rear longitudinal grip usage">
-                  <div id="rear-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
-                </div>
-                <span id="rear-grip-label" class="grip-caption">Rear grip —</span>
-              </div>
+            <div id="mode-card" class="status-card">
+              <span class="status-card-label">Drive mode</span>
+              <span id="drive-mode" class="status-card-value">—</span>
             </div>
           </div>
         </div>
-        <div class="safety-banner">
-          <div id="safety-card" class="status-card safety-off">
-            <span class="status-card-label">Safety</span>
-            <span id="safety-state" class="status-card-value">OFF</span>
+        <div class="cockpit-soc">
+          <span class="label">SOC</span>
+          <div class="soc-bar"><div id="soc-fill"></div></div>
+          <span id="soc-text">—</span>
+        </div>
+        <div id="axle-physics-panel" class="axle-physics-panel inactive">
+          <div class="axle-physics-head">
+            <span>4-wheel physics</span>
+            <span id="load-transfer-hint" class="load-transfer-hint">—</span>
           </div>
-          <div id="mode-card" class="status-card">
-            <span class="status-card-label">Drive mode</span>
-            <span id="drive-mode" class="status-card-value">—</span>
+          <div class="load-split-bar" aria-label="Front/rear weight balance">
+            <div id="front-load-segment" class="load-segment front" style="width: 50%"></div>
+            <div id="rear-load-segment" class="load-segment rear" style="width: 50%"></div>
+          </div>
+          <div class="load-split-labels">
+            <span id="front-load-pct">F 50%</span>
+            <span class="load-split-title">Weight balance</span>
+            <span id="rear-load-pct">R 50%</span>
+          </div>
+          <div class="axle-grip-grid">
+            <div class="axle-grip-card">
+              <div class="axle-grip-head">
+                <span>Front axle</span>
+                <span id="front-load-value" class="axle-force">—</span>
+              </div>
+              <div class="grip-meter" title="Lateral grip usage">
+                <div id="front-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+              </div>
+              <span id="front-grip-label" class="grip-caption">Lateral —</span>
+            </div>
+            <div class="axle-grip-card">
+              <div class="axle-grip-head">
+                <span>Rear axle</span>
+                <span id="rear-load-value" class="axle-force">—</span>
+              </div>
+              <div class="grip-meter" title="Rear longitudinal grip usage">
+                <div id="rear-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+              </div>
+              <span id="rear-grip-label" class="grip-caption">Rear grip —</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="cockpit-bottom">
-        <div id="driving-controls" class="driving-controls">
-          <div class="cockpit-sliders">
-            <label class="cockpit-slider">
-              <span class="cockpit-slider-head">
-                <span>Throttle</span>
-                <span id="throttle-readout" class="slider-readout">0%</span>
-              </span>
-              <input type="range" id="throttle" min="0" max="100" value="0" />
-            </label>
-            <label class="cockpit-slider">
-              <span class="cockpit-slider-head">
-                <span>Brake</span>
-                <span id="brake-readout" class="slider-readout">0%</span>
-              </span>
-              <input type="range" id="brake" min="0" max="100" value="0" />
-            </label>
-            <label id="steering-label" class="cockpit-slider">
-              <span class="cockpit-slider-head">
-                <span>Steering</span>
-                <span id="steering-readout" class="slider-readout">0°</span>
-              </span>
-              <input type="range" id="steering" min="-100" max="100" value="0" />
-            </label>
-            <button id="btn-brake-hold" type="button" class="btn-toggle btn-brake-hold hidden">Brake hold: OFF</button>
+        <div class="cockpit-controls-col">
+          <div id="driving-controls" class="driving-controls">
+            <div class="cockpit-sliders">
+              <label class="cockpit-slider">
+                <span class="cockpit-slider-head">
+                  <span>Throttle</span>
+                  <span id="throttle-readout" class="slider-readout">0%</span>
+                </span>
+                <input type="range" id="throttle" min="0" max="100" value="0" />
+              </label>
+              <label class="cockpit-slider">
+                <span class="cockpit-slider-head">
+                  <span>Brake</span>
+                  <span id="brake-readout" class="slider-readout">0%</span>
+                </span>
+                <input type="range" id="brake" min="0" max="100" value="0" />
+              </label>
+              <label id="steering-label" class="cockpit-slider">
+                <span class="cockpit-slider-head">
+                  <span>Steering</span>
+                  <span id="steering-readout" class="slider-readout">0°</span>
+                </span>
+                <input type="range" id="steering" min="-100" max="100" value="0" />
+              </label>
+              <button id="btn-brake-hold" type="button" class="btn-toggle btn-brake-hold hidden">Brake hold: OFF</button>
+            </div>
           </div>
         </div>
       </div>
