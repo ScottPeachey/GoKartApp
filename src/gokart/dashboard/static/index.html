@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=11" />
+  <link rel="stylesheet" href="/static/style.css?v=12" />
 </head>
 <body>
   <header>
@@ -214,7 +214,19 @@
 
     <div id="telemetry-split" class="telemetry-split">
       <section id="tab-live" class="tab-panel telemetry-panel">
-        <h3 class="telemetry-panel-title">Live Channels</h3>
+        <div class="telemetry-panel-head">
+          <h3 class="telemetry-panel-title">Live Channels</h3>
+          <div class="channel-customise">
+            <button id="btn-channel-customise" type="button" class="btn-secondary channel-customise-btn">Customise</button>
+            <div id="channel-customise-menu" class="channel-customise-menu hidden" role="dialog" aria-label="Customise live channels">
+              <div class="channel-customise-head">
+                <span>Visible channels</span>
+                <button id="btn-channel-show-all" type="button" class="btn-link">Show all</button>
+              </div>
+              <div id="channel-customise-list" class="channel-customise-list"></div>
+            </div>
+          </div>
+        </div>
         <div id="channels-grid" class="channels-grid" aria-live="polite"></div>
       </section>
 
@@ -361,7 +373,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=38"></script>
+  <script src="/static/app.js?v=39"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

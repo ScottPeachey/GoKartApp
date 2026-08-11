@@ -14,6 +14,8 @@ const state = {
   liveUiScheduled: false,
   channelRowsBuilt: false,
   channelStableValues: {},
+  hiddenChannels: new Set(),
+  channelCustomiseOpen: false,
   historySessionListKey: "",
   historyViewSessionId: "",
   historySamplesFingerprint: "",
@@ -496,6 +498,120 @@ function channelUiMeta(name) {
   return CHANNEL_UI[name] || { icon: "📊", label: name.replace(/_/g, " ") };
 }
 
+const CHANNEL_VISIBILITY_STORAGE_KEY = "gokart.hiddenChannels";
+
+function loadHiddenChannels() {
+  try {
+    const raw = localStorage.getItem(CHANNEL_VISIBILITY_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.filter((name) => typeof name === "string") : []);
+  } catch (_error) {
+    return new Set();
+  }
+}
+
+function saveHiddenChannels() {
+  localStorage.setItem(
+    CHANNEL_VISIBILITY_STORAGE_KEY,
+    JSON.stringify([...state.hiddenChannels].sort()),
+  );
+}
+
+function syncHiddenChannelsWithSchema() {
+  const known = new Set(state.channels.map((channel) => channel.name));
+  let changed = false;
+  for (const name of state.hiddenChannels) {
+    if (!known.has(name)) {
+      state.hiddenChannels.delete(name);
+      changed = true;
+    }
+  }
+  if (changed) {
+    saveHiddenChannels();
+  }
+}
+
+function isChannelVisible(name) {
+  return !state.hiddenChannels.has(name);
+}
+
+function visibleChannels() {
+  return state.channels.filter((channel) => isChannelVisible(channel.name));
+}
+
+function setChannelCustomiseOpen(open) {
+  state.channelCustomiseOpen = open;
+  document.getElementById("channel-customise-menu")?.classList.toggle("hidden", !open);
+}
+
+function renderChannelCustomiseMenu() {
+  const list = document.getElementById("channel-customise-list");
+  if (!list) return;
+  list.innerHTML = "";
+  const sorted = [...state.channels].sort((left, right) => {
+    const leftLabel = channelUiMeta(left.name).label;
+    const rightLabel = channelUiMeta(right.name).label;
+    return leftLabel.localeCompare(rightLabel);
+  });
+  for (const channel of sorted) {
+    const meta = channelUiMeta(channel.name);
+    const item = document.createElement("label");
+    item.className = "channel-customise-item";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = isChannelVisible(channel.name);
+    checkbox.dataset.channel = channel.name;
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        state.hiddenChannels.delete(channel.name);
+      } else {
+        state.hiddenChannels.add(channel.name);
+      }
+      saveHiddenChannels();
+      rebuildChannelsGrid();
+      if (state.lastSample && Object.keys(state.lastSample).length) {
+        updateChannelsGrid(state.lastSample);
+      }
+    });
+    const text = document.createElement("span");
+    text.textContent = meta.label;
+    item.append(checkbox, text);
+    list.appendChild(item);
+  }
+}
+
+function setupChannelCustomise() {
+  const button = document.getElementById("btn-channel-customise");
+  const menu = document.getElementById("channel-customise-menu");
+  if (!button || !menu) return;
+
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = !state.channelCustomiseOpen;
+    setChannelCustomiseOpen(open);
+    if (open) {
+      renderChannelCustomiseMenu();
+    }
+  });
+
+  document.getElementById("btn-channel-show-all")?.addEventListener("click", () => {
+    state.hiddenChannels.clear();
+    saveHiddenChannels();
+    renderChannelCustomiseMenu();
+    rebuildChannelsGrid();
+    if (state.lastSample && Object.keys(state.lastSample).length) {
+      updateChannelsGrid(state.lastSample);
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!state.channelCustomiseOpen) return;
+    if (menu.contains(event.target) || button.contains(event.target)) return;
+    setChannelCustomiseOpen(false);
+  });
+}
+
 function channelCardClass(name, value) {
   if (name === "active_faults" && value) return "channel-fault";
   if (name === "safety_state" && String(value).includes("FAULT")) return "channel-fault";
@@ -508,10 +624,13 @@ function channelCardClass(name, value) {
 function ensureChannelsGrid() {
   const grid = document.getElementById("channels-grid");
   if (!grid || !state.channels.length) return;
-  if (state.channelRowsBuilt && grid.children.length === state.channels.length) return;
+  const channels = visibleChannels();
+  const existing = [...grid.children].map((card) => card.dataset.channel);
+  const expected = channels.map((channel) => channel.name);
+  if (state.channelRowsBuilt && existing.join("|") === expected.join("|")) return;
 
   grid.innerHTML = "";
-  for (const channel of state.channels) {
+  for (const channel of channels) {
     const meta = channelUiMeta(channel.name);
     const card = document.createElement("article");
     card.className = "channel-card";
@@ -530,6 +649,9 @@ function ensureChannelsGrid() {
 function rebuildChannelsGrid() {
   state.channelRowsBuilt = false;
   ensureChannelsGrid();
+  if (state.channelCustomiseOpen) {
+    renderChannelCustomiseMenu();
+  }
 }
 
 function formatChannelValue(value, channelType = "float", channelName = "") {
@@ -588,6 +710,7 @@ function connectWebSocket() {
     const message = JSON.parse(event.data);
     if (message.channels?.length) {
       state.channels = message.channels;
+      syncHiddenChannelsWithSchema();
       rebuildChannelsGrid();
     }
     if (message.type !== "sample" || !message.data) return;
@@ -598,6 +721,7 @@ function connectWebSocket() {
 
 async function loadConfig() {
   state.channels = await api("/api/channels");
+  syncHiddenChannelsWithSchema();
   rebuildChannelsGrid();
   await refreshVehicleLists();
   await loadDriveSettingOptions();
@@ -2083,8 +2207,10 @@ function setupControls() {
 }
 
 async function init() {
+  state.hiddenChannels = loadHiddenChannels();
   setupTabs();
   setupControls();
+  setupChannelCustomise();
   try {
     const version = await api("/api/version");
     const el = document.getElementById("app-version");
