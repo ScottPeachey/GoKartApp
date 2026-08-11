@@ -51,6 +51,28 @@ def test_braking_transfers_load_to_front() -> None:
     assert braking.rear_normal_n < static.rear_normal_n
 
 
+def test_stationary_full_brake_keeps_balanced_loads() -> None:
+    from gokart.physics.vehicle import Environment, VehicleState, VehicleStepInputs, load_validated_vehicle_model
+
+    vehicle = load_validated_vehicle_model("Scott_Kart_V2", "V2.0")
+    state = vehicle.initial_state()
+    _, outputs = vehicle.step(
+        state,
+        VehicleStepInputs(
+            motor_torque_request_nm=0.0,
+            regen_torque_request_nm=0.0,
+            mechanical_brake=1.0,
+            environment=Environment(),
+            steering=0.0,
+        ),
+        dt=0.01,
+    )
+    total = outputs.front_normal_n + outputs.rear_normal_n
+    assert outputs.speed_mps == 0.0
+    assert outputs.acceleration_mps2 == pytest.approx(0.0)
+    assert outputs.front_normal_n / total == pytest.approx(0.5, abs=0.02)
+
+
 def test_rear_drive_is_limited_by_rear_grip_only() -> None:
     loads = axle_normal_loads_n(
         mass_kg=193.0,

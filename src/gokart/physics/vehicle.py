@@ -381,6 +381,7 @@ class VehicleModel:
             mass_kg=self.mass_kg,
             front_normal_n=axle_loads.front_normal_n,
         )
+        achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt
 
         steering_out = step_steering(
@@ -442,7 +443,7 @@ class VehicleModel:
             heading_deg=math.degrees(steering_out.heading_rad),
             steering_angle_deg=math.degrees(steering_out.steering_angle_rad),
             speed_mps=new_speed,
-            acceleration_mps2=accel,
+            acceleration_mps2=achieved_accel,
             motor_rpm=drivetrain_out.motor_rpm,
             motor_torque_nm=motor_out.torque_nm,
             motor_current_a=motor_out.motor_current_a,

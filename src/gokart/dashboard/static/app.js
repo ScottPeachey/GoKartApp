@@ -234,6 +234,15 @@ function setGripMeterBar(barId, pct) {
   }
 }
 
+function effectiveLoadTransferAccel(sample) {
+  const speed = Number(sample.speed_mps || 0);
+  const accel = Number(sample.acceleration_mps2 || 0);
+  if (speed <= 0.05 && accel < 0) {
+    return 0;
+  }
+  return accel;
+}
+
 function updateAxlePhysicsPanel(sample) {
   const panel = document.getElementById("axle-physics-panel");
   if (!panel) return;
@@ -267,13 +276,17 @@ function updateAxlePhysicsPanel(sample) {
   setGripMeterBar("front-grip-bar", frontGripPct);
   setGripMeterBar("rear-grip-bar", rearGripPct);
   document.getElementById("front-grip-label").textContent = `Lateral ${Math.min(999, frontGripPct).toFixed(0)}%`;
-  document.getElementById("rear-grip-label").textContent = `Drive ${Math.min(999, rearGripPct).toFixed(0)}%`;
+  document.getElementById("rear-grip-label").textContent = `Rear grip ${Math.min(999, rearGripPct).toFixed(0)}%`;
 
-  const accel = Number(sample.acceleration_mps2 || 0);
+  const speed = Number(sample.speed_mps || 0);
+  const brake = Number(sample.brake || 0);
+  const loadAccel = effectiveLoadTransferAccel(sample);
   const hint = document.getElementById("load-transfer-hint");
-  if (accel > 0.8) {
+  if (speed <= 0.05 && brake > 0.1) {
+    hint.textContent = "Brakes held";
+  } else if (loadAccel > 0.8) {
     hint.textContent = "Load → rear";
-  } else if (accel < -0.8) {
+  } else if (loadAccel < -0.8) {
     hint.textContent = "Load → front";
   } else if (frontLat > 200) {
     hint.textContent = "Front cornering";
@@ -295,7 +308,7 @@ function resetAxlePhysicsPanel() {
   document.getElementById("front-load-value").textContent = "—";
   document.getElementById("rear-load-value").textContent = "—";
   document.getElementById("front-grip-label").textContent = "Lateral —";
-  document.getElementById("rear-grip-label").textContent = "Drive —";
+  document.getElementById("rear-grip-label").textContent = "Rear grip —";
   document.getElementById("load-transfer-hint").textContent = "—";
   setGripMeterBar("front-grip-bar", 0);
   setGripMeterBar("rear-grip-bar", 0);
