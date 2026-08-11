@@ -18,7 +18,23 @@ const state = {
   historySamplesFingerprint: "",
   historyMarkerFingerprint: "",
   historyPathTransform: null,
+  historyPathBaseTransform: null,
+  historyPathLayer: null,
   historyPathColorMaxKmh: null,
+  pathView: {
+    zoom: 1,
+    panX: 0,
+    panY: 0,
+  },
+  pathPan: {
+    active: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startPanX: 0,
+    startPanY: 0,
+    moved: false,
+  },
   historyLimitsCacheKey: "",
   historyLimitsCacheValue: null,
   track: {
@@ -546,12 +562,93 @@ function historyMarkerFingerprint(marker) {
   return `${marker.x.toFixed(2)}|${marker.y.toFixed(2)}|${Number(marker.heading || 0).toFixed(1)}`;
 }
 
-function makePathToPx(transform) {
-  const { minX, minY, scale, offsetX, offsetY, drawH } = transform;
-  return (x, y) => ({
-    px: offsetX + (x - minX) * scale,
-    py: offsetY + drawH - (y - minY) * scale,
-  });
+function makePathToPx(base, view) {
+  return (x, y) => worldToScreen(Number(x), Number(y), base, view);
+}
+
+function worldToScreen(x, y, base, view) {
+  const px = base.offsetX + (x - base.minX) * base.scale;
+  const py = base.offsetY + base.drawH - (y - base.minY) * base.scale;
+  const cx = base.inset + base.plotW / 2;
+  const cy = base.inset + base.plotH / 2;
+  return {
+    px: cx + (px - cx) * view.zoom + view.panX,
+    py: cy + (py - cy) * view.zoom + view.panY,
+  };
+}
+
+function screenToWorld(sx, sy, base, view) {
+  const cx = base.inset + base.plotW / 2;
+  const cy = base.inset + base.plotH / 2;
+  const px = cx + (sx - cx - view.panX) / view.zoom;
+  const py = cy + (sy - cy - view.panY) / view.zoom;
+  return {
+    x: base.minX + (px - base.offsetX) / base.scale,
+    y: base.minY + (base.offsetY + base.drawH - py) / base.scale,
+  };
+}
+
+function effectivePathScale(base, view) {
+  return base.scale * view.zoom;
+}
+
+function resetPathView() {
+  state.pathView.zoom = 1;
+  state.pathView.panX = 0;
+  state.pathView.panY = 0;
+}
+
+function zoomPathViewAt(canvasX, canvasY, factor) {
+  const base = state.historyPathBaseTransform;
+  if (!base) return;
+  const view = state.pathView;
+  const before = screenToWorld(canvasX, canvasY, base, view);
+  view.zoom = Math.max(0.4, Math.min(24, view.zoom * factor));
+  const after = worldToScreen(before.x, before.y, base, view);
+  view.panX += canvasX - after.px;
+  view.panY += canvasY - after.py;
+  redrawPathLayer();
+}
+
+function canvasCoordsFromEvent(canvas, event) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY,
+  };
+}
+
+function redrawPathLayer() {
+  const layer = state.historyPathLayer;
+  const base = state.historyPathBaseTransform;
+  if (!layer || !base) return;
+
+  const pathCanvas = document.getElementById("history-path");
+  const markerCanvas = document.getElementById("history-marker");
+  if (!pathCanvas || !markerCanvas) return;
+
+  const pathCtx = pathCanvas.getContext("2d");
+  const view = state.pathView;
+  const toPx = (x, y) => worldToScreen(x, y, base, view);
+  state.historyPathTransform = { base, view };
+
+  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+  drawTrackUnderlay(pathCtx, state.track.data, toPx);
+  drawSpeedColoredPath(pathCtx, layer.marker.xs, layer.marker.ys, layer.speeds, layer.pathColorMaxKmh, toPx);
+  drawStartFinishLine(pathCtx, state.track.data, toPx);
+  pathCtx.fillStyle = "#8aa0b8";
+  pathCtx.font = "12px sans-serif";
+  const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
+  const zoomLabel = view.zoom === 1 ? "" : ` · ${view.zoom.toFixed(1)}×`;
+  pathCtx.fillText(
+    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}`,
+    10,
+    16,
+  );
+
+  drawPathMarkerOverlay(layer.marker.x, layer.marker.y, layer.marker.heading, state.historyVehicleDims);
 }
 
 function buildPathTransform(boundsXs, boundsYs, canvas) {
@@ -604,12 +701,8 @@ function collectPathBounds(marker) {
   return { xs, ys };
 }
 
-function pxToWorld(px, py, transform) {
-  const { minX, minY, scale, offsetX, offsetY, drawH } = transform;
-  return {
-    x: minX + (px - offsetX) / scale,
-    y: minY + (offsetY + drawH - py) / scale,
-  };
+function pxToWorld(px, py, base, view) {
+  return screenToWorld(px, py, base, view);
 }
 
 function findNearestCenterlinePoint(centerline, x, y) {
@@ -709,10 +802,13 @@ async function resolvePathColorMaxKmh(session, peakSpeedKmh) {
 
 function drawPathMarkerOverlay(markerX, markerY, headingDeg, dims) {
   const markerCanvas = document.getElementById("history-marker");
-  if (!markerCanvas || !state.historyPathTransform) return;
+  const base = state.historyPathBaseTransform;
+  if (!markerCanvas || !base) return;
   const markerCtx = markerCanvas.getContext("2d");
   markerCtx.clearRect(0, 0, markerCanvas.width, markerCanvas.height);
-  const toPx = makePathToPx(state.historyPathTransform);
+  const view = state.pathView;
+  const toPx = (x, y) => worldToScreen(x, y, base, view);
+  const effectiveTransform = { ...base, scale: effectivePathScale(base, view) };
   drawKartMarker(
     markerCtx,
     markerX,
@@ -721,7 +817,7 @@ function drawPathMarkerOverlay(markerX, markerY, headingDeg, dims) {
     dims,
     toPx,
     markerCanvas,
-    state.historyPathTransform,
+    effectiveTransform,
   );
 }
 
@@ -750,6 +846,9 @@ function invalidateHistoryDrawCache() {
   state.historySamplesFingerprint = "";
   state.historyMarkerFingerprint = "";
   state.historyPathTransform = null;
+  state.historyPathBaseTransform = null;
+  state.historyPathLayer = null;
+  resetPathView();
 }
 
 async function refreshSessions() {
@@ -985,25 +1084,21 @@ async function drawSessionChart(sessionId) {
     ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
 
     const bounds = collectPathBounds(marker);
-    state.historyPathTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
+    state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
+    resetPathView();
     state.historyPathColorMaxKmh = pathColorMaxKmh;
-
-    pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
-    const toPx = makePathToPx(state.historyPathTransform);
-    drawTrackUnderlay(pathCtx, state.track.data, toPx);
-    drawSpeedColoredPath(pathCtx, marker.xs, marker.ys, speeds, pathColorMaxKmh, toPx);
-    drawStartFinishLine(pathCtx, state.track.data, toPx);
-    pathCtx.fillStyle = "#8aa0b8";
-    pathCtx.font = "12px sans-serif";
-    const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
-    pathCtx.fillText(
-      `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}`,
-      10,
-      16,
-    );
+    state.historyPathLayer = {
+      marker,
+      speeds,
+      pathColorMaxKmh,
+    };
+    redrawPathLayer();
   }
 
-  if (markerChanged || samplesChanged) {
+  if (markerChanged && !samplesChanged) {
+    if (state.historyPathLayer) {
+      state.historyPathLayer.marker = marker;
+    }
     drawPathMarkerOverlay(marker.x, marker.y, marker.heading, vehicleDims);
   }
 
@@ -1012,7 +1107,7 @@ async function drawSessionChart(sessionId) {
 }
 
 function updateHistoryMarkerFromLive() {
-  if (!isHistoryTabActive() || !state.historyPathTransform) return;
+  if (!isHistoryTabActive() || !state.historyPathBaseTransform) return;
   const sessionId = document.getElementById("session-select").value;
   if (!sessionId) return;
   const liveX = Number(state.lastSample.position_x_m);
@@ -1027,6 +1122,15 @@ function updateHistoryMarkerFromLive() {
     heading: liveHeading,
   });
   if (markerFingerprint === state.historyMarkerFingerprint) return;
+  if (state.historyPathLayer) {
+    state.historyPathLayer.marker = {
+      ...state.historyPathLayer.marker,
+      x: liveX,
+      y: liveY,
+      heading: liveHeading,
+      useLiveMarker: true,
+    };
+  }
   drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
   state.historyMarkerFingerprint = markerFingerprint;
 }
@@ -1319,23 +1423,96 @@ async function saveTrackDirection(direction) {
 }
 
 async function handleTrackCanvasClick(event) {
-  if (!state.track.editStartFinish || !state.track.data || !state.historyPathTransform) return;
+  if (state.pathPan.moved) return;
+  if (!state.track.editStartFinish || !state.track.data || !state.historyPathBaseTransform) return;
   const pathCanvas = document.getElementById("history-path");
-  const rect = pathCanvas.getBoundingClientRect();
-  const scaleX = pathCanvas.width / rect.width;
-  const scaleY = pathCanvas.height / rect.height;
-  const px = (event.clientX - rect.left) * scaleX;
-  const py = (event.clientY - rect.top) * scaleY;
-  const world = pxToWorld(px, py, state.historyPathTransform);
+  const coords = canvasCoordsFromEvent(pathCanvas, event);
+  const world = screenToWorld(coords.x, coords.y, state.historyPathBaseTransform, state.pathView);
   const nearest = findNearestCenterlinePoint(state.track.data.centerline, world.x, world.y);
   state.track.data = await api(`/api/tracks/${encodeURIComponent(state.track.id)}/start-finish`, {
     method: "POST",
     body: JSON.stringify({ s_m: Number(nearest.s) }),
   });
   setStartFinishEditMode(false);
-  invalidateHistoryDrawCache();
-  const sessionId = document.getElementById("session-select").value;
-  if (sessionId) await drawSessionChart(sessionId);
+  redrawPathLayer();
+}
+
+function setupPathMapInteractions() {
+  const stack = document.getElementById("history-path-stack");
+  const pathCanvas = document.getElementById("history-path");
+  if (!stack || !pathCanvas) return;
+
+  stack.addEventListener(
+    "wheel",
+    (event) => {
+      if (!state.historyPathBaseTransform) return;
+      event.preventDefault();
+      const coords = canvasCoordsFromEvent(pathCanvas, event);
+      const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+      zoomPathViewAt(coords.x, coords.y, factor);
+    },
+    { passive: false },
+  );
+
+  const endPan = (event) => {
+    if (!state.pathPan.active || event.pointerId !== state.pathPan.pointerId) return;
+    state.pathPan.active = false;
+    state.pathPan.pointerId = null;
+    stack.classList.remove("is-panning");
+    if (state.pathPan.moved) {
+      window.setTimeout(() => {
+        state.pathPan.moved = false;
+      }, 0);
+    }
+  };
+
+  stack.addEventListener("pointerdown", (event) => {
+    if (!state.historyPathBaseTransform) return;
+    if (state.track.editStartFinish && event.button === 0) return;
+    if (event.button !== 0 && event.button !== 2) return;
+    event.preventDefault();
+    stack.setPointerCapture(event.pointerId);
+    state.pathPan.active = true;
+    state.pathPan.pointerId = event.pointerId;
+    state.pathPan.startX = event.clientX;
+    state.pathPan.startY = event.clientY;
+    state.pathPan.startPanX = state.pathView.panX;
+    state.pathPan.startPanY = state.pathView.panY;
+    state.pathPan.moved = false;
+    stack.classList.add("is-panning");
+  });
+
+  stack.addEventListener("pointermove", (event) => {
+    if (!state.pathPan.active || event.pointerId !== state.pathPan.pointerId) return;
+    const dx = event.clientX - state.pathPan.startX;
+    const dy = event.clientY - state.pathPan.startY;
+    if (Math.hypot(dx, dy) > 4) {
+      state.pathPan.moved = true;
+    }
+    const rect = pathCanvas.getBoundingClientRect();
+    const scaleX = pathCanvas.width / rect.width;
+    const scaleY = pathCanvas.height / rect.height;
+    state.pathView.panX = state.pathPan.startPanX + dx * scaleX;
+    state.pathView.panY = state.pathPan.startPanY + dy * scaleY;
+    redrawPathLayer();
+  });
+
+  stack.addEventListener("pointerup", endPan);
+  stack.addEventListener("pointercancel", endPan);
+
+  pathCanvas.addEventListener("click", (event) => {
+    void handleTrackCanvasClick(event);
+  });
+
+  stack.addEventListener("dblclick", () => {
+    if (!state.historyPathBaseTransform) return;
+    resetPathView();
+    redrawPathLayer();
+  });
+
+  stack.addEventListener("contextmenu", (event) => {
+    event.preventDefault();
+  });
 }
 
 function setupControls() {
@@ -1422,9 +1599,7 @@ function setupControls() {
     if (!state.track.data) return;
     setStartFinishEditMode(!state.track.editStartFinish);
   });
-  document.getElementById("history-path").addEventListener("click", (event) => {
-    void handleTrackCanvasClick(event);
-  });
+  setupPathMapInteractions();
 
   for (const id of ["throttle", "steering"]) {
     document.getElementById(id).addEventListener("input", sendInputs);

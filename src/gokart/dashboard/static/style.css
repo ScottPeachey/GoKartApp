@@ -212,9 +212,15 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   background: #121a26;
   border-radius: 8px;
   overflow: hidden;
+  cursor: grab;
+  touch-action: none;
 }
 
-.history-path-stack.edit-start-finish #history-path {
+.history-path-stack.is-panning {
+  cursor: grabbing;
+}
+
+.history-path-stack.edit-start-finish {
   cursor: crosshair;
 }
 

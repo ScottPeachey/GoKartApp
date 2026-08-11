@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=6" />
+  <link rel="stylesheet" href="/static/style.css?v=7" />
 </head>
 <body>
   <header>
@@ -163,6 +163,9 @@
         <p id="track-edit-hint" class="config-hint hidden">
           Click on the track map to place the start/finish line.
         </p>
+        <p id="track-map-hint" class="config-hint">
+          Scroll to zoom · drag to pan · double-click to reset view
+        </p>
         <canvas id="history-chart" width="900" height="220"></canvas>
         <div class="history-path-stack" id="history-path-stack">
           <canvas id="history-path" width="900" height="480"></canvas>
@@ -271,7 +274,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=29"></script>
+  <script src="/static/app.js?v=30"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
