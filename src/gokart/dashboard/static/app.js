@@ -203,6 +203,91 @@ function updateDrivePanel(sample, speedKmh) {
 
   setFaultBanner(sample);
   updateFreeDriveGuide(safetyState);
+  updateAxlePhysicsPanel(sample);
+}
+
+const DISPLAY_GRIP_COEFF = 1.1;
+
+function setGripMeterBar(barId, pct) {
+  const bar = document.getElementById(barId);
+  if (!bar) return;
+  const clamped = Math.max(0, Math.min(100, pct));
+  bar.style.width = `${clamped}%`;
+  bar.classList.remove("grip-low", "grip-mid", "grip-high");
+  if (clamped >= 90) {
+    bar.classList.add("grip-high");
+  } else if (clamped >= 65) {
+    bar.classList.add("grip-mid");
+  } else {
+    bar.classList.add("grip-low");
+  }
+}
+
+function updateAxlePhysicsPanel(sample) {
+  const panel = document.getElementById("axle-physics-panel");
+  if (!panel) return;
+
+  const frontN = Number(sample.front_normal_n || 0);
+  const rearN = Number(sample.rear_normal_n || 0);
+  const total = frontN + rearN;
+  const hasData = total > 1;
+  panel.classList.toggle("inactive", !hasData);
+  if (!hasData) {
+    document.getElementById("load-transfer-hint").textContent = "Start driving to see load transfer";
+    return;
+  }
+
+  const frontPct = (frontN / total) * 100;
+  const rearPct = 100 - frontPct;
+  document.getElementById("front-load-segment").style.width = `${frontPct}%`;
+  document.getElementById("rear-load-segment").style.width = `${rearPct}%`;
+  document.getElementById("front-load-pct").textContent = `F ${frontPct.toFixed(0)}%`;
+  document.getElementById("rear-load-pct").textContent = `R ${rearPct.toFixed(0)}%`;
+  document.getElementById("front-load-value").textContent = `${Math.round(frontN)} N`;
+  document.getElementById("rear-load-value").textContent = `${Math.round(rearN)} N`;
+
+  const frontLat = Math.abs(Number(sample.front_lateral_n || 0));
+  const rearTrac = Math.abs(Number(sample.rear_traction_n || sample.traction_force_n || 0));
+  const frontLimit = frontN * DISPLAY_GRIP_COEFF;
+  const rearLimit = rearN * DISPLAY_GRIP_COEFF;
+  const frontGripPct = frontLimit > 0 ? (frontLat / frontLimit) * 100 : 0;
+  const rearGripPct = rearLimit > 0 ? (rearTrac / rearLimit) * 100 : 0;
+
+  setGripMeterBar("front-grip-bar", frontGripPct);
+  setGripMeterBar("rear-grip-bar", rearGripPct);
+  document.getElementById("front-grip-label").textContent = `Lateral ${Math.min(999, frontGripPct).toFixed(0)}%`;
+  document.getElementById("rear-grip-label").textContent = `Drive ${Math.min(999, rearGripPct).toFixed(0)}%`;
+
+  const accel = Number(sample.acceleration_mps2 || 0);
+  const hint = document.getElementById("load-transfer-hint");
+  if (accel > 0.8) {
+    hint.textContent = "Load → rear";
+  } else if (accel < -0.8) {
+    hint.textContent = "Load → front";
+  } else if (frontLat > 200) {
+    hint.textContent = "Front cornering";
+  } else if (rearGripPct > 75) {
+    hint.textContent = "Rear grip limited";
+  } else {
+    hint.textContent = "Balanced";
+  }
+}
+
+function resetAxlePhysicsPanel() {
+  const panel = document.getElementById("axle-physics-panel");
+  if (!panel) return;
+  panel.classList.add("inactive");
+  document.getElementById("front-load-segment").style.width = "50%";
+  document.getElementById("rear-load-segment").style.width = "50%";
+  document.getElementById("front-load-pct").textContent = "F 50%";
+  document.getElementById("rear-load-pct").textContent = "R 50%";
+  document.getElementById("front-load-value").textContent = "—";
+  document.getElementById("rear-load-value").textContent = "—";
+  document.getElementById("front-grip-label").textContent = "Lateral —";
+  document.getElementById("rear-grip-label").textContent = "Drive —";
+  document.getElementById("load-transfer-hint").textContent = "—";
+  setGripMeterBar("front-grip-bar", 0);
+  setGripMeterBar("rear-grip-bar", 0);
 }
 
 const STEER_MAX_DEG = 28;

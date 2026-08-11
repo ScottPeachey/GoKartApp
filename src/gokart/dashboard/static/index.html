@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=9" />
+  <link rel="stylesheet" href="/static/style.css?v=10" />
 </head>
 <body>
   <header>
@@ -50,6 +50,43 @@
             <span class="label">SOC</span>
             <div class="soc-bar"><div id="soc-fill"></div></div>
             <span id="soc-text">—</span>
+          </div>
+          <div id="axle-physics-panel" class="axle-physics-panel inactive">
+            <div class="axle-physics-head">
+              <span>4-wheel physics</span>
+              <span id="load-transfer-hint" class="load-transfer-hint">—</span>
+            </div>
+            <div class="load-split-bar" aria-label="Front/rear weight balance">
+              <div id="front-load-segment" class="load-segment front" style="width: 50%"></div>
+              <div id="rear-load-segment" class="load-segment rear" style="width: 50%"></div>
+            </div>
+            <div class="load-split-labels">
+              <span id="front-load-pct">F 50%</span>
+              <span class="load-split-title">Weight balance</span>
+              <span id="rear-load-pct">R 50%</span>
+            </div>
+            <div class="axle-grip-grid">
+              <div class="axle-grip-card">
+                <div class="axle-grip-head">
+                  <span>Front axle</span>
+                  <span id="front-load-value" class="axle-force">—</span>
+                </div>
+                <div class="grip-meter" title="Lateral grip usage">
+                  <div id="front-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+                </div>
+                <span id="front-grip-label" class="grip-caption">Lateral —</span>
+              </div>
+              <div class="axle-grip-card">
+                <div class="axle-grip-head">
+                  <span>Rear axle</span>
+                  <span id="rear-load-value" class="axle-force">—</span>
+                </div>
+                <div class="grip-meter" title="Drive/brake grip usage">
+                  <div id="rear-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+                </div>
+                <span id="rear-grip-label" class="grip-caption">Drive —</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="safety-banner">
