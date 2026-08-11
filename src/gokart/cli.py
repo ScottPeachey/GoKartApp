@@ -265,6 +265,25 @@ def cmd_track_list(_args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_track_import_f1(args: argparse.Namespace) -> int:
+    from gokart.track.f1 import import_f1_circuits
+
+    results = import_f1_circuits(
+        width_m=args.width,
+        direction=args.direction,
+        fetch_elevation=not args.no_elevation,
+        allow_overwrite=args.force,
+    )
+    ok_count = sum(1 for row in results if row.ok)
+    fail_count = len(results) - ok_count
+    for row in results:
+        prefix = "OK" if row.ok else "FAIL"
+        track_id = row.track_id or "—"
+        print(f"{prefix:4} {row.filename:<18} {track_id:<12} {row.message}")
+    print(f"\nImported {ok_count}/{len(results)} circuits.")
+    return 1 if fail_count else 0
+
+
 def cmd_firmware_golden(args: argparse.Namespace) -> int:
     import subprocess
 
@@ -395,6 +414,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     track_list = track_sub.add_parser("list", help="List imported tracks")
     track_list.set_defaults(func=cmd_track_list)
+
+    track_import_f1 = track_sub.add_parser(
+        "import-f1",
+        help="Download and import all F1 circuits from bacinger/f1-circuits",
+    )
+    track_import_f1.add_argument("--width", type=float, default=10.0, help="Track width in metres")
+    track_import_f1.add_argument(
+        "--direction",
+        choices=["clockwise", "counterclockwise"],
+        default="clockwise",
+        help="Racing direction",
+    )
+    track_import_f1.add_argument(
+        "--no-elevation",
+        action="store_true",
+        help="Skip elevation fetch (flat tracks)",
+    )
+    track_import_f1.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow overwrite existing tracks",
+    )
+    track_import_f1.set_defaults(func=cmd_track_import_f1)
 
     firmware = sub.add_parser("firmware", help="Firmware development commands")
     firmware_sub = firmware.add_subparsers(dest="firmware_command", required=True)

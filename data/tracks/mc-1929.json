@@ -8064,7 +8064,7 @@
     }
   ],
   "direction": "clockwise",
-  "id": "monaco",
+  "id": "mc-1929",
   "inner_boundary": [
     {
       "x": 50.879940988471645,
@@ -16127,7 +16127,7 @@
     }
   ],
   "scale": 0.3026223943887009,
-  "source": "/tmp/mc-1929.geojson",
+  "source": ".cache/f1-circuits/mc-1929.geojson",
   "source_length_m": 3337.0,
   "start_finish": {
     "s_m": 0.0,
