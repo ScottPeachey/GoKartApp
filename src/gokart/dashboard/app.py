@@ -91,7 +91,7 @@ class SaveTrackDirectionRequest(BaseModel):
     direction: Literal["clockwise", "counterclockwise"]
 
 
-PHYSICS_REVISION = "cornering-v2"
+PHYSICS_REVISION = "4wheel-v1"
 
 
 def create_app(

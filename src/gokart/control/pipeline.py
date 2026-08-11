@@ -28,6 +28,7 @@ class ControlInputs:
     mass_kg: float
     grip_coefficient: float
     gradient_rad: float
+    rear_traction_limit_n: float | None = None
 
 
 @dataclass
@@ -130,11 +131,13 @@ def control_step(
 
         wheel_torque = motor_torque * params.gear_ratio * params.drivetrain_efficiency
         force_req = wheel_torque / params.wheel_radius_m if params.wheel_radius_m > 0 else 0.0
-        force_avail = max_traction_force_n(
-            inputs.mass_kg,
-            inputs.grip_coefficient,
-            inputs.gradient_rad,
-        )
+        force_avail = inputs.rear_traction_limit_n
+        if force_avail is None:
+            force_avail = max_traction_force_n(
+                inputs.mass_kg,
+                inputs.grip_coefficient,
+                inputs.gradient_rad,
+            )
         threshold = _traction_scale_threshold(params.mode.traction_limiter)
         if force_avail > 0 and force_req > force_avail * threshold:
             traction_scale = (force_avail * threshold) / force_req

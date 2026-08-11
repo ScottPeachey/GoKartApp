@@ -23,13 +23,14 @@ from gokart.physics.drivetrain import (
 )
 from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_motor
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
+from gokart.physics.load_transfer import axle_normal_loads_n
 from gokart.physics.steering import step_steering, steering_angle_rad
 from gokart.physics.tyres import (
     apply_cornering_speed_bleed,
     cornering_scrub_force_n,
-    cornering_speed_limit_mps,
+    lateral_accel_from_bicycle_mps2,
     lateral_force_from_steering_n,
-    saturate_traction_friction_circle,
+    saturate_axle_forces,
 )
 
 
@@ -89,6 +90,10 @@ class VehicleStepOutputs:
     pack_voltage_v: float
     soc: float
     traction_force_n: float
+    front_normal_n: float
+    rear_normal_n: float
+    front_lateral_n: float
+    rear_traction_n: float
     motor_temp_c: float
     battery_temp_c: float
     power_w: float
@@ -105,7 +110,8 @@ class VehicleModel:
     drivetrain_params: DrivetrainParams
     brake_params: BrakeParams
     accessory_params: AccessoryParams | None
-    grip_coefficient: float
+    front_grip_coefficient: float
+    rear_grip_coefficient: float
     drag_coefficient: float
     frontal_area_m2: float
     rolling_resistance_coefficient: float
@@ -125,12 +131,16 @@ class VehicleModel:
         brake = None
         if config.brake:
             brake = load_component("brake", config.brake.component_id, root=root)
-        tyre = None
+        front_tyre = None
+        rear_tyre = None
         if config.front_tyre:
-            tyre = load_component("tyre", config.front_tyre.component_id, root=root)
-        dcdc = None
-        if config.dcdc:
-            dcdc = load_component("dcdc", config.dcdc.component_id, root=root)
+            front_tyre = load_component("tyre", config.front_tyre.component_id, root=root)
+        if config.rear_tyre:
+            rear_tyre = load_component("tyre", config.rear_tyre.component_id, root=root)
+        if front_tyre is None and rear_tyre is not None:
+            front_tyre = rear_tyre
+        if rear_tyre is None and front_tyre is not None:
+            rear_tyre = front_tyre
 
         if brake is None:
             from gokart.config.schemas.components import Brake as BrakeModel
@@ -143,9 +153,16 @@ class VehicleModel:
             )
         assert isinstance(brake, Brake)
 
-        grip = 1.0
-        if isinstance(tyre, Tyre):
-            grip = tyre.dry_grip_coefficient
+        dcdc = None
+        if config.dcdc:
+            dcdc = load_component("dcdc", config.dcdc.component_id, root=root)
+
+        front_grip = 1.0
+        rear_grip = 1.0
+        if isinstance(front_tyre, Tyre):
+            front_grip = front_tyre.dry_grip_coefficient
+        if isinstance(rear_tyre, Tyre):
+            rear_grip = rear_tyre.dry_grip_coefficient
 
         accessory_params = None
         if isinstance(dcdc, DcDcConverter):
@@ -162,7 +179,8 @@ class VehicleModel:
             drivetrain_params=drivetrain,
             brake_params=BrakeParams.from_component(brake, config.wheel_radius_m),
             accessory_params=accessory_params,
-            grip_coefficient=grip,
+            front_grip_coefficient=front_grip,
+            rear_grip_coefficient=rear_grip,
             drag_coefficient=config.drag_coefficient,
             frontal_area_m2=config.frontal_area_m2,
             rolling_resistance_coefficient=config.rolling_resistance_coefficient,
@@ -180,6 +198,41 @@ class VehicleModel:
     def initial_state(self) -> VehicleState:
         return VehicleState(pack_voltage_v=self.nominal_voltage_v)
 
+    @property
+    def grip_coefficient(self) -> float:
+        """Average axle grip — kept for control-layer compatibility."""
+        return (self.front_grip_coefficient + self.rear_grip_coefficient) / 2.0
+
+    def rear_traction_limit_n(
+        self,
+        *,
+        speed_mps: float,
+        steering: float,
+        gradient_rad: float,
+        surface_mu_scale: float = 1.0,
+        long_accel_mps2: float = 0.0,
+    ) -> float:
+        lat_accel = lateral_accel_from_bicycle_mps2(
+            speed_mps,
+            steering_angle_rad(steering),
+            self.config.wheelbase_m,
+        )
+        loads = axle_normal_loads_n(
+            mass_kg=self.mass_kg,
+            wheelbase_m=self.config.wheelbase_m,
+            cg_longitudinal_m=self.config.cg_longitudinal_m,
+            cg_height_m=self.config.cg_height_m,
+            long_accel_mps2=long_accel_mps2,
+            lat_accel_mps2=lat_accel,
+            gradient_rad=gradient_rad,
+        )
+        from gokart.physics.tyres import max_traction_force_at_rear
+
+        return max_traction_force_at_rear(
+            loads,
+            self.rear_grip_coefficient * surface_mu_scale,
+        )
+
     def step(
         self,
         state: VehicleState,
@@ -192,7 +245,9 @@ class VehicleModel:
         assert state.battery_thermal is not None
 
         env = inputs.environment
-        grip = self.grip_coefficient * env.surface_mu_scale
+        surface_mu = env.surface_mu_scale
+        front_grip = self.front_grip_coefficient * surface_mu
+        rear_grip = self.rear_grip_coefficient * surface_mu
         motor_rpm = motor_rpm_from_speed(self.drivetrain_params, state.speed_mps)
 
         motor_state, motor_out = step_motor(
@@ -226,24 +281,40 @@ class VehicleModel:
             self.drivetrain_params.wheel_radius_m,
         )
         steer_rad = steering_angle_rad(inputs.steering)
+        lat_accel = lateral_accel_from_bicycle_mps2(
+            state.speed_mps,
+            steer_rad,
+            self.config.wheelbase_m,
+        )
+        axle_loads = axle_normal_loads_n(
+            mass_kg=self.mass_kg,
+            wheelbase_m=self.config.wheelbase_m,
+            cg_longitudinal_m=self.config.cg_longitudinal_m,
+            cg_height_m=self.config.cg_height_m,
+            long_accel_mps2=0.0,
+            lat_accel_mps2=lat_accel,
+            gradient_rad=env.gradient_rad,
+        )
         lateral_force = lateral_force_from_steering_n(
             state.speed_mps,
             steer_rad,
             self.config.wheelbase_m,
             self.mass_kg,
         )
-        tyre_out = saturate_traction_friction_circle(
-            force_req,
-            lateral_force,
-            self.mass_kg,
-            grip,
-            env.gradient_rad,
-        )
 
         brake_out = step_brakes(
             inputs.mechanical_brake,
             inputs.regen_torque_request_nm,
             self.brake_params,
+        )
+
+        tyre_out = saturate_axle_forces(
+            force_req,
+            brake_out.mechanical_force_n,
+            lateral_force,
+            axle_loads,
+            front_grip,
+            rear_grip,
         )
 
         f_aero = aero_drag_force_n(state.speed_mps, self.drag_coefficient, self.frontal_area_m2)
@@ -254,14 +325,46 @@ class VehicleModel:
             GRAVITY_MPS2,
         )
         f_grad = gradient_force_n(self.mass_kg, env.gradient_rad, GRAVITY_MPS2)
-        f_scrub = cornering_scrub_force_n(lateral_force, self.mass_kg, grip, env.gradient_rad)
+        f_scrub = cornering_scrub_force_n(
+            lateral_force,
+            self.mass_kg,
+            front_grip,
+            env.gradient_rad,
+        )
         f_net = (
             tyre_out.traction_force_n
+            + tyre_out.front_longitudinal_n
             - f_aero
             - f_roll
             - f_grad
             - f_scrub
-            - brake_out.mechanical_force_n
+        )
+        accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
+
+        axle_loads = axle_normal_loads_n(
+            mass_kg=self.mass_kg,
+            wheelbase_m=self.config.wheelbase_m,
+            cg_longitudinal_m=self.config.cg_longitudinal_m,
+            cg_height_m=self.config.cg_height_m,
+            long_accel_mps2=accel,
+            lat_accel_mps2=lat_accel,
+            gradient_rad=env.gradient_rad,
+        )
+        tyre_out = saturate_axle_forces(
+            force_req,
+            brake_out.mechanical_force_n,
+            lateral_force,
+            axle_loads,
+            front_grip,
+            rear_grip,
+        )
+        f_net = (
+            tyre_out.traction_force_n
+            + tyre_out.front_longitudinal_n
+            - f_aero
+            - f_roll
+            - f_grad
+            - f_scrub
         )
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
 
@@ -270,9 +373,11 @@ class VehicleModel:
             new_speed,
             steer_rad,
             self.config.wheelbase_m,
-            grip,
+            front_grip,
             env.gradient_rad,
             dt,
+            mass_kg=self.mass_kg,
+            front_normal_n=axle_loads.front_normal_n,
         )
         new_position = state.position_m + new_speed * dt
 
@@ -343,6 +448,10 @@ class VehicleModel:
             pack_voltage_v=battery_out.pack_voltage_v,
             soc=battery_state.soc,
             traction_force_n=tyre_out.traction_force_n,
+            front_normal_n=tyre_out.front_normal_n,
+            rear_normal_n=tyre_out.rear_normal_n,
+            front_lateral_n=tyre_out.front_lateral_n,
+            rear_traction_n=tyre_out.rear_longitudinal_n,
             motor_temp_c=motor_thermal_out.temperature_c,
             battery_temp_c=battery_thermal_out.temperature_c,
             power_w=battery_out.power_w,

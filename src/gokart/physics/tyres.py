@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass
 
 from gokart.physics.constants import GRAVITY_MPS2
+from gokart.physics.load_transfer import AxleLoads
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,79 @@ class TyreOutputs:
     normal_load_n: float
     lateral_force_n: float = 0.0
     longitudinal_grip_limit_n: float = 0.0
+    front_normal_n: float = 0.0
+    rear_normal_n: float = 0.0
+    front_longitudinal_n: float = 0.0
+    rear_longitudinal_n: float = 0.0
+    front_lateral_n: float = 0.0
+    rear_lateral_n: float = 0.0
+
+
+def clip_friction_circle(
+    long_requested_n: float,
+    lat_requested_n: float,
+    max_force_n: float,
+) -> tuple[float, float]:
+    """Clip longitudinal and lateral requests to a circular friction limit."""
+    if max_force_n <= 0.0:
+        return 0.0, 0.0
+    lat = max(-max_force_n, min(lat_requested_n, max_force_n))
+    lat_mag = abs(lat)
+    long_available = math.sqrt(max(0.0, max_force_n * max_force_n - lat_mag * lat_mag))
+    long_force = max(-long_available, min(long_requested_n, long_available))
+    return long_force, lat
+
+
+def max_traction_force_at_rear(
+    axle_loads: AxleLoads,
+    rear_grip_coefficient: float,
+    *,
+    lateral_force_n: float = 0.0,
+) -> float:
+    """Available rear-axle longitudinal force after lateral demand on the front axle."""
+    rear_max = axle_loads.rear_normal_n * rear_grip_coefficient
+    long_available, _ = clip_friction_circle(rear_max, 0.0, rear_max)
+    return long_available
+
+
+def saturate_axle_forces(
+    drive_force_requested_n: float,
+    brake_force_n: float,
+    lateral_force_n: float,
+    axle_loads: AxleLoads,
+    front_grip_coefficient: float,
+    rear_grip_coefficient: float,
+    *,
+    front_brake_bias: float = 0.55,
+) -> TyreOutputs:
+    """Resolve per-axle friction circles for rear drive/brake and front steer/brake."""
+    front_brake = max(0.0, brake_force_n) * front_brake_bias
+    rear_brake = max(0.0, brake_force_n) * (1.0 - front_brake_bias)
+
+    front_max = axle_loads.front_normal_n * front_grip_coefficient
+    rear_max = axle_loads.rear_normal_n * rear_grip_coefficient
+
+    front_long, front_lat = clip_friction_circle(-front_brake, lateral_force_n, front_max)
+    rear_long, rear_lat = clip_friction_circle(
+        drive_force_requested_n - rear_brake,
+        0.0,
+        rear_max,
+    )
+
+    total_normal = axle_loads.front_normal_n + axle_loads.rear_normal_n
+    return TyreOutputs(
+        traction_force_n=rear_long,
+        traction_force_requested_n=drive_force_requested_n,
+        normal_load_n=total_normal,
+        lateral_force_n=lateral_force_n,
+        longitudinal_grip_limit_n=rear_max,
+        front_normal_n=axle_loads.front_normal_n,
+        rear_normal_n=axle_loads.rear_normal_n,
+        front_longitudinal_n=front_long,
+        rear_longitudinal_n=rear_long,
+        front_lateral_n=front_lat,
+        rear_lateral_n=rear_lat,
+    )
 
 
 def normal_load_n(mass_kg: float, gradient_rad: float = 0.0) -> float:
@@ -72,7 +146,15 @@ def lateral_force_from_steering_n(
     return mass_kg * lateral_accel_from_bicycle_mps2(speed_mps, steer_rad, wheelbase_m)
 
 
-def max_lateral_accel_mps2(grip_coefficient: float, gradient_rad: float = 0.0) -> float:
+def max_lateral_accel_mps2(
+    grip_coefficient: float,
+    gradient_rad: float = 0.0,
+    *,
+    normal_load_n: float | None = None,
+    mass_kg: float | None = None,
+) -> float:
+    if normal_load_n is not None and mass_kg is not None and mass_kg > 0.0:
+        return normal_load_n * grip_coefficient / mass_kg
     return grip_coefficient * GRAVITY_MPS2 * math.cos(gradient_rad)
 
 
@@ -98,13 +180,21 @@ def apply_cornering_speed_bleed(
     grip_coefficient: float,
     gradient_rad: float,
     dt: float,
+    *,
+    mass_kg: float | None = None,
+    front_normal_n: float | None = None,
 ) -> float:
     """Reduce scalar speed when cornering demand exceeds available lateral grip."""
     lat_accel = abs(lateral_accel_from_bicycle_mps2(speed_mps, steer_rad, wheelbase_m))
     if lat_accel <= 1e-6:
         return speed_mps
 
-    max_lat = max_lateral_accel_mps2(grip_coefficient, gradient_rad)
+    max_lat = max_lateral_accel_mps2(
+        grip_coefficient,
+        gradient_rad,
+        normal_load_n=front_normal_n,
+        mass_kg=mass_kg,
+    )
     demand_ratio = lat_accel / max(max_lat, 1e-6)
     speed_cap = cornering_speed_limit_mps(steer_rad, wheelbase_m, grip_coefficient, gradient_rad)
     new_speed = min(speed_mps, speed_cap) if speed_cap is not None else speed_mps
