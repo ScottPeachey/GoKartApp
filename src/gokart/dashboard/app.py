@@ -26,6 +26,7 @@ from gokart.config.editor import (
 )
 from gokart.config.schemas.modes import DriveMode, DriverProfile
 from gokart.config.store import (
+    ConfigStoreError,
     data_root,
     list_drive_modes,
     list_driver_profiles,
@@ -41,6 +42,8 @@ from gokart.sim.scenarios import BUILTIN_SCENARIOS
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import channel_schema
 from gokart.telemetry.storage import TelemetryStore
+from gokart.track.api import track_detail, track_summary
+from gokart.track.store import list_tracks, load_track, update_track_start_finish
 from gokart.units import mps_to_kmh
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -71,6 +74,11 @@ class SimInputsRequest(BaseModel):
 class VehicleDetailRequest(BaseModel):
     vehicle_name: str
     vehicle_version: str
+
+
+class SaveStartFinishRequest(BaseModel):
+    s_m: float = Field(ge=0.0)
+    width_m: float | None = Field(default=None, gt=0.0)
 
 
 PHYSICS_REVISION = "cornering-v2"
@@ -405,6 +413,37 @@ def create_app(
             "speed_kmh": speed_kmh,
             "sample": sample,
         }
+
+    @app.get("/api/tracks")
+    def api_tracks() -> list[dict[str, Any]]:
+        summaries: list[dict[str, Any]] = []
+        for path in list_tracks():
+            track = load_track(path.stem)
+            summaries.append(track_summary(track))
+        return summaries
+
+    @app.get("/api/tracks/{track_id}")
+    def api_track_detail(track_id: str) -> dict[str, Any]:
+        try:
+            track = load_track(track_id)
+        except ConfigStoreError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return track_detail(track)
+
+    @app.post("/api/tracks/{track_id}/start-finish")
+    def api_track_save_start_finish(
+        track_id: str,
+        request: SaveStartFinishRequest,
+    ) -> dict[str, Any]:
+        try:
+            track = update_track_start_finish(
+                track_id,
+                request.s_m,
+                width_m=request.width_m,
+            )
+        except ConfigStoreError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return track_detail(track)
 
     @app.websocket("/ws/live")
     async def ws_live(websocket: WebSocket) -> None:

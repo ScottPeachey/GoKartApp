@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=4" />
+  <link rel="stylesheet" href="/static/style.css?v=5" />
 </head>
 <body>
   <header>
@@ -146,8 +146,19 @@
           <button id="btn-refresh-sessions">Refresh</button>
           <select id="session-select"></select>
         </div>
+        <div class="row history-track-controls">
+          <label>Track
+            <select id="track-select">
+              <option value="">No track</option>
+            </select>
+          </label>
+          <button id="btn-edit-start-finish" type="button" class="btn-secondary">Set start/finish</button>
+        </div>
+        <p id="track-edit-hint" class="config-hint hidden">
+          Click on the track map to place the start/finish line.
+        </p>
         <canvas id="history-chart" width="900" height="280"></canvas>
-        <div class="history-path-stack">
+        <div class="history-path-stack" id="history-path-stack">
           <canvas id="history-path" width="900" height="220"></canvas>
           <canvas id="history-marker" width="900" height="220" class="history-marker-overlay"></canvas>
         </div>
@@ -254,7 +265,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=26"></script>
+  <script src="/static/app.js?v=27"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

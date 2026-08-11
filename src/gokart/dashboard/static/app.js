@@ -21,6 +21,13 @@ const state = {
   historyPathColorMaxKmh: null,
   historyLimitsCacheKey: "",
   historyLimitsCacheValue: null,
+  track: {
+    id: null,
+    data: null,
+    editStartFinish: false,
+  },
+  vehicleDimensionsCache: {},
+  historyVehicleDims: { wheelbase_m: 1.04, track_m: 0.9 },
 };
 
 const CHANNEL_DISPLAY = {
@@ -505,6 +512,9 @@ function resolvePathMarker(sessionId, samples) {
   const live = state.lastSample;
   const liveX = Number(live.position_x_m);
   const liveY = Number(live.position_y_m);
+  const liveHeading = Number(live.heading_deg);
+  const last = samples[samples.length - 1];
+  const lastHeading = Number(last?.heading_deg || 0);
   const useLiveMarker = state.simRunning
     && state.liveSessionId === sessionId
     && Number.isFinite(liveX)
@@ -512,6 +522,7 @@ function resolvePathMarker(sessionId, samples) {
   return {
     x: useLiveMarker ? liveX : xs[xs.length - 1],
     y: useLiveMarker ? liveY : ys[ys.length - 1],
+    heading: useLiveMarker && Number.isFinite(liveHeading) ? liveHeading : lastHeading,
     useLiveMarker,
     xs,
     ys,
@@ -531,7 +542,7 @@ function historySamplesFingerprint(sessionId, samples) {
 }
 
 function historyMarkerFingerprint(marker) {
-  return `${marker.x.toFixed(2)}|${marker.y.toFixed(2)}`;
+  return `${marker.x.toFixed(2)}|${marker.y.toFixed(2)}|${Number(marker.heading || 0).toFixed(1)}`;
 }
 
 function makePathToPx(transform, canvas) {
@@ -553,6 +564,99 @@ function buildPathTransform(boundsXs, boundsYs, canvas) {
   const plotW = canvas.width - inset * 2;
   const plotH = canvas.height - inset * 2;
   return { minX, maxX, minY, maxY, spanX, spanY, inset, plotW, plotH };
+}
+
+function collectPathBounds(marker) {
+  const xs = marker.useLiveMarker ? marker.xs.concat(marker.x) : marker.xs.slice();
+  const ys = marker.useLiveMarker ? marker.ys.concat(marker.y) : marker.ys.slice();
+  const track = state.track.data;
+  if (track) {
+    track.inner_boundary.forEach((point) => {
+      xs.push(Number(point.x));
+      ys.push(Number(point.y));
+    });
+    track.outer_boundary.forEach((point) => {
+      xs.push(Number(point.x));
+      ys.push(Number(point.y));
+    });
+  }
+  return { xs, ys };
+}
+
+function pxToWorld(px, py, transform) {
+  const { minX, minY, spanX, spanY, inset, plotW, plotH } = transform;
+  const x = minX + ((px - inset) / plotW) * spanX;
+  const y = minY + ((inset + plotH - py) / plotH) * spanY;
+  return { x, y };
+}
+
+function findNearestCenterlinePoint(centerline, x, y) {
+  let best = centerline[0];
+  let bestDist = Number.POSITIVE_INFINITY;
+  for (const point of centerline) {
+    const dx = Number(point.x) - x;
+    const dy = Number(point.y) - y;
+    const dist = dx * dx + dy * dy;
+    if (dist < bestDist) {
+      best = point;
+      bestDist = dist;
+    }
+  }
+  return best;
+}
+
+function drawPolyline(pathCtx, points, toPx) {
+  if (!points.length) return;
+  pathCtx.beginPath();
+  const first = toPx(Number(points[0].x), Number(points[0].y));
+  pathCtx.moveTo(first.px, first.py);
+  for (let index = 1; index < points.length; index += 1) {
+    const point = toPx(Number(points[index].x), Number(points[index].y));
+    pathCtx.lineTo(point.px, point.py);
+  }
+  pathCtx.stroke();
+}
+
+function drawTrackUnderlay(pathCtx, track, toPx) {
+  if (!track) return;
+  pathCtx.lineWidth = 1.25;
+  pathCtx.strokeStyle = "rgba(110, 130, 150, 0.55)";
+  drawPolyline(pathCtx, track.outer_boundary, toPx);
+  pathCtx.strokeStyle = "rgba(90, 110, 130, 0.45)";
+  drawPolyline(pathCtx, track.inner_boundary, toPx);
+  pathCtx.setLineDash([5, 7]);
+  pathCtx.strokeStyle = "rgba(150, 170, 190, 0.35)";
+  drawPolyline(pathCtx, track.centerline, toPx);
+  pathCtx.setLineDash([]);
+}
+
+function drawStartFinishLine(pathCtx, track, toPx) {
+  const line = track?.start_finish_line;
+  if (!line) return;
+  const start = toPx(line.x1, line.y1);
+  const end = toPx(line.x2, line.y2);
+  pathCtx.strokeStyle = "#4ade80";
+  pathCtx.lineWidth = 3;
+  pathCtx.beginPath();
+  pathCtx.moveTo(start.px, start.py);
+  pathCtx.lineTo(end.px, end.py);
+  pathCtx.stroke();
+}
+
+async function resolveVehicleDimensions(vehicleName, vehicleVersion) {
+  const cacheKey = `${vehicleName}|${vehicleVersion}`;
+  if (state.vehicleDimensionsCache[cacheKey]) {
+    return state.vehicleDimensionsCache[cacheKey];
+  }
+  const detail = await api(
+    `/api/config/vehicles/${encodeURIComponent(vehicleName)}/${encodeURIComponent(vehicleVersion)}/detail`,
+  );
+  const dims = {
+    wheelbase_m: Number(detail.wheelbase_m) || 1.04,
+    track_m: ((Number(detail.front_track_m) || 0.9) + (Number(detail.rear_track_m) || 0.9)) / 2,
+  };
+  state.vehicleDimensionsCache[cacheKey] = dims;
+  return dims;
 }
 
 async function resolvePathColorMaxKmh(session, peakSpeedKmh) {
@@ -581,13 +685,45 @@ async function resolvePathColorMaxKmh(session, peakSpeedKmh) {
   }
 }
 
-function drawPathMarkerOverlay(markerX, markerY) {
+function drawPathMarkerOverlay(markerX, markerY, headingDeg, dims) {
   const markerCanvas = document.getElementById("history-marker");
   if (!markerCanvas || !state.historyPathTransform) return;
   const markerCtx = markerCanvas.getContext("2d");
   markerCtx.clearRect(0, 0, markerCanvas.width, markerCanvas.height);
   const toPx = makePathToPx(state.historyPathTransform, markerCanvas);
-  drawPathMarker(markerCtx, markerX, markerY, toPx, markerCanvas);
+  drawKartMarker(
+    markerCtx,
+    markerX,
+    markerY,
+    headingDeg,
+    dims,
+    toPx,
+    markerCanvas,
+    state.historyPathTransform,
+  );
+}
+
+function drawKartMarker(markerCtx, x, y, headingDeg, dims, toPx, canvas, transform) {
+  let { px, py } = toPx(x, y);
+  const metersPerPxX = transform.spanX / Math.max(transform.plotW, 1);
+  const metersPerPxY = transform.spanY / Math.max(transform.plotH, 1);
+  const metersPerPx = (metersPerPxX + metersPerPxY) / 2;
+  const lengthPx = Math.max(dims.wheelbase_m / metersPerPx, 8);
+  const widthPx = Math.max(dims.track_m / metersPerPx, 5);
+  ({ px, py } = clampPathMarkerPx(px, py, canvas, Math.max(lengthPx, widthPx)));
+
+  const angleRad = (-Number(headingDeg) * Math.PI) / 180;
+  markerCtx.save();
+  markerCtx.translate(px, py);
+  markerCtx.rotate(angleRad);
+  markerCtx.fillStyle = "#ff3b30";
+  markerCtx.strokeStyle = "#ffffff";
+  markerCtx.lineWidth = 1.5;
+  markerCtx.fillRect(-lengthPx / 2, -widthPx / 2, lengthPx, widthPx);
+  markerCtx.strokeRect(-lengthPx / 2, -widthPx / 2, lengthPx, widthPx);
+  markerCtx.fillStyle = "#ffffff";
+  markerCtx.fillRect(lengthPx / 2 - 2, -1.5, 3, 3);
+  markerCtx.restore();
 }
 
 function invalidateHistoryDrawCache() {
@@ -768,15 +904,16 @@ function drawSpeedColoredPath(pathCtx, xs, ys, speedsKmh, maxSpeedKmh, toPx) {
 }
 
 function drawPathMarker(pathCtx, x, y, toPx, canvas) {
-  let { px, py } = toPx(x, y);
-  ({ px, py } = clampPathMarkerPx(px, py, canvas));
-  pathCtx.beginPath();
-  pathCtx.fillStyle = "#ff3b30";
-  pathCtx.arc(px, py, 5, 0, Math.PI * 2);
-  pathCtx.fill();
-  pathCtx.strokeStyle = "#ffffff";
-  pathCtx.lineWidth = 1.5;
-  pathCtx.stroke();
+  drawKartMarker(
+    pathCtx,
+    x,
+    y,
+    0,
+    state.historyVehicleDims,
+    toPx,
+    canvas,
+    state.historyPathTransform,
+  );
 }
 
 async function drawSessionChart(sessionId) {
@@ -796,6 +933,8 @@ async function drawSessionChart(sessionId) {
   const markerFingerprint = historyMarkerFingerprint(marker);
   const samplesChanged = samplesFingerprint !== state.historySamplesFingerprint;
   const markerChanged = markerFingerprint !== state.historyMarkerFingerprint;
+  const vehicleDims = await resolveVehicleDimensions(session.vehicle_name, session.vehicle_version);
+  state.historyVehicleDims = vehicleDims;
 
   if (!samplesChanged && !markerChanged) {
     return;
@@ -825,25 +964,27 @@ async function drawSessionChart(sessionId) {
     ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
     ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
 
-    const boundsXs = marker.useLiveMarker ? marker.xs.concat(marker.x) : marker.xs;
-    const boundsYs = marker.useLiveMarker ? marker.ys.concat(marker.y) : marker.ys;
-    state.historyPathTransform = buildPathTransform(boundsXs, boundsYs, pathCanvas);
+    const bounds = collectPathBounds(marker);
+    state.historyPathTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
     state.historyPathColorMaxKmh = pathColorMaxKmh;
 
     pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
     const toPx = makePathToPx(state.historyPathTransform, pathCanvas);
+    drawTrackUnderlay(pathCtx, state.track.data, toPx);
     drawSpeedColoredPath(pathCtx, marker.xs, marker.ys, speeds, pathColorMaxKmh, toPx);
+    drawStartFinishLine(pathCtx, state.track.data, toPx);
     pathCtx.fillStyle = "#8aa0b8";
     pathCtx.font = "12px sans-serif";
+    const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
     pathCtx.fillText(
-      `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit`,
+      `Path trace — blue slow → red at ${pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}`,
       10,
       16,
     );
   }
 
   if (markerChanged || samplesChanged) {
-    drawPathMarkerOverlay(marker.x, marker.y);
+    drawPathMarkerOverlay(marker.x, marker.y, marker.heading, vehicleDims);
   }
 
   state.historySamplesFingerprint = samplesFingerprint;
@@ -856,12 +997,17 @@ function updateHistoryMarkerFromLive() {
   if (!sessionId) return;
   const liveX = Number(state.lastSample.position_x_m);
   const liveY = Number(state.lastSample.position_y_m);
+  const liveHeading = Number(state.lastSample.heading_deg);
   if (!state.simRunning || state.liveSessionId !== sessionId) return;
   if (!Number.isFinite(liveX) || !Number.isFinite(liveY)) return;
 
-  const markerFingerprint = historyMarkerFingerprint({ x: liveX, y: liveY });
+  const markerFingerprint = historyMarkerFingerprint({
+    x: liveX,
+    y: liveY,
+    heading: liveHeading,
+  });
   if (markerFingerprint === state.historyMarkerFingerprint) return;
-  drawPathMarkerOverlay(liveX, liveY);
+  drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
   state.historyMarkerFingerprint = markerFingerprint;
 }
 
@@ -1075,6 +1221,71 @@ function setupTabs() {
   });
 }
 
+function setStartFinishEditMode(active) {
+  state.track.editStartFinish = active;
+  document.getElementById("btn-edit-start-finish")?.classList.toggle("active", active);
+  document.getElementById("track-edit-hint")?.classList.toggle("hidden", !active);
+  document.getElementById("history-path-stack")?.classList.toggle("edit-start-finish", active);
+}
+
+async function loadTrackCatalog() {
+  try {
+    const tracks = await api("/api/tracks");
+    const select = document.getElementById("track-select");
+    const current = select.value;
+    select.innerHTML = '<option value="">No track</option>';
+    for (const track of tracks) {
+      const option = document.createElement("option");
+      option.value = track.id;
+      option.textContent = `${track.name} (${Math.round(track.length_m)} m)`;
+      select.appendChild(option);
+    }
+    if (current && [...select.options].some((option) => option.value === current)) {
+      select.value = current;
+    }
+  } catch (_error) {
+    /* track list is optional */
+  }
+}
+
+async function loadSelectedTrack(force = false) {
+  const trackId = document.getElementById("track-select").value;
+  if (!trackId) {
+    state.track.id = null;
+    state.track.data = null;
+    invalidateHistoryDrawCache();
+    const sessionId = document.getElementById("session-select").value;
+    if (sessionId) await drawSessionChart(sessionId);
+    return;
+  }
+  if (!force && state.track.id === trackId && state.track.data) return;
+  state.track.data = await api(`/api/tracks/${encodeURIComponent(trackId)}`);
+  state.track.id = trackId;
+  invalidateHistoryDrawCache();
+  const sessionId = document.getElementById("session-select").value;
+  if (sessionId) await drawSessionChart(sessionId);
+}
+
+async function handleTrackCanvasClick(event) {
+  if (!state.track.editStartFinish || !state.track.data || !state.historyPathTransform) return;
+  const pathCanvas = document.getElementById("history-path");
+  const rect = pathCanvas.getBoundingClientRect();
+  const scaleX = pathCanvas.width / rect.width;
+  const scaleY = pathCanvas.height / rect.height;
+  const px = (event.clientX - rect.left) * scaleX;
+  const py = (event.clientY - rect.top) * scaleY;
+  const world = pxToWorld(px, py, state.historyPathTransform);
+  const nearest = findNearestCenterlinePoint(state.track.data.centerline, world.x, world.y);
+  state.track.data = await api(`/api/tracks/${encodeURIComponent(state.track.id)}/start-finish`, {
+    method: "POST",
+    body: JSON.stringify({ s_m: Number(nearest.s) }),
+  });
+  setStartFinishEditMode(false);
+  invalidateHistoryDrawCache();
+  const sessionId = document.getElementById("session-select").value;
+  if (sessionId) await drawSessionChart(sessionId);
+}
+
 function setupControls() {
   document.getElementById("sim-mode").addEventListener("change", updateSimModeUi);
   document.getElementById("vehicle-select").addEventListener("change", () => {
@@ -1147,6 +1358,17 @@ function setupControls() {
     invalidateHistoryDrawCache();
     void drawSessionChart(event.target.value);
   });
+  document.getElementById("track-select").addEventListener("change", () => {
+    setStartFinishEditMode(false);
+    void loadSelectedTrack(true);
+  });
+  document.getElementById("btn-edit-start-finish").addEventListener("click", () => {
+    if (!state.track.data) return;
+    setStartFinishEditMode(!state.track.editStartFinish);
+  });
+  document.getElementById("history-path").addEventListener("click", (event) => {
+    void handleTrackCanvasClick(event);
+  });
 
   for (const id of ["throttle", "steering"]) {
     document.getElementById(id).addEventListener("input", sendInputs);
@@ -1172,6 +1394,7 @@ async function init() {
     /* version badge is optional */
   }
   await loadConfig();
+  await loadTrackCatalog();
   connectWebSocket();
   syncTelemetryPanels(activeTabName());
 }

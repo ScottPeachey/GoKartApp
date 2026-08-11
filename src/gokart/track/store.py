@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from gokart.config.store import ConfigStoreError, data_root
-from gokart.track.model import Track
+from gokart.track.model import StartFinish, Track
 
 
 def _track_path(root: Path, track_id: str) -> Path:
@@ -43,3 +43,25 @@ def list_tracks(*, root: Path | None = None) -> list[Path]:
     if not tracks_dir.is_dir():
         return []
     return sorted(tracks_dir.glob("*.json"))
+
+
+def update_track_start_finish(
+    track_id: str,
+    s_m: float,
+    *,
+    width_m: float | None = None,
+    root: Path | None = None,
+) -> Track:
+    track = load_track(track_id, root=root)
+    if s_m < 0 or s_m > track.length_m:
+        raise ConfigStoreError(
+            f"start/finish s_m must be between 0 and {track.length_m:.1f}, got {s_m:.1f}"
+        )
+    resolved_width = width_m if width_m is not None else track.start_finish.width_m or track.width_m
+    updated = track.model_copy(
+        update={
+            "start_finish": StartFinish(s_m=s_m, width_m=resolved_width),
+        }
+    )
+    save_track(updated, root=root, allow_overwrite=True)
+    return updated
