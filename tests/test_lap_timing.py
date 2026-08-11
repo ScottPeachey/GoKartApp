@@ -32,14 +32,15 @@ def hairpin_track():
 
 def test_project_xy_to_track_on_segment_midpoint() -> None:
     centerline = [
-        TrackPoint(x=0, y=0, s=0, gradient_rad=0.01),
-        TrackPoint(x=10, y=0, s=10, gradient_rad=0.02),
-        TrackPoint(x=20, y=0, s=20, gradient_rad=0.03),
+        TrackPoint(x=0, y=0, z=0, s=0, gradient_rad=0.01),
+        TrackPoint(x=10, y=0, z=5, s=10, gradient_rad=0.02),
+        TrackPoint(x=20, y=0, z=10, s=20, gradient_rad=0.03),
     ]
     projection = project_xy_to_track(centerline, 5.0, 1.0)
     assert projection.s_m == pytest.approx(5.0)
     assert projection.lateral_m == pytest.approx(1.0)
     assert projection.gradient_rad == pytest.approx(0.015)
+    assert projection.elevation_m == pytest.approx(2.5)
 
 
 def test_segments_intersect_crossing_lines() -> None:

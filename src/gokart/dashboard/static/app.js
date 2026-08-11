@@ -59,6 +59,9 @@ const CHANNEL_DISPLAY = {
   steering: { decimals: 2, deadband: 0.02 },
   steering_angle_deg: { decimals: 1, deadband: 0.5 },
   heading_deg: { decimals: 1, deadband: 0.5 },
+  elevation_m: { decimals: 1, deadband: 0.05 },
+  pitch_deg: { decimals: 1, deadband: 0.2 },
+  roll_deg: { decimals: 1, deadband: 0.2 },
   position_m: { decimals: 2, deadband: 0.05 },
   position_x_m: { decimals: 2, deadband: 0.05 },
   position_y_m: { decimals: 2, deadband: 0.05 },
@@ -184,6 +187,14 @@ function updateDrivePanel(sample, speedKmh) {
   const headingDeg = Number(sample.heading_deg || 0);
   document.getElementById("steer-value").textContent = `${steerDeg.toFixed(0)}°`;
   document.getElementById("heading-value").textContent = `${headingDeg.toFixed(0)}°`;
+  const elevationM = Number(sample.elevation_m);
+  const hasElevation = Number.isFinite(elevationM);
+  document.getElementById("elevation-pill")?.classList.toggle("hidden", !hasElevation && !sample.track_s_m);
+  document.getElementById("elevation-value").textContent = hasElevation
+    ? `${elevationM.toFixed(1)} m`
+    : "—";
+  document.getElementById("pitch-value").textContent = `${Number(sample.pitch_deg || 0).toFixed(1)}°`;
+  document.getElementById("roll-value").textContent = `${Number(sample.roll_deg || 0).toFixed(1)}°`;
   const soc = Number(sample.soc || 0);
   document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
   document.getElementById("soc-fill").style.width = `${soc * 100}%`;
@@ -375,6 +386,10 @@ function resetDriveUi() {
   document.getElementById("power-kw").textContent = "0.0 kW";
   document.getElementById("steer-value").textContent = "0°";
   document.getElementById("heading-value").textContent = "0°";
+  document.getElementById("elevation-value").textContent = "—";
+  document.getElementById("pitch-value").textContent = "0°";
+  document.getElementById("roll-value").textContent = "0°";
+  document.getElementById("elevation-pill")?.classList.add("hidden");
   document.getElementById("soc-text").textContent = "—";
   document.getElementById("soc-fill").style.width = "0%";
   const safetyCard = document.getElementById("safety-card");
@@ -384,6 +399,7 @@ function resetDriveUi() {
   document.getElementById("fault-recovery-panel")?.classList.add("hidden");
   state.channelStableValues = {};
   updateSliderReadouts();
+  resetAxlePhysicsPanel();
 }
 
 async function resetSession() {
@@ -428,6 +444,9 @@ const CHANNEL_UI = {
   steering: { icon: "🎮", label: "Steering" },
   steering_angle_deg: { icon: "↩", label: "Steer angle" },
   heading_deg: { icon: "🧭", label: "Heading" },
+  elevation_m: { icon: "⛰", label: "Elevation" },
+  pitch_deg: { icon: "↕", label: "Pitch" },
+  roll_deg: { icon: "↔", label: "Roll" },
   position_x_m: { icon: "↔", label: "Position X" },
   position_y_m: { icon: "↕", label: "Position Y" },
   track_s_m: { icon: "🛣", label: "Track distance" },

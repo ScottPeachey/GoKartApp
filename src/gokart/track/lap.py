@@ -16,6 +16,7 @@ class TrackProjection:
     heading_rad: float
     gradient_rad: float
     curvature: float
+    elevation_m: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -129,6 +130,7 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
             heading_rad=0.0,
             gradient_rad=point.gradient_rad,
             curvature=point.curvature,
+            elevation_m=point.z,
         )
 
     best_dist_sq = float("inf")
@@ -137,6 +139,7 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
     best_heading = 0.0
     best_gradient = centerline[0].gradient_rad
     best_curvature = centerline[0].curvature
+    best_elevation = centerline[0].z
 
     for index in range(1, len(centerline)):
         prev = centerline[index - 1]
@@ -161,6 +164,7 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
         best_heading = heading
         best_gradient = prev.gradient_rad + (curr.gradient_rad - prev.gradient_rad) * t
         best_curvature = prev.curvature + (curr.curvature - prev.curvature) * t
+        best_elevation = prev.z + (curr.z - prev.z) * t
 
     return TrackProjection(
         s_m=best_s,
@@ -168,6 +172,7 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
         heading_rad=best_heading,
         gradient_rad=best_gradient,
         curvature=best_curvature,
+        elevation_m=best_elevation,
     )
 
 

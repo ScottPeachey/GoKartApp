@@ -12,6 +12,7 @@ from gokart.config.store import load_component
 from gokart.config.validation import validate_vehicle_config
 from gokart.physics.accessories import AccessoryParams, step_accessories
 from gokart.physics.aero import aero_drag_force_n, gradient_force_n, rolling_resistance_force_n
+from gokart.physics.attitude import load_transfer_long_accel_mps2
 from gokart.physics.battery import BatteryInputs, BatteryParams, BatteryState, step_battery
 from gokart.physics.brakes import BrakeParams, step_brakes
 from gokart.physics.constants import GRAVITY_MPS2
@@ -340,13 +341,14 @@ class VehicleModel:
             - f_scrub
         )
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
+        load_accel = load_transfer_long_accel_mps2(state.speed_mps, accel)
 
         axle_loads = axle_normal_loads_n(
             mass_kg=self.mass_kg,
             wheelbase_m=self.config.wheelbase_m,
             cg_longitudinal_m=self.config.cg_longitudinal_m,
             cg_height_m=self.config.cg_height_m,
-            long_accel_mps2=accel,
+            long_accel_mps2=load_accel,
             lat_accel_mps2=lat_accel,
             gradient_rad=env.gradient_rad,
         )

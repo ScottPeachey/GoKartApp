@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=10" />
+  <link rel="stylesheet" href="/static/style.css?v=11" />
 </head>
 <body>
   <header>
@@ -32,6 +32,18 @@
             <div class="metric-pill">
               <span class="label">Heading</span>
               <span id="heading-value">0°</span>
+            </div>
+            <div class="metric-pill" id="elevation-pill">
+              <span class="label">Elev</span>
+              <span id="elevation-value">—</span>
+            </div>
+            <div class="metric-pill">
+              <span class="label">Pitch</span>
+              <span id="pitch-value">0°</span>
+            </div>
+            <div class="metric-pill">
+              <span class="label">Roll</span>
+              <span id="roll-value">0°</span>
             </div>
             <div class="metric-pill" id="lap-pill">
               <span class="label">Lap</span>
@@ -349,7 +361,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=35"></script>
+  <script src="/static/app.js?v=37"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

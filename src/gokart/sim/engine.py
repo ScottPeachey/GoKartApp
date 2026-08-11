@@ -21,6 +21,9 @@ from gokart.control.pipeline import (
 )
 from gokart.limits.resolver import resolve_limits
 from gokart.physics.drivetrain import motor_rpm_from_speed, speed_from_motor_rpm
+from gokart.physics.attitude import vehicle_attitude_deg
+from gokart.physics.steering import steering_angle_rad
+from gokart.physics.tyres import lateral_accel_from_bicycle_mps2
 from gokart.physics.vehicle import (
     VehicleModel,
     VehicleState,
@@ -450,6 +453,20 @@ def run_simulation(
                 physics_out.speed_mps,
             )
 
+        lat_accel = lateral_accel_from_bicycle_mps2(
+            physics_out.speed_mps,
+            steering_angle_rad(steering),
+            vehicle_model.config.wheelbase_m,
+        )
+        pitch_deg, roll_deg = vehicle_attitude_deg(
+            gradient_rad=env.gradient_rad,
+            long_accel_mps2=physics_out.acceleration_mps2,
+            lat_accel_mps2=lat_accel,
+            wheelbase_m=vehicle_model.config.wheelbase_m,
+            cg_height_m=vehicle_model.config.cg_height_m,
+            speed_mps=vehicle_state.speed_mps,
+        )
+
         tick = SimTickRecord(
             time_s=time_s,
             values={
@@ -461,9 +478,12 @@ def run_simulation(
                 "steering": steering,
                 "steering_angle_deg": physics_out.steering_angle_deg,
                 "heading_deg": physics_out.heading_deg,
+                "elevation_m": track_values.get("elevation_m", 0.0),
+                "pitch_deg": pitch_deg,
+                "roll_deg": roll_deg,
                 "position_x_m": physics_out.position_x_m,
                 "position_y_m": physics_out.position_y_m,
-                **track_values,
+                **{k: v for k, v in track_values.items() if k != "elevation_m"},
                 "motor_rpm": physics_out.motor_rpm,
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,

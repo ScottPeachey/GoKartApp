@@ -74,7 +74,7 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 .cockpit-metrics {
   display: flex;
   gap: 0.4rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .metric-pill {
@@ -453,21 +453,21 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   }
 
   .telemetry-split.layout-split #tab-live .channels-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
   }
 
   .telemetry-split.layout-split #tab-live .channel-card {
-    min-height: 100px;
-    padding: 0.65rem 0.75rem;
+    min-height: 0;
+    padding: 0.35rem 0.45rem;
   }
 
   .telemetry-split.layout-split #tab-live .channel-card-value {
-    font-size: 1.25rem;
+    font-size: 0.88rem;
   }
 
   .telemetry-split.layout-split #tab-live .channel-card-icon {
-    font-size: 1.1rem;
+    font-size: 0.78rem;
   }
 
   .tabs.split-telemetry-active .tab[data-tab="live"],
@@ -587,43 +587,43 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 
 .channels-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
 .channel-card {
   background: #121a26;
-  border: 2px solid #2a3548;
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
+  border: 1px solid #2a3548;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  min-height: 118px;
+  gap: 0.12rem;
+  min-height: 0;
 }
 
 .channel-card-icon {
-  font-size: 1.35rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 
 .channel-card-label {
-  font-size: 0.7rem;
+  font-size: 0.58rem;
   color: #8aa0b8;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .channel-card-value {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 600;
   line-height: 1.1;
   color: var(--text);
   word-break: break-word;
 }
 
 .channel-card-unit {
-  font-size: 0.75rem;
+  font-size: 0.58rem;
   color: #6b829c;
 }
 
@@ -633,7 +633,7 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 
 .channel-card.channel-fault .channel-card-value {
   color: var(--fault);
-  font-size: 1.1rem;
+  font-size: 0.82rem;
 }
 
 .channel-card.channel-active .channel-card-value {

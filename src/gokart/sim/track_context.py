@@ -44,5 +44,6 @@ class TrackSimulationContext:
         return {
             "track_s_m": projection.s_m,
             "track_lateral_m": projection.lateral_m,
+            "elevation_m": projection.elevation_m,
             **lap_values,
         }
