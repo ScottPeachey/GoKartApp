@@ -6,6 +6,13 @@ import json
 from pathlib import Path
 
 from gokart.config.store import ConfigStoreError, data_root
+from gokart.track.geometry import (
+    build_track_points,
+    compute_bbox,
+    offset_boundaries,
+    remap_start_finish_s,
+    reverse_centerline_points,
+)
 from gokart.track.model import StartFinish, Track
 
 
@@ -61,6 +68,41 @@ def update_track_start_finish(
     updated = track.model_copy(
         update={
             "start_finish": StartFinish(s_m=s_m, width_m=resolved_width),
+        }
+    )
+    save_track(updated, root=root, allow_overwrite=True)
+    return updated
+
+
+def update_track_direction(
+    track_id: str,
+    direction: str,
+    *,
+    root: Path | None = None,
+) -> Track:
+    if direction not in {"clockwise", "counterclockwise"}:
+        raise ConfigStoreError(f"Unsupported track direction: {direction}")
+    track = load_track(track_id, root=root)
+    if track.direction == direction:
+        return track
+
+    reversed_points = reverse_centerline_points(track.centerline)
+    centerline = build_track_points(reversed_points)
+    inner, outer = offset_boundaries(reversed_points, track.width_m)
+    bbox = compute_bbox(reversed_points, inner, outer)
+    length_m = centerline[-1].s if centerline else 0.0
+    start_finish = StartFinish(
+        s_m=remap_start_finish_s(length_m, track.start_finish.s_m),
+        width_m=track.start_finish.width_m or track.width_m,
+    )
+    updated = track.model_copy(
+        update={
+            "direction": direction,
+            "centerline": centerline,
+            "inner_boundary": inner,
+            "outer_boundary": outer,
+            "bbox": bbox,
+            "start_finish": start_finish,
         }
     )
     save_track(updated, root=root, allow_overwrite=True)

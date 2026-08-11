@@ -228,3 +228,27 @@ def build_track_points(points: list[XYPoint]) -> list[TrackPoint]:
             points, arc_lengths, curvatures, gradients, strict=True
         )
     ]
+
+
+def _points_close(a: XYPoint, b: XYPoint, tol: float = 1.0) -> bool:
+    return math.hypot(a.x - b.x, a.y - b.y) <= tol
+
+
+def reverse_centerline_points(centerline: list[TrackPoint]) -> list[XYPoint]:
+    """Reverse centerline traversal order while keeping a closed loop."""
+    xy = [XYPoint(point.x, point.y, point.z) for point in centerline]
+    if len(xy) > 1 and _points_close(xy[0], xy[-1]):
+        xy = xy[:-1]
+    return close_polyline(list(reversed(xy)))
+
+
+def remap_start_finish_s(length_m: float, s_m: float) -> float:
+    if length_m <= 0:
+        return 0.0
+    remapped = length_m - s_m
+    if remapped < 0:
+        return 0.0
+    if remapped > length_m:
+        return length_m
+    return remapped
+

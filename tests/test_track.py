@@ -144,3 +144,26 @@ def test_import_rejects_invalid_geojson(tmp_path: Path) -> None:
     bad.write_text(json.dumps({"type": "FeatureCollection", "features": []}), encoding="utf-8")
     with pytest.raises(TrackImportError):
         import_geojson_track(bad, fetch_elevation=False)
+
+
+def test_reverse_centerline_preserves_length() -> None:
+    from gokart.track.geometry import reverse_centerline_points
+    from gokart.track.model import TrackPoint
+
+    centerline = [
+        TrackPoint(x=0, y=0, s=0),
+        TrackPoint(x=50, y=0, s=50),
+        TrackPoint(x=50, y=50, s=100),
+        TrackPoint(x=0, y=50, s=150),
+        TrackPoint(x=0, y=0, s=200),
+    ]
+    reversed_points = reverse_centerline_points(centerline)
+    assert polyline_length(reversed_points) == pytest.approx(200.0, rel=0.05)
+
+
+def test_remap_start_finish_s() -> None:
+    from gokart.track.geometry import remap_start_finish_s
+
+    assert remap_start_finish_s(1000.0, 200.0) == pytest.approx(800.0)
+    assert remap_start_finish_s(1000.0, 0.0) == pytest.approx(1000.0)
+

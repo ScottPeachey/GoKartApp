@@ -57,3 +57,27 @@ def test_save_start_finish_api(client: TestClient) -> None:
 def test_track_detail_not_found(client: TestClient) -> None:
     response = client.get("/api/tracks/missing-track")
     assert response.status_code == 404
+
+
+def test_save_direction_api(client: TestClient) -> None:
+    before = client.get("/api/tracks/test-hairpin").json()
+    assert before["direction"] == "clockwise"
+    sf_before = before["start_finish"]["s_m"]
+    length = before["length_m"]
+
+    response = client.post(
+        "/api/tracks/test-hairpin/direction",
+        json={"direction": "counterclockwise"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["direction"] == "counterclockwise"
+    assert payload["start_finish"]["s_m"] == pytest.approx(length - sf_before, rel=0.01)
+
+    again = client.post(
+        "/api/tracks/test-hairpin/direction",
+        json={"direction": "counterclockwise"},
+    )
+    assert again.status_code == 200
+    assert again.json()["direction"] == "counterclockwise"
+

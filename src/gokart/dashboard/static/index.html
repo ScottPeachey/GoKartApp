@@ -152,6 +152,12 @@
               <option value="">No track</option>
             </select>
           </label>
+          <label>Direction
+            <select id="track-direction-select" disabled>
+              <option value="clockwise">Clockwise</option>
+              <option value="counterclockwise">Counter-clockwise</option>
+            </select>
+          </label>
           <button id="btn-edit-start-finish" type="button" class="btn-secondary">Set start/finish</button>
         </div>
         <p id="track-edit-hint" class="config-hint hidden">
@@ -265,7 +271,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=27"></script>
+  <script src="/static/app.js?v=28"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

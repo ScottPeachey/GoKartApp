@@ -25,6 +25,7 @@ const state = {
     id: null,
     data: null,
     editStartFinish: false,
+    suppressDirectionChange: false,
   },
   vehicleDimensionsCache: {},
   historyVehicleDims: { wheelbase_m: 1.04, track_m: 0.9 },
@@ -1250,9 +1251,14 @@ async function loadTrackCatalog() {
 
 async function loadSelectedTrack(force = false) {
   const trackId = document.getElementById("track-select").value;
+  const directionSelect = document.getElementById("track-direction-select");
   if (!trackId) {
     state.track.id = null;
     state.track.data = null;
+    if (directionSelect) {
+      directionSelect.disabled = true;
+      directionSelect.value = "clockwise";
+    }
     invalidateHistoryDrawCache();
     const sessionId = document.getElementById("session-select").value;
     if (sessionId) await drawSessionChart(sessionId);
@@ -1261,6 +1267,33 @@ async function loadSelectedTrack(force = false) {
   if (!force && state.track.id === trackId && state.track.data) return;
   state.track.data = await api(`/api/tracks/${encodeURIComponent(trackId)}`);
   state.track.id = trackId;
+  syncTrackDirectionControls();
+  invalidateHistoryDrawCache();
+  const sessionId = document.getElementById("session-select").value;
+  if (sessionId) await drawSessionChart(sessionId);
+}
+
+function syncTrackDirectionControls() {
+  const directionSelect = document.getElementById("track-direction-select");
+  if (!directionSelect) return;
+  const hasTrack = Boolean(state.track.data);
+  directionSelect.disabled = !hasTrack;
+  if (!hasTrack) {
+    directionSelect.value = "clockwise";
+    return;
+  }
+  state.track.suppressDirectionChange = true;
+  directionSelect.value = state.track.data.direction || "clockwise";
+  state.track.suppressDirectionChange = false;
+}
+
+async function saveTrackDirection(direction) {
+  if (!state.track.id || !state.track.data) return;
+  state.track.data = await api(`/api/tracks/${encodeURIComponent(state.track.id)}/direction`, {
+    method: "POST",
+    body: JSON.stringify({ direction }),
+  });
+  syncTrackDirectionControls();
   invalidateHistoryDrawCache();
   const sessionId = document.getElementById("session-select").value;
   if (sessionId) await drawSessionChart(sessionId);
@@ -1361,6 +1394,10 @@ function setupControls() {
   document.getElementById("track-select").addEventListener("change", () => {
     setStartFinishEditMode(false);
     void loadSelectedTrack(true);
+  });
+  document.getElementById("track-direction-select").addEventListener("change", (event) => {
+    if (state.track.suppressDirectionChange) return;
+    void saveTrackDirection(event.target.value);
   });
   document.getElementById("btn-edit-start-finish").addEventListener("click", () => {
     if (!state.track.data) return;

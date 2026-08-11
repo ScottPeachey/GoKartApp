@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -43,7 +43,12 @@ from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import channel_schema
 from gokart.telemetry.storage import TelemetryStore
 from gokart.track.api import track_detail, track_summary
-from gokart.track.store import list_tracks, load_track, update_track_start_finish
+from gokart.track.store import (
+    list_tracks,
+    load_track,
+    update_track_direction,
+    update_track_start_finish,
+)
 from gokart.units import mps_to_kmh
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -79,6 +84,10 @@ class VehicleDetailRequest(BaseModel):
 class SaveStartFinishRequest(BaseModel):
     s_m: float = Field(ge=0.0)
     width_m: float | None = Field(default=None, gt=0.0)
+
+
+class SaveTrackDirectionRequest(BaseModel):
+    direction: Literal["clockwise", "counterclockwise"]
 
 
 PHYSICS_REVISION = "cornering-v2"
@@ -441,6 +450,17 @@ def create_app(
                 request.s_m,
                 width_m=request.width_m,
             )
+        except ConfigStoreError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return track_detail(track)
+
+    @app.post("/api/tracks/{track_id}/direction")
+    def api_track_save_direction(
+        track_id: str,
+        request: SaveTrackDirectionRequest,
+    ) -> dict[str, Any]:
+        try:
+            track = update_track_direction(track_id, request.direction)
         except ConfigStoreError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return track_detail(track)
