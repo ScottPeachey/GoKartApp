@@ -1105,6 +1105,85 @@ th, td {
   .config-layout { grid-template-columns: 1fr; }
 }
 
+.auto-drive-panel h4 {
+  margin: 0.75rem 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.rl-train-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a3548;
+}
+
+.rl-train-panel h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.rl-train-actions {
+  gap: 0.5rem;
+}
+
+.rl-train-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #121a26;
+  border-radius: 8px;
+  border: 1px solid #2a3548;
+}
+
+.rl-train-metrics.hidden {
+  display: none;
+}
+
+.rl-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.85rem;
+}
+
+.rl-metric-wide {
+  grid-column: 1 / -1;
+}
+
+.rl-metric-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8aa0b8;
+}
+
+.rl-progress-wrap {
+  height: 8px;
+  background: #1e2836;
+  border-radius: 4px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.rl-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #2a8f6e, #3ec99a);
+  transition: width 0.25s ease;
+}
+
+.rl-progress-text {
+  font-size: 0.8rem;
+  color: #b8c8dc;
+}
+
+.train-error {
+  color: #f08080;
+  grid-column: 1 / -1;
+}
+
 .config-slots, .config-drivetrain {
   background: #121a26;
   border-radius: 8px;

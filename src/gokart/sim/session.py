@@ -318,7 +318,7 @@ class SimulationSession:
             sensors,
             safety_config,
             detection_state=ctx.detection_state,
-            dt=self.dt_s,
+            dt=dt_s,
         )
         if manual_mode or self.config.control_source == ControlSource.RL:
             detected.discard(FaultId.THROTTLE_BRAKE_SIMULTANEOUS)

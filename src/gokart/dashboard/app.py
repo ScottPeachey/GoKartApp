@@ -38,6 +38,7 @@ from gokart.config.store import (
 )
 from gokart.dashboard.limits import compute_effective_limits
 from gokart.dashboard.sim_controller import SimController
+from gokart.dashboard.training_controller import TrainingController, TrainingRunRequest
 from gokart.sim.scenarios import BUILTIN_SCENARIOS
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import channel_schema
@@ -96,6 +97,19 @@ class SaveTrackDirectionRequest(BaseModel):
     direction: Literal["clockwise", "counterclockwise"]
 
 
+class RlTrainStartRequest(BaseModel):
+    vehicle_name: str
+    vehicle_version: str
+    track_id: str
+    drive_mode: str = "default"
+    driver_profile: str = "owner"
+    objective: str = "god"
+    target_laps: int = Field(default=3, ge=1, le=50)
+    total_timesteps: int = Field(default=50_000, ge=1_000, le=5_000_000)
+    preview_freq: int = Field(default=10_000, ge=500, le=500_000)
+    seed: int = 0
+
+
 PHYSICS_REVISION = "tyre-v1"
 
 
@@ -107,11 +121,13 @@ def create_app(
     telemetry_bus = bus or TelemetryBus()
     telemetry_store = store or TelemetryStore()
     sim_controller = SimController(bus=telemetry_bus, store_path=telemetry_store.db_path)
+    training_controller = TrainingController(bus=telemetry_bus)
 
     app = FastAPI(title="Go-Kart Dashboard", version="0.1.0")
     app.state.bus = telemetry_bus
     app.state.store = telemetry_store
     app.state.sim = sim_controller
+    app.state.training = training_controller
 
     @app.get("/")
     def index() -> FileResponse:
@@ -406,8 +422,53 @@ def create_app(
             "clean_lap_rate": manifest.clean_lap_rate if manifest else None,
         }
 
+    @app.get("/api/rl/train/status")
+    def api_rl_train_status() -> dict[str, Any]:
+        return training_controller.snapshot()
+
+    @app.post("/api/rl/train/start")
+    def api_rl_train_start(request: RlTrainStartRequest) -> dict[str, Any]:
+        if sim_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop the simulation before starting training.",
+            )
+        try:
+            training_controller.start(
+                TrainingRunRequest(
+                    vehicle_name=request.vehicle_name,
+                    vehicle_version=request.vehicle_version,
+                    track_id=request.track_id,
+                    drive_mode=request.drive_mode,
+                    driver_profile=request.driver_profile,
+                    objective=request.objective,
+                    target_laps=request.target_laps,
+                    total_timesteps=request.total_timesteps,
+                    preview_freq=request.preview_freq,
+                    seed=request.seed,
+                )
+            )
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"status": "started", "training": training_controller.snapshot()}
+
+    @app.post("/api/rl/train/stop")
+    def api_rl_train_stop() -> dict[str, str]:
+        training_controller.stop()
+        return {"status": "stopping"}
+
+    @app.post("/api/rl/train/reset")
+    def api_rl_train_reset() -> dict[str, str]:
+        training_controller.reset()
+        return {"status": "reset"}
+
     @app.post("/api/sim/start")
     def api_sim_start(request: SimStartRequest) -> dict[str, Any]:
+        if training_controller.status.running:
+            raise HTTPException(
+                status_code=409,
+                detail="Stop RL training before starting a simulation.",
+            )
         try:
             sim_controller.start(
                 vehicle_name=request.vehicle_name,
@@ -527,6 +588,7 @@ def create_app(
         await websocket.accept()
         sub_id = telemetry_bus.subscribe(name="dashboard", maxsize=128)
         sent_schema = False
+        last_metrics_seq = 0
         try:
             while True:
                 sample = await asyncio.to_thread(telemetry_bus.poll, sub_id, timeout_s=0.05)
@@ -540,7 +602,12 @@ def create_app(
                         payload["channels"] = channel_schema()
                         sent_schema = True
                     await websocket.send_json(payload)
-                else:
+
+                metrics = training_controller.poll_metrics(last_metrics_seq)
+                if metrics is not None:
+                    last_metrics_seq = int(metrics.get("seq", last_metrics_seq))
+                    await websocket.send_json({"type": "training_metrics", "data": metrics})
+                elif sample is None:
                     await asyncio.sleep(0.01)
         except WebSocketDisconnect:
             pass

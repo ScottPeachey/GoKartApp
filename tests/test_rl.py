@@ -151,3 +151,43 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
         __import__("json").loads(path.read_text(encoding="utf-8"))
     )
     assert loaded.identity.policy_key == identity.policy_key
+
+
+def test_run_preview_episode_with_stub_model(hairpin_track) -> None:
+    from gokart.rl.trainer import TrainingConfig, run_preview_episode
+
+    class _StubModel:
+        def predict(self, obs, deterministic=True):
+            return np.array([0.25, 0.0, 0.05], dtype=np.float32), None
+
+    ticks: list[dict] = []
+
+    class _TickHooks:
+        def on_progress(self, progress) -> None:
+            return
+
+        def on_preview_tick(self, row: dict) -> None:
+            ticks.append(row)
+
+        def should_stop(self) -> bool:
+            return False
+
+    config = TrainingConfig(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track_id=hairpin_track.id,
+        preview_log_every_n=5,
+        target_laps=1,
+    )
+    lap, clean, reward = run_preview_episode(
+        _StubModel(),
+        config=config,
+        track=hairpin_track,
+        hooks=_TickHooks(),
+        timestep=10_000,
+        max_steps=400,
+    )
+    assert np.isfinite(reward)
+    assert clean in {0.0, 1.0}
+    assert len(ticks) > 0
+    assert "speed_mps" in ticks[0]

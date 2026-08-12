@@ -280,6 +280,8 @@ def cmd_rl_train(args: argparse.Namespace) -> int:
             objective=args.objective,
             target_laps=args.laps,
             total_timesteps=args.timesteps,
+            preview_freq=args.preview_freq,
+            eval_freq=args.preview_freq,
             seed=args.seed,
         )
     )
@@ -471,6 +473,7 @@ def build_parser() -> argparse.ArgumentParser:
     rl_train.add_argument("--objective", choices=["god", "endurance"], default="god")
     rl_train.add_argument("--laps", type=int, default=3)
     rl_train.add_argument("--timesteps", type=int, default=50_000)
+    rl_train.add_argument("--preview-freq", type=int, default=10_000, help="Preview/eval interval in env steps")
     rl_train.add_argument("--seed", type=int, default=0)
     rl_train.set_defaults(func=cmd_rl_train)
 

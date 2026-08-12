@@ -6,6 +6,8 @@ const state = {
   inputPollTimer: null,
   brakeHold: false,
   simRunning: false,
+  trainingRunning: false,
+  trainingMetrics: {},
   historyPollTimer: null,
   historyRefreshInFlight: false,
   historyPollCount: 0,
@@ -919,6 +921,10 @@ function connectWebSocket() {
       syncHiddenChannelsWithSchema();
       rebuildChannelsGrid();
     }
+    if (message.type === "training_metrics" && message.data) {
+      applyTrainingMetrics(message.data);
+      return;
+    }
     if (message.type !== "sample" || !message.data) return;
     scheduleLiveUi(message.data, message.speed_kmh);
   };
@@ -1339,8 +1345,9 @@ function redrawPathLayer() {
   const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
   const zoomLabel = view.zoom === 1 ? "" : ` · ${view.zoom.toFixed(1)}×`;
   const followLabel = state.pathFollowKart ? " · follow on" : "";
+  const trainLabel = state.trainingMetrics.preview_running ? " · RL preview" : "";
   pathCtx.fillText(
-    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}`,
+    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}${trainLabel}`,
     10,
     16,
   );
@@ -2115,6 +2122,122 @@ function updateSimModeUi() {
   updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
 }
 
+function applyTrainingMetrics(metrics) {
+  const wasRunning = state.trainingRunning;
+  state.trainingMetrics = metrics;
+  state.trainingRunning = Boolean(metrics.running);
+  renderTrainingMetricsPanel(metrics);
+  syncTrainingControlsState();
+  if (wasRunning && !state.trainingRunning) {
+    void updateAutoPolicyStatus();
+  }
+}
+
+function renderTrainingMetricsPanel(metrics) {
+  const panel = document.getElementById("rl-train-metrics");
+  if (!panel) return;
+  const show = state.trainingRunning || metrics.status === "failed" || metrics.status === "ceiling_reached" || metrics.status === "stopped";
+  panel.classList.toggle("hidden", !show);
+
+  const pct = Number(metrics.progress_pct || 0);
+  const progressBar = document.getElementById("train-progress-bar");
+  const progressText = document.getElementById("train-progress-text");
+  if (progressBar) progressBar.style.width = `${Math.min(100, Math.max(0, pct)).toFixed(1)}%`;
+  if (progressText) progressText.textContent = `${pct.toFixed(1)}%`;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  const previewNote = metrics.preview_running ? " (preview lap…)" : "";
+  setText("train-status", `${metrics.status || "—"}${previewNote}`);
+  setText(
+    "train-timesteps",
+    `${Number(metrics.timesteps || 0).toLocaleString()} / ${Number(metrics.total_timesteps || 0).toLocaleString()}`,
+  );
+  setText(
+    "train-best-lap",
+    metrics.best_lap_s != null ? `${Number(metrics.best_lap_s).toFixed(2)} s` : "—",
+  );
+  setText(
+    "train-clean-rate",
+    metrics.clean_lap_rate != null ? `${(Number(metrics.clean_lap_rate) * 100).toFixed(0)}%` : "—",
+  );
+  setText(
+    "train-last-reward",
+    metrics.last_episode_reward != null ? Number(metrics.last_episode_reward).toFixed(2) : "—",
+  );
+  setText("train-previews", String(metrics.previews_completed ?? 0));
+  setText("train-policy-key", metrics.policy_key || "—");
+
+  const errorEl = document.getElementById("train-error");
+  if (errorEl) {
+    if (metrics.error) {
+      errorEl.textContent = metrics.error;
+      errorEl.classList.remove("hidden");
+    } else {
+      errorEl.textContent = "";
+      errorEl.classList.add("hidden");
+    }
+  }
+}
+
+function syncTrainingControlsState() {
+  const startBtn = document.getElementById("btn-train-start");
+  const stopBtn = document.getElementById("btn-train-stop");
+  const simStartBtn = document.getElementById("btn-start");
+  if (startBtn) startBtn.disabled = state.trainingRunning || state.simRunning;
+  if (stopBtn) stopBtn.disabled = !state.trainingRunning;
+  if (simStartBtn && state.trainingRunning) {
+    simStartBtn.disabled = true;
+  } else if (simStartBtn && !state.simRunning) {
+    simStartBtn.disabled = false;
+  }
+}
+
+async function refreshTrainingStatus() {
+  try {
+    const metrics = await api("/api/rl/train/status");
+    applyTrainingMetrics(metrics);
+  } catch (_err) {
+    /* training status optional */
+  }
+}
+
+async function startRlTraining() {
+  const vehicle = selectedVehicle();
+  const trackId = document.getElementById("sim-track-select")?.value;
+  if (!trackId) {
+    window.alert("Select a track before training.");
+    return;
+  }
+  const driveSettings = selectedDriveSettings();
+  const objective = document.getElementById("auto-objective")?.value || "god";
+  const totalSteps = Number(document.getElementById("train-total-steps")?.value || 50000);
+  const previewFreq = Number(document.getElementById("train-preview-freq")?.value || 10000);
+  syncTrackSelectValue(trackId);
+  await loadSelectedTrack(true);
+  state.pathFollowKart = true;
+  await api("/api/rl/train/start", {
+    method: "POST",
+    body: JSON.stringify({
+      ...vehicle,
+      ...driveSettings,
+      track_id: trackId,
+      objective,
+      target_laps: Number(document.getElementById("auto-laps")?.value || 3),
+      total_timesteps: totalSteps,
+      preview_freq: previewFreq,
+    }),
+  });
+  await refreshTrainingStatus();
+}
+
+async function stopRlTraining() {
+  await api("/api/rl/train/stop", { method: "POST" });
+  await refreshTrainingStatus();
+}
+
 async function updateAutoPolicyStatus() {
   const pill = document.getElementById("auto-policy-status");
   if (!pill || simMode() !== "auto") return;
@@ -2139,7 +2262,7 @@ async function updateAutoPolicyStatus() {
       const lap = status.ceiling_lap_s ? `, ceiling ${Number(status.ceiling_lap_s).toFixed(1)}s` : "";
       pill.textContent = `Policy ${status.policy_key}: ${status.status}${lap}`;
     } else {
-      pill.textContent = `Policy ${status.policy_key}: not trained — run gokart rl train`;
+      pill.textContent = `Policy ${status.policy_key}: not trained — use Train below or gokart rl train`;
     }
   } catch (_err) {
     pill.textContent = "Policy: —";
@@ -2506,6 +2629,7 @@ function setupControls() {
     state.simRunning = true;
     if (interactiveInputsEnabled()) startManualInputPolling();
     syncDrivingControlsState();
+    syncTrainingControlsState();
     await beginLiveSession();
     updateSimModeUi();
     updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
@@ -2517,8 +2641,16 @@ function setupControls() {
     state.simRunning = false;
     state.liveSessionId = null;
     await api("/api/sim/stop", { method: "POST" });
+    syncTrainingControlsState();
     updateSimModeUi();
     updateFreeDriveGuide("OFF");
+  });
+
+  document.getElementById("btn-train-start")?.addEventListener("click", () => {
+    void startRlTraining();
+  });
+  document.getElementById("btn-train-stop")?.addEventListener("click", () => {
+    void stopRlTraining();
   });
 
   document.getElementById("btn-reset-session").addEventListener("click", () => {
@@ -2617,6 +2749,8 @@ async function init() {
     await loadSelectedTrack(true);
   }
   connectWebSocket();
+  await refreshTrainingStatus();
+  syncTrainingControlsState();
   syncTelemetryPanels(activeTabName());
 }
 

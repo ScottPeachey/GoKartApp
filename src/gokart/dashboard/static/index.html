@@ -220,6 +220,43 @@
           </label>
         </div>
         <p id="auto-policy-status" class="config-hint">Policy: —</p>
+        <div id="rl-train-panel" class="rl-train-panel">
+          <h4>Train learned driver</h4>
+          <p class="config-hint">
+            Preview laps stream to the <strong>live track view</strong> every N PPO steps
+            (uses vehicle, track, mode, profile, and objective above).
+          </p>
+          <div class="row">
+            <label>Total steps
+              <input id="train-total-steps" type="number" min="1000" step="1000" value="50000" />
+            </label>
+            <label>Preview every
+              <input id="train-preview-freq" type="number" min="500" step="500" value="10000" />
+              steps
+            </label>
+          </div>
+          <div class="row rl-train-actions">
+            <button id="btn-train-start" type="button" class="btn-secondary">Start training</button>
+            <button id="btn-train-stop" type="button" class="btn-secondary" disabled>Stop training</button>
+          </div>
+          <div id="rl-train-metrics" class="rl-train-metrics hidden" aria-live="polite">
+            <div class="rl-metric"><span class="rl-metric-label">Status</span><span id="train-status">—</span></div>
+            <div class="rl-metric rl-metric-wide">
+              <span class="rl-metric-label">Progress</span>
+              <div class="rl-progress-wrap">
+                <div id="train-progress-bar" class="rl-progress-bar" style="width: 0%"></div>
+              </div>
+              <span id="train-progress-text" class="rl-progress-text">0%</span>
+            </div>
+            <div class="rl-metric"><span class="rl-metric-label">Timesteps</span><span id="train-timesteps">—</span></div>
+            <div class="rl-metric"><span class="rl-metric-label">Best lap</span><span id="train-best-lap">—</span></div>
+            <div class="rl-metric"><span class="rl-metric-label">Clean rate</span><span id="train-clean-rate">—</span></div>
+            <div class="rl-metric"><span class="rl-metric-label">Last reward</span><span id="train-last-reward">—</span></div>
+            <div class="rl-metric"><span class="rl-metric-label">Previews</span><span id="train-previews">—</span></div>
+            <div class="rl-metric rl-metric-wide"><span class="rl-metric-label">Policy</span><span id="train-policy-key">—</span></div>
+            <p id="train-error" class="config-hint train-error hidden"></p>
+          </div>
+        </div>
       </div>
       <p id="effective-limits" class="config-hint">Effective max speed: —</p>
       <div id="free-drive-panel" class="free-drive-panel hidden">
@@ -439,7 +476,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=52"></script>
+  <script src="/static/app.js?v=53"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
