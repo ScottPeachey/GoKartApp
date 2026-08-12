@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=13" />
+  <link rel="stylesheet" href="/static/style.css?v=14" />
 </head>
 <body>
   <header>
@@ -58,23 +58,6 @@
             <span class="label">Best</span>
             <span id="best-lap-time">—</span>
           </div>
-        </div>
-        <div class="cockpit-status-col">
-          <div class="safety-banner">
-            <div id="safety-card" class="status-card safety-off">
-              <span class="status-card-label">Safety</span>
-              <span id="safety-state" class="status-card-value">OFF</span>
-            </div>
-            <div id="mode-card" class="status-card">
-              <span class="status-card-label">Drive mode</span>
-              <span id="drive-mode" class="status-card-value">—</span>
-            </div>
-          </div>
-        </div>
-        <div class="cockpit-soc">
-          <span class="label">SOC</span>
-          <div class="soc-bar"><div id="soc-fill"></div></div>
-          <span id="soc-text">—</span>
         </div>
         <div id="axle-physics-panel" class="axle-physics-panel inactive">
           <div class="axle-physics-head">
@@ -138,6 +121,23 @@
                 <input type="range" id="steering" min="-100" max="100" value="0" />
               </label>
               <button id="btn-brake-hold" type="button" class="btn-toggle btn-brake-hold hidden">Brake hold: OFF</button>
+            </div>
+          </div>
+        </div>
+        <div class="cockpit-soc">
+          <span class="label">SOC</span>
+          <div class="soc-bar"><div id="soc-fill"></div></div>
+          <span id="soc-text">—</span>
+        </div>
+        <div class="cockpit-status-col">
+          <div class="safety-banner">
+            <div id="safety-card" class="status-card safety-off">
+              <span class="status-card-label">Safety</span>
+              <span id="safety-state" class="status-card-value">OFF</span>
+            </div>
+            <div id="mode-card" class="status-card">
+              <span class="status-card-label">Drive mode</span>
+              <span id="drive-mode" class="status-card-value">—</span>
             </div>
           </div>
         </div>
