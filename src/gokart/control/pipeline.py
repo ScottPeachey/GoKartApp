@@ -146,16 +146,22 @@ def control_step(
 
     governor_brake = 0.0
     if inputs.speed_mps > 0 and limits.max_speed_mps > 0:
+        cruise_cap = limits.max_speed_mps * 0.94
         if inputs.speed_mps >= limits.max_speed_mps:
             motor_torque = 0.0
             overspeed_mps = inputs.speed_mps - limits.max_speed_mps
-            governor_brake = min(1.0, 0.2 + overspeed_mps * 0.35)
+            governor_brake = min(1.0, 0.35 + overspeed_mps * 0.5)
+        elif inputs.speed_mps >= cruise_cap:
+            motor_torque = 0.0
+            span = max(limits.max_speed_mps - cruise_cap, 0.01)
+            overshoot = inputs.speed_mps - cruise_cap
+            governor_brake = min(1.0, 0.15 + (overshoot / span) * 0.55)
         else:
-            taper_start = limits.max_speed_mps * 0.85
+            taper_start = limits.max_speed_mps * 0.82
             if inputs.speed_mps > taper_start:
-                span = limits.max_speed_mps - taper_start
+                span = cruise_cap - taper_start
                 if span > 0:
-                    taper = max(0.0, (limits.max_speed_mps - inputs.speed_mps) / span)
+                    taper = max(0.0, (cruise_cap - inputs.speed_mps) / span)
                     motor_torque *= taper
 
     motor_torque = min(motor_torque, params.motor_peak_torque_nm)

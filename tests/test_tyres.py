@@ -40,6 +40,20 @@ def test_apply_cornering_speed_bleed_reduces_high_speed_turns() -> None:
     assert speed < 5.0
 
 
+def test_apply_cornering_speed_bleed_never_increases_speed() -> None:
+    steer = steering_angle_rad(0.2)
+    for speed in (6.0, 8.0, 12.0):
+        out = apply_cornering_speed_bleed(
+            speed,
+            steer,
+            wheelbase_m=1.04,
+            grip_coefficient=1.1,
+            gradient_rad=0.0,
+            dt=0.01,
+        )
+        assert out <= speed + 1e-9
+
+
 def test_cornering_scrub_increases_with_steering() -> None:
     mass = 193.0
     grip = 1.1

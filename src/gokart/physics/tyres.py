@@ -308,21 +308,22 @@ def apply_cornering_speed_bleed(
     )
     demand_ratio = lat_accel / max(max_lat, 1e-6)
     speed_cap = cornering_speed_limit_mps(steer_rad, wheelbase_m, grip_coefficient, gradient_rad)
+    incoming = speed_mps
     new_speed = min(speed_mps, speed_cap) if speed_cap is not None else speed_mps
 
     if demand_ratio > 1.0:
         bleed = min(1.0, (demand_ratio - 1.0) * 8.0 * dt)
+        new_speed *= 1.0 - bleed
         if speed_cap is not None:
-            new_speed = max(speed_cap, new_speed * (1.0 - bleed))
-        else:
-            new_speed *= 1.0 - bleed
+            new_speed = min(new_speed, speed_cap)
     elif demand_ratio > 0.88:
         # Only bleed speed when cornering load is near the friction limit.
         scrub_fraction = (demand_ratio - 0.88) / 0.12
         scrub_accel = (scrub_fraction * scrub_fraction) * max_lat * 0.35
         new_speed = max(0.0, new_speed - scrub_accel * dt)
 
-    return max(0.0, new_speed)
+    # Cornering bleed must never add speed (a bad max() floor caused runaway on gentle steer).
+    return min(max(0.0, new_speed), incoming)
 
 
 def cornering_scrub_force_n(

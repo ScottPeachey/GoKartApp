@@ -82,6 +82,7 @@ class VehicleStepInputs:
     mechanical_brake: float
     environment: Environment
     steering: float = 0.0
+    max_speed_mps: float | None = None
 
 
 @dataclass(frozen=True)
@@ -470,6 +471,8 @@ class VehicleModel:
             mass_kg=self.mass_kg,
             front_normal_n=wheel_loads.front_normal_n,
         )
+        if inputs.max_speed_mps is not None and inputs.max_speed_mps > 0.0:
+            new_speed = min(new_speed, inputs.max_speed_mps)
         achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt
 

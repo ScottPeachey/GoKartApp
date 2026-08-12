@@ -505,6 +505,7 @@ def run_simulation(
                 mechanical_brake=control_out.mechanical_brake,
                 environment=env,
                 steering=steering,
+                max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else None,
             ),
             dt_s,
         )
