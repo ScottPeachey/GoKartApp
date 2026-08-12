@@ -61,6 +61,11 @@ def _critical_faults(faults: set[FaultId]) -> set[FaultId]:
     return {fault for fault in faults if FAULT_REGISTRY[fault].severity == FaultSeverity.CRITICAL}
 
 
+def _latch_blocking_faults(faults: set[FaultId], latched: set[FaultId]) -> None:
+    """Keep recoverable blocking faults visible until the operator acknowledges."""
+    latched |= _blocking_faults(faults)
+
+
 def _outputs_for_state(
     state: SafetyState,
     faults: set[FaultId],
@@ -147,6 +152,10 @@ def safety_step(
 
     if state == SafetyState.SELF_TEST:
         if critical or blocking:
+            _latch_blocking_faults(inputs.detected_faults, latched)
+            active_faults = merge_fault_sets(inputs.detected_faults, latched)
+            blocking = _blocking_faults(active_faults)
+            critical = _critical_faults(active_faults)
             state = SafetyState.FAULT
         elif timers.state_elapsed_s >= config.self_test_duration_s:
             state = SafetyState.READY
@@ -173,6 +182,9 @@ def safety_step(
             state = SafetyState.SAFE_SHUTDOWN
             timers.shutdown_elapsed_s = 0.0
         elif blocking:
+            _latch_blocking_faults(inputs.detected_faults, latched)
+            active_faults = merge_fault_sets(inputs.detected_faults, latched)
+            blocking = _blocking_faults(active_faults)
             state = SafetyState.FAULT
         elif inputs.arm_request and inputs.driver_authenticated and inputs.brake_pressed:
             timers.precharge_elapsed_s = 0.0
@@ -214,6 +226,8 @@ def safety_step(
             )
 
         if blocking:
+            _latch_blocking_faults(inputs.detected_faults, latched)
+            active_faults = merge_fault_sets(inputs.detected_faults, latched)
             state = SafetyState.FAULT
             return (
                 state,
@@ -292,6 +306,8 @@ def safety_step(
             )
 
         if blocking:
+            _latch_blocking_faults(inputs.detected_faults, latched)
+            active_faults = merge_fault_sets(inputs.detected_faults, latched)
             state = SafetyState.FAULT
             return (
                 state,
@@ -339,13 +355,20 @@ def safety_step(
         )
 
     if state == SafetyState.FAULT:
+        _latch_blocking_faults(inputs.detected_faults, latched)
+        active_faults = merge_fault_sets(inputs.detected_faults, latched)
+        blocking = _blocking_faults(active_faults)
+        critical = _critical_faults(active_faults)
+        detected_blocking = _blocking_faults(inputs.detected_faults)
         if critical:
             for fault in critical:
                 if FAULT_REGISTRY[fault].latching:
                     latched.add(fault)
             state = SafetyState.SAFE_SHUTDOWN
             timers.shutdown_elapsed_s = 0.0
-        elif not blocking and inputs.fault_ack_request:
+        elif not detected_blocking and inputs.fault_ack_request:
+            latched.clear()
+            active_faults = merge_fault_sets(inputs.detected_faults, latched)
             state = SafetyState.READY
             timers.state_elapsed_s = 0.0
         return (

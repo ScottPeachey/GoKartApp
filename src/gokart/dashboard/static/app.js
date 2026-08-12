@@ -16,6 +16,8 @@ const state = {
   channelStableValues: {},
   faultAckPending: false,
   faultControlsActive: false,
+  faultContext: null,
+  effectiveLimits: null,
   hiddenChannels: new Set(),
   channelCustomiseOpen: false,
   historySessionListKey: "",
@@ -136,13 +138,54 @@ const FAULT_HELP = {
   CELL_UNDERVOLTAGE: "Cell voltage too low — stop driving and click Clear fault after recovery.",
 };
 
-function describeFaults(faultCodes) {
+const OVERSPEED_FAULT_MARGIN_KMH = 1.8;
+
+function describeFaultCode(code, sample = {}, context = null) {
+  const trimmed = code.trim();
+  if (trimmed === "OVERSPEED") {
+    const peakKmh = context?.peakSpeedKmh ?? Number(sample.speed_mps || 0) * 3.6;
+    const limitKmh = Number(state.effectiveLimits?.max_speed_kmh || 0);
+    const faultKmh = limitKmh > 0 ? limitKmh + OVERSPEED_FAULT_MARGIN_KMH : 0;
+    const speedPart = peakKmh > 0 ? `${peakKmh.toFixed(1)} km/h` : "speed too high";
+    const limitPart = limitKmh > 0
+      ? `limit ${limitKmh.toFixed(0)} km/h (fault above ${faultKmh.toFixed(1)} km/h)`
+      : "the drive-mode speed limit";
+    return `Speed ${speedPart} exceeded ${limitPart}. Ease off the throttle, slow down, then click Clear fault.`;
+  }
+  return FAULT_HELP[trimmed] || trimmed;
+}
+
+function describeFaults(faultCodes, sample = {}, context = null) {
   if (!faultCodes) return "A safety fault was detected.";
   return faultCodes
     .split(",")
     .filter(Boolean)
-    .map((code) => FAULT_HELP[code.trim()] || code.trim())
+    .map((code) => describeFaultCode(code, sample, context))
     .join(" ");
+}
+
+function updateFaultContext(sample) {
+  const faults = sample.active_faults || "";
+  const safetyState = sample.safety_state || "";
+  const speedKmh = Number(sample.speed_mps || 0) * 3.6;
+  const faultActive = Boolean(faults) || isFaultSafetyState(safetyState);
+
+  if (faultActive) {
+    const codes = faults || state.faultContext?.codes || "";
+    const peakSpeedKmh = Math.max(state.faultContext?.peakSpeedKmh || 0, speedKmh);
+    state.faultContext = { codes, peakSpeedKmh };
+    return;
+  }
+
+  if (safetyState === "READY" || safetyState === "OFF" || safetyState === "DRIVING") {
+    state.faultContext = null;
+  }
+}
+
+function faultDisplayCodes(sample) {
+  const faults = sample.active_faults || "";
+  if (faults) return faults;
+  return state.faultContext?.codes || "";
 }
 
 const SAFETY_CLASSES = [
@@ -196,16 +239,31 @@ function syncFaultDrivingControls(safetyState) {
 
 function setFaultBanner(sample) {
   const banner = document.getElementById("fault-banner");
-  const faults = sample.active_faults || "";
+  updateFaultContext(sample);
+  const faults = faultDisplayCodes(sample);
   const safetyState = sample.safety_state || "";
   if (faults || safetyState === "FAULT" || safetyState === "SAFE_SHUTDOWN") {
-    const detail = faults ? describeFaults(faults) : "Safety fault active.";
-    banner.textContent = safetyState === "SAFE_SHUTDOWN"
-      ? `SAFE SHUTDOWN: ${detail}`
-      : `FAULT: ${detail}`;
+    const codes = faults
+      .split(",")
+      .map((code) => code.trim())
+      .filter(Boolean);
+    const detail = faults
+      ? describeFaults(faults, sample, state.faultContext)
+      : "Safety fault active — check active faults and click Clear fault when safe.";
+    const prefix = safetyState === "SAFE_SHUTDOWN" ? "SAFE SHUTDOWN" : "FAULT";
+    banner.replaceChildren();
+    const title = document.createElement("div");
+    title.className = "fault-banner-title";
+    title.textContent = codes.length ? `${prefix}: ${codes.join(", ")}` : `${prefix}`;
+    banner.appendChild(title);
+    const body = document.createElement("div");
+    body.className = "fault-banner-detail";
+    body.textContent = detail;
+    banner.appendChild(body);
     banner.classList.remove("hidden");
   } else {
     banner.classList.add("hidden");
+    banner.replaceChildren();
   }
 }
 
@@ -505,7 +563,9 @@ function resetDriveUi() {
   safetyCard.classList.remove(...SAFETY_CLASSES);
   safetyCard.classList.add("safety-off");
   document.getElementById("fault-banner").classList.add("hidden");
+  document.getElementById("fault-banner").replaceChildren();
   document.getElementById("fault-recovery-panel")?.classList.add("hidden");
+  state.faultContext = null;
   state.channelStableValues = {};
   updateSliderReadouts();
   resetAxlePhysicsPanel();
@@ -923,6 +983,7 @@ async function updateEffectiveLimits() {
       profile,
     });
     const limits = await api(`/api/config/effective-limits?${params}`);
+    state.effectiveLimits = limits;
     const layerLabel = {
       hardware: "hardware",
       vehicle: "vehicle",
@@ -1931,12 +1992,16 @@ function updateFreeDriveGuide(safetyState) {
       break;
     case "FAULT":
     case "SAFE_SHUTDOWN": {
-      const faults = state.lastSample.active_faults || "";
+      const faults = faultDisplayCodes(state.lastSample);
       const recovery = document.getElementById("fault-recovery-panel");
       const recoveryText = document.getElementById("fault-recovery-text");
       if (recovery && recoveryText) {
         recovery.classList.remove("hidden");
-        recoveryText.textContent = describeFaults(faults);
+        recoveryText.textContent = describeFaults(
+          faults,
+          state.lastSample,
+          state.faultContext,
+        );
       }
       const isCritical = String(faults).includes("PACK_") || String(faults).includes("CELL_")
         || String(faults).includes("BATTERY_OVERTEMP") || String(faults).includes("CONTACTOR")
@@ -2352,6 +2417,7 @@ function setupControls() {
     updateSliderReadouts();
     await sendInputs();
     state.faultAckPending = true;
+    state.faultContext = null;
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-brake-hold").addEventListener("click", () => setBrakeHold(!state.brakeHold));
@@ -2362,6 +2428,7 @@ function setupControls() {
     updateSliderReadouts();
     await sendInputs();
     state.faultAckPending = true;
+    state.faultContext = null;
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-refresh-sessions").addEventListener("click", () => {

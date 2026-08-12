@@ -139,6 +139,45 @@ def test_precharge_failure_critical_shutdown() -> None:
     assert FaultId.PRECHARGE_FAILURE in outputs.active_faults
 
 
+def test_overspeed_fault_latched_until_ack() -> None:
+    config = SafetyConfig(max_speed_mps=12.5, overspeed_margin_mps=0.5)
+    state = SafetyState.DRIVING
+    timers = SafetyTimers()
+    latched: set[FaultId] = set()
+    state, outputs, timers, latched = safety_step(
+        state,
+        SafetyInputs(detected_faults={FaultId.OVERSPEED}),
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    assert state == SafetyState.FAULT
+    assert FaultId.OVERSPEED in outputs.active_faults
+
+    state, outputs, timers, latched = safety_step(
+        state,
+        SafetyInputs(detected_faults=set()),
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    assert state == SafetyState.FAULT
+    assert FaultId.OVERSPEED in outputs.active_faults
+
+    state, outputs, timers, latched = safety_step(
+        state,
+        SafetyInputs(detected_faults=set(), fault_ack_request=True),
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    assert state == SafetyState.READY
+    assert FaultId.OVERSPEED not in outputs.active_faults
+
+
 def test_recoverable_fault_requires_ack() -> None:
     config = SafetyConfig()
     state = SafetyState.DRIVING

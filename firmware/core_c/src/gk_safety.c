@@ -31,6 +31,14 @@ static void latch_critical(uint32_t faults, uint32_t *latched) {
     }
 }
 
+static void latch_blocking(uint32_t faults, uint32_t *latched) {
+    for (int i = 0; i < GK_FAULT_COUNT; ++i) {
+        if ((faults & (1u << i)) && gk_fault_is_blocking((gk_fault_id_t)i)) {
+            *latched |= (1u << i);
+        }
+    }
+}
+
 void gk_safety_step(
     gk_safety_state_t state,
     const gk_safety_inputs_t *inputs,
@@ -53,6 +61,7 @@ void gk_safety_step(
 
     bool critical = gk_has_critical_fault(active_faults);
     bool blocking = gk_has_blocking_fault(active_faults);
+    bool detected_blocking = gk_has_blocking_fault(inputs->detected_faults);
 
     switch (state) {
     case GK_SAFETY_OFF:
@@ -80,6 +89,8 @@ void gk_safety_step(
 
     case GK_SAFETY_SELF_TEST:
         if (critical || blocking) {
+            latch_blocking(inputs->detected_faults, &latched);
+            active_faults = gk_merge_faults(inputs->detected_faults, latched);
             state = GK_SAFETY_FAULT;
         } else if (timers->state_elapsed_s >= config->self_test_duration_s) {
             state = GK_SAFETY_READY;
@@ -96,6 +107,8 @@ void gk_safety_step(
             state = GK_SAFETY_SAFE_SHUTDOWN;
             timers->shutdown_elapsed_s = 0.0f;
         } else if (blocking) {
+            latch_blocking(inputs->detected_faults, &latched);
+            active_faults = gk_merge_faults(inputs->detected_faults, latched);
             state = GK_SAFETY_FAULT;
         } else if (inputs->arm_request && inputs->driver_authenticated && inputs->brake_pressed) {
             timers->precharge_elapsed_s = 0.0f;
@@ -118,6 +131,8 @@ void gk_safety_step(
             break;
         }
         if (blocking) {
+            latch_blocking(inputs->detected_faults, &latched);
+            active_faults = gk_merge_faults(inputs->detected_faults, latched);
             state = GK_SAFETY_FAULT;
             *outputs = make_outputs(
                 state, active_faults, config, GK_CONTACTOR_OPEN, false, false, 0
@@ -164,6 +179,8 @@ void gk_safety_step(
             break;
         }
         if (blocking) {
+            latch_blocking(inputs->detected_faults, &latched);
+            active_faults = gk_merge_faults(inputs->detected_faults, latched);
             state = GK_SAFETY_FAULT;
             *outputs = make_outputs(
                 state, active_faults, config, GK_CONTACTOR_OPEN, false, false, 0
@@ -184,11 +201,17 @@ void gk_safety_step(
         break;
 
     case GK_SAFETY_FAULT:
+        latch_blocking(inputs->detected_faults, &latched);
+        active_faults = gk_merge_faults(inputs->detected_faults, latched);
+        critical = gk_has_critical_fault(active_faults);
+        detected_blocking = gk_has_blocking_fault(inputs->detected_faults);
         if (critical) {
             latch_critical(active_faults, &latched);
             state = GK_SAFETY_SAFE_SHUTDOWN;
             timers->shutdown_elapsed_s = 0.0f;
-        } else if (!blocking && inputs->fault_ack_request) {
+        } else if (!detected_blocking && inputs->fault_ack_request) {
+            latched = 0;
+            active_faults = inputs->detected_faults;
             state = GK_SAFETY_READY;
             timers->state_elapsed_s = 0.0f;
         }

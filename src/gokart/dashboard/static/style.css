@@ -1036,6 +1036,18 @@ select, input[type="range"] { accent-color: var(--accent); }
   font-weight: 600;
 }
 
+.fault-banner-title {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.fault-banner-detail {
+  margin-top: 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 .fault-banner.hidden { display: none; }
 
 .tabs { display: flex; gap: 0.5rem; }
