@@ -8,6 +8,7 @@ const state = {
   simRunning: false,
   trainingRunning: false,
   trainingMetrics: {},
+  trainingPollTimer: null,
   historyPollTimer: null,
   historyRefreshInFlight: false,
   historyPollCount: 0,
@@ -144,6 +145,17 @@ const OVERSPEED_FAULT_MARGIN_KMH = 1.8;
 const HISTORY_CHART_VIEWPORT_WIDTH = 900;
 const HISTORY_CHART_HEIGHT = 220;
 const HISTORY_CHART_PX_PER_SAMPLE = 1.5;
+const TRAIN_STATUS_LABELS = {
+  idle: "Idle",
+  starting: "Starting…",
+  loading_libraries: "Loading PyTorch (first run can take a minute)…",
+  building_model: "Building policy network…",
+  training: "Training",
+  stopping: "Stopping…",
+  stopped: "Stopped",
+  failed: "Failed",
+  ceiling_reached: "Ceiling reached",
+};
 
 function describeFaultCode(code, sample = {}, context = null) {
   const trimmed = code.trim();
@@ -1877,10 +1889,11 @@ async function drawSessionChart(sessionId) {
 
 function updateHistoryMarkerFromLive() {
   if (!isHistoryTabActive() || !state.historyPathBaseTransform) return;
-  if (!state.simRunning || !state.liveSessionId) return;
+  const liveTraining = state.trainingRunning;
+  if ((!state.simRunning || !state.liveSessionId) && !liveTraining) return;
 
   const sessionSelect = document.getElementById("session-select");
-  if (sessionSelect.value !== state.liveSessionId) {
+  if (!liveTraining && sessionSelect.value !== state.liveSessionId) {
     if ([...sessionSelect.options].some((option) => option.value === state.liveSessionId)) {
       sessionSelect.value = state.liveSessionId;
       resetLiveHistoryState();
@@ -1902,35 +1915,40 @@ function updateHistoryMarkerFromLive() {
   });
   if (markerFingerprint === state.historyMarkerFingerprint) return;
 
-  if (state.historyPathLayer) {
-    const marker = state.historyPathLayer.marker;
-    const xs = marker.xs.slice();
-    const ys = marker.ys.slice();
-    const speeds = state.historyPathLayer.speeds.slice();
-    const lastX = xs.length ? xs[xs.length - 1] : null;
-    const lastY = ys.length ? ys[ys.length - 1] : null;
-    const moved = lastX === null || Math.hypot(liveX - lastX, liveY - lastY) > 0.05;
-    if (moved) {
-      xs.push(liveX);
-      ys.push(liveY);
-      speeds.push(liveSpeedKmh);
-    }
-    state.historyPathLayer.marker = {
-      ...marker,
-      x: liveX,
-      y: liveY,
-      heading: liveHeading,
-      useLiveMarker: true,
-      xs,
-      ys,
+  if (!state.historyPathLayer) {
+    state.historyPathLayer = {
+      marker: { x: liveX, y: liveY, heading: liveHeading, useLiveMarker: true, xs: [], ys: [] },
+      speeds: [],
+      pathColorMaxKmh: state.historyPathColorMaxKmh ?? 45,
     };
-    state.historyPathLayer.speeds = speeds;
-    if (moved) {
-      schedulePathRedraw();
-    } else if (state.pathFollowKart) {
-      applyPathFollowIfEnabled();
-      schedulePathRedraw();
-    }
+  }
+  const marker = state.historyPathLayer.marker;
+  const xs = marker.xs.slice();
+  const ys = marker.ys.slice();
+  const speeds = state.historyPathLayer.speeds.slice();
+  const lastX = xs.length ? xs[xs.length - 1] : null;
+  const lastY = ys.length ? ys[ys.length - 1] : null;
+  const moved = lastX === null || Math.hypot(liveX - lastX, liveY - lastY) > 0.05;
+  if (moved) {
+    xs.push(liveX);
+    ys.push(liveY);
+    speeds.push(liveSpeedKmh);
+  }
+  state.historyPathLayer.marker = {
+    ...marker,
+    x: liveX,
+    y: liveY,
+    heading: liveHeading,
+    useLiveMarker: true,
+    xs,
+    ys,
+  };
+  state.historyPathLayer.speeds = speeds;
+  if (moved) {
+    schedulePathRedraw();
+  } else if (state.pathFollowKart) {
+    applyPathFollowIfEnabled();
+    schedulePathRedraw();
   }
 
   drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
@@ -2160,15 +2178,35 @@ function applyTrainingMetrics(metrics) {
   state.trainingRunning = Boolean(metrics.running);
   renderTrainingMetricsPanel(metrics);
   syncTrainingControlsState();
+  ensureTrainingStatusPoll();
   if (wasRunning && !state.trainingRunning) {
     void updateAutoPolicyStatus();
+  }
+}
+
+function ensureTrainingStatusPoll() {
+  if (state.trainingRunning && state.trainingPollTimer == null) {
+    state.trainingPollTimer = setInterval(() => {
+      if (!state.trainingRunning) {
+        clearInterval(state.trainingPollTimer);
+        state.trainingPollTimer = null;
+        return;
+      }
+      void refreshTrainingStatus();
+    }, 1000);
+    return;
+  }
+  if (!state.trainingRunning && state.trainingPollTimer != null) {
+    clearInterval(state.trainingPollTimer);
+    state.trainingPollTimer = null;
   }
 }
 
 function renderTrainingMetricsPanel(metrics) {
   const panel = document.getElementById("rl-train-metrics");
   if (!panel) return;
-  const show = state.trainingRunning || metrics.status === "failed" || metrics.status === "ceiling_reached" || metrics.status === "stopped";
+  const show = state.trainingRunning
+    || ["failed", "ceiling_reached", "stopped", "starting", "loading_libraries", "building_model"].includes(metrics.status);
   panel.classList.toggle("hidden", !show);
 
   const pct = Number(metrics.progress_pct || 0);
@@ -2181,8 +2219,10 @@ function renderTrainingMetricsPanel(metrics) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   };
-  const previewNote = metrics.preview_running ? " (preview lap…)" : "";
-  setText("train-status", `${metrics.status || "—"}${previewNote}`);
+  const previewNote = metrics.preview_running ? " (scored preview lap…)" : "";
+  const statusKey = metrics.status || "—";
+  const statusLabel = TRAIN_STATUS_LABELS[statusKey] || statusKey;
+  setText("train-status", `${statusLabel}${previewNote}`);
   setText(
     "train-timesteps",
     `${Number(metrics.timesteps || 0).toLocaleString()} / ${Number(metrics.total_timesteps || 0).toLocaleString()}`,
@@ -2250,6 +2290,7 @@ async function startRlTraining() {
   syncTrackSelectValue(trackId);
   await loadSelectedTrack(true);
   state.pathFollowKart = true;
+  ensureTrackMapVisible(true);
   await api("/api/rl/train/start", {
     method: "POST",
     body: JSON.stringify({

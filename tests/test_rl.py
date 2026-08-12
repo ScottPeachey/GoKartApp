@@ -7,11 +7,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from gokart.rl.env import make_env
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import build_policy_identity
 from gokart.rl.registry import PolicyManifest, save_manifest
 from gokart.rl.rewards import RewardState, compute_reward, reward_preset
-from gokart.rl.env import make_env
 from gokart.track.importer import import_geojson_track
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -191,3 +191,32 @@ def test_run_preview_episode_with_stub_model(hairpin_track) -> None:
     assert clean in {0.0, 1.0}
     assert len(ticks) > 0
     assert "speed_mps" in ticks[0]
+
+
+def test_stream_training_tick_unwraps_monitor() -> None:
+    from types import SimpleNamespace
+
+    from gokart.rl.trainer import _stream_training_tick
+
+    ticks: list[dict] = []
+
+    class _Hooks:
+        def on_progress(self, progress) -> None:
+            return
+
+        def on_preview_tick(self, row: dict) -> None:
+            ticks.append(row)
+
+        def should_stop(self) -> bool:
+            return False
+
+    inner = SimpleNamespace(
+        session=SimpleNamespace(
+            state=SimpleNamespace(
+                last_tick=SimpleNamespace(to_row=lambda: {"speed_mps": 3.2})
+            )
+        )
+    )
+    vec = SimpleNamespace(envs=[SimpleNamespace(env=inner)])
+    _stream_training_tick(vec, _Hooks())
+    assert ticks == [{"speed_mps": 3.2}]

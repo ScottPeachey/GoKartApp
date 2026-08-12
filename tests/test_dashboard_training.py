@@ -25,6 +25,12 @@ def test_training_progress_to_dict() -> None:
     assert payload["preview_running"] is True
 
 
+def test_training_status_labels_cover_init_phases() -> None:
+    for status in ("starting", "loading_libraries", "building_model", "training"):
+        payload = TrainingProgress(status=status, total_timesteps=1000).to_dict()
+        assert payload["status"] == status
+
+
 def test_rl_train_status_endpoint() -> None:
     client = TestClient(create_app())
     response = client.get("/api/rl/train/status")

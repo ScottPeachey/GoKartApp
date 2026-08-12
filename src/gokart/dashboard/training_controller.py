@@ -6,7 +6,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any
 
-from gokart.rl.hooks import TrainingProgress, TrainingHooks
+from gokart.rl.hooks import TrainingProgress
 from gokart.rl.trainer import TrainingConfig, train_policy
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import validate_sample_row
@@ -111,12 +111,14 @@ class TrainingController:
             total_timesteps=request.total_timesteps,
             preview_freq=request.preview_freq,
             eval_freq=request.preview_freq,
+            n_steps=256,
+            batch_size=64,
             seed=request.seed,
         )
         try:
             hooks.on_progress(
                 TrainingProgress(
-                    status="training",
+                    status="starting",
                     total_timesteps=config.total_timesteps,
                     policy_key=_policy_key_for(config),
                 )

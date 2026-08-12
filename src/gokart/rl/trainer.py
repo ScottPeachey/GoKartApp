@@ -28,8 +28,12 @@ class TrainingConfig:
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
     preview_log_every_n: int = 2
+    rollout_stream_every: int = 8
+    progress_every: int = 50
     eval_freq: int = 10_000
     n_eval_episodes: int = 2
+    n_steps: int = 2048
+    batch_size: int = 64
     seed: int = 0
     learning_rate: float = 3e-4
     plateau_evals: int = 3
@@ -99,15 +103,6 @@ def train_policy(
     hooks: TrainingHooks | None = None,
     stop_check: Callable[[], bool] | None = None,
 ) -> TrainingResult:
-    try:
-        from stable_baselines3 import PPO
-        from stable_baselines3.common.callbacks import BaseCallback
-        from stable_baselines3.common.monitor import Monitor
-    except ImportError as exc:
-        raise RuntimeError(
-            "RL training requires stable-baselines3. Install with: uv sync --group rl"
-        ) from exc
-
     callbacks = hooks or NullTrainingHooks()
     should_stop = stop_check or (lambda: False)
 
@@ -121,6 +116,28 @@ def train_policy(
         objective=config.objective,  # type: ignore[arg-type]
         root=root,
     )
+
+    def _status(status: str, **kwargs: Any) -> None:
+        callbacks.on_progress(
+            TrainingProgress(
+                timesteps=int(kwargs.get("timesteps", 0)),
+                total_timesteps=config.total_timesteps,
+                status=status,
+                policy_key=identity.policy_key,
+                preview_running=bool(kwargs.get("preview_running", False)),
+            )
+        )
+
+    _status("loading_libraries")
+    try:
+        from stable_baselines3 import PPO
+        from stable_baselines3.common.callbacks import BaseCallback
+        from stable_baselines3.common.monitor import Monitor
+    except ImportError as exc:
+        raise RuntimeError(
+            "RL training requires stable-baselines3. Install with: uv sync --group rl"
+        ) from exc
+
     manifest = PolicyManifest(
         identity=identity,
         status="training",
@@ -142,13 +159,16 @@ def train_policy(
         )
         return Monitor(env)
 
+    _status("building_model")
     env = _make()
     model = PPO(
         "MlpPolicy",
         env,
-        verbose=1,
+        verbose=0,
         seed=config.seed,
         learning_rate=config.learning_rate,
+        n_steps=config.n_steps,
+        batch_size=config.batch_size,
     )
 
     eval_history: list[float | None] = []
@@ -184,8 +204,18 @@ def train_policy(
                 stop_training_flag = True
                 return False
 
-            if self.num_timesteps > 0 and self.num_timesteps % 1000 == 0:
+            if (
+                self.num_timesteps > 0
+                and config.progress_every > 0
+                and self.num_timesteps % config.progress_every == 0
+            ):
                 _emit_progress(timesteps=self.num_timesteps)
+
+            if (
+                config.rollout_stream_every > 0
+                and self.num_timesteps % config.rollout_stream_every == 0
+            ):
+                _stream_training_tick(self.training_env, callbacks)
 
             run_preview = (
                 self.num_timesteps > 0
@@ -356,6 +386,27 @@ def verify_policy(identity: PolicyIdentity, *, episodes: int = 5, root: Path | N
         "clean_lap_rate": clean_rate,
         "episodes": episodes,
     }
+
+
+def _unwrap_env(vec_env: Any) -> Any:
+    env = vec_env
+    envs = getattr(env, "envs", None)
+    if envs:
+        env = envs[0]
+    for _ in range(8):
+        inner = getattr(env, "env", None)
+        if inner is None:
+            break
+        env = inner
+    return env
+
+
+def _stream_training_tick(vec_env: Any, hooks: TrainingHooks) -> None:
+    kart_env = _unwrap_env(vec_env)
+    session = getattr(kart_env, "session", None)
+    if session is None or session.state.last_tick is None:
+        return
+    hooks.on_preview_tick(session.state.last_tick.to_row())
 
 
 def _plateau_reached(history: list[float | None], window: int, epsilon: float) -> bool:

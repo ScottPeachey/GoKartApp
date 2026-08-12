@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=21" />
+  <link rel="stylesheet" href="/static/style.css?v=22" />
 </head>
 <body>
   <header>
@@ -223,8 +223,10 @@
         <div id="rl-train-panel" class="rl-train-panel">
           <h4>Train learned driver</h4>
           <p class="config-hint">
-            Preview laps stream to the <strong>live track view</strong> every N PPO steps
-            (uses vehicle, track, mode, profile, and objective above).
+            Training rollouts appear on the <strong>live track view</strong> immediately.
+            A scored preview lap still runs every N PPO steps (uses vehicle, track, mode,
+            profile, and objective above). The first start can sit on
+            <em>Loading PyTorch</em> for up to a minute.
           </p>
           <div class="row">
             <label>Total steps
@@ -478,7 +480,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=55"></script>
+  <script src="/static/app.js?v=56"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
