@@ -320,6 +320,7 @@ function updateDrivePanel(sample, speedKmh) {
 
   setFaultBanner(sample);
   syncFaultDrivingControls(safetyState);
+  syncSlidersFromSample(sample);
   updateFreeDriveGuide(safetyState);
   updateAxlePhysicsPanel(sample);
 }
@@ -601,6 +602,29 @@ function simMode() {
 function interactiveInputsEnabled() {
   const mode = simMode();
   return mode === "free" || mode === "manual";
+}
+
+function autoDriveActive() {
+  return simMode() === "auto" && state.simRunning;
+}
+
+function syncSlidersFromSample(sample) {
+  if (!autoDriveActive()) return;
+  const throttleEl = document.getElementById("throttle");
+  const brakeEl = document.getElementById("brake");
+  const steeringEl = document.getElementById("steering");
+  if (!throttleEl || !brakeEl || !steeringEl) return;
+
+  const throttlePct = Math.round(Math.max(0, Math.min(100, Number(sample.throttle || 0) * 100)));
+  const brakePct = Math.round(Math.max(0, Math.min(100, Number(sample.brake || 0) * 100)));
+  const steeringPct = Math.round(
+    Math.max(-100, Math.min(100, -Number(sample.steering || 0) * 100)),
+  );
+
+  if (Number(throttleEl.value) !== throttlePct) throttleEl.value = String(throttlePct);
+  if (Number(brakeEl.value) !== brakePct) brakeEl.value = String(brakePct);
+  if (Number(steeringEl.value) !== steeringPct) steeringEl.value = String(steeringPct);
+  updateSliderReadouts();
 }
 
 const CHANNEL_UI = {
@@ -2041,8 +2065,16 @@ function startManualInputPolling() {
 function syncDrivingControlsState() {
   const mode = simMode();
   const interactive = interactiveInputsEnabled();
+  const auto = autoDriveActive();
   const driving = document.getElementById("driving-controls");
   document.getElementById("btn-brake-hold").classList.toggle("hidden", mode !== "free");
+  driving.classList.toggle("auto-passive", auto);
+
+  if (auto) {
+    driving.classList.remove("locked");
+    return;
+  }
+  driving.classList.remove("auto-passive");
 
   if (!interactive) {
     driving.classList.add("locked");
@@ -2412,6 +2444,7 @@ function setupControls() {
     });
     state.simRunning = true;
     if (interactiveInputsEnabled()) startManualInputPolling();
+    syncDrivingControlsState();
     await beginLiveSession();
     updateSimModeUi();
     updateFreeDriveGuide(state.lastSample.safety_state || "OFF");

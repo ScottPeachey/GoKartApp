@@ -33,11 +33,14 @@ def step_thermal(
     inputs: ThermalInputs,
     params: ThermalParams,
     dt: float,
+    *,
+    cooling_scale: float = 1.0,
 ) -> tuple[ThermalState, ThermalOutputs]:
     if params.thermal_capacity_j_per_k <= 0 or params.thermal_resistance_k_per_w <= 0:
         return state, ThermalOutputs(temperature_c=state.temperature_c, heat_loss_w=0.0)
 
-    heat_loss = (state.temperature_c - params.ambient_temp_c) / params.thermal_resistance_k_per_w
+    effective_r = params.thermal_resistance_k_per_w / max(cooling_scale, 0.1)
+    heat_loss = (state.temperature_c - params.ambient_temp_c) / effective_r
     dT = (inputs.heat_w - heat_loss) * dt / params.thermal_capacity_j_per_k
     new_temp = state.temperature_c + dT
     new_state = ThermalState(temperature_c=new_temp)

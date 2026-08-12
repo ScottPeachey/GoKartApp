@@ -31,10 +31,14 @@ def pure_pursuit_step(
     wheelbase_m: float,
     lookahead_base_m: float = 4.0,
     lookahead_gain: float = 0.35,
-    speed_kp_throttle: float = 0.12,
-    speed_kp_brake: float = 0.18,
+    speed_kp_throttle: float = 0.07,
+    speed_kp_brake: float = 0.16,
+    max_throttle: float = 0.85,
     soc: float = 1.0,
     aggression: float = 1.0,
+    battery_temp_c: float = 25.0,
+    battery_derate_c: float = 50.0,
+    battery_fault_c: float = 60.0,
 ) -> PursuitOutputs:
     """Compute driver inputs for one control tick."""
     target_speed = profile.target_speed_mps(s_m, track_length_m)
@@ -65,9 +69,14 @@ def pure_pursuit_step(
     throttle = 0.0
     brake = 0.0
     if speed_error > 0.15:
-        throttle = max(0.0, min(1.0, speed_kp_throttle * speed_error))
+        throttle = max(0.0, min(max_throttle, speed_kp_throttle * speed_error))
     elif speed_error < -0.2:
         brake = max(0.0, min(1.0, speed_kp_brake * abs(speed_error)))
+
+    if battery_temp_c >= battery_derate_c:
+        hot_span = max(battery_fault_c - battery_derate_c, 1.0)
+        thermal_scale = max(0.25, 1.0 - (battery_temp_c - battery_derate_c) / hot_span)
+        throttle *= thermal_scale
 
     return PursuitOutputs(
         throttle=throttle,

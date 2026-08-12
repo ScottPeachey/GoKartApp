@@ -944,6 +944,10 @@ button.btn-path-follow {
   border-top: 1px solid #2a3548;
 }
 
+.driving-controls.auto-passive input[type="range"] {
+  pointer-events: none;
+}
+
 .driving-controls.locked {
   opacity: 0.45;
   pointer-events: none;

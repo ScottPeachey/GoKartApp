@@ -247,8 +247,8 @@ class VehicleModel:
                 thermal_resistance_k_per_w=0.5,
             ),
             battery_thermal_params=ThermalParams(
-                thermal_capacity_j_per_k=5000.0,
-                thermal_resistance_k_per_w=0.2,
+                thermal_capacity_j_per_k=8000.0,
+                thermal_resistance_k_per_w=0.28,
             ),
             front_tyre_thermal_params=front_tyre_thermal,
             rear_tyre_thermal_params=rear_tyre_thermal,
@@ -521,6 +521,7 @@ class VehicleModel:
             ThermalInputs(heat_w=battery_out.heat_w),
             replace(self.battery_thermal_params, ambient_temp_c=env.ambient_temp_c),
             dt,
+            cooling_scale=1.0 + min(new_speed, 14.0) * 0.1,
         )
 
         new_state = VehicleState(

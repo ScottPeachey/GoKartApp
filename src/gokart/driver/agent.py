@@ -17,6 +17,8 @@ class DriverConfig:
     wheelbase_m: float
     aggression: float = 1.0
     apex_offset_m: float = 0.85
+    battery_temp_derate_c: float = 50.0
+    battery_temp_fault_c: float = 60.0
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,12 @@ class DriverOutputs:
     target_speed_mps: float
     track_s_m: float
     lateral_m: float
+
+
+@dataclass
+class _DriverActuatorState:
+    throttle: float = 0.0
+    brake: float = 0.0
 
 
 class RuleBasedDriver:
@@ -42,6 +50,7 @@ class RuleBasedDriver:
             max_speed_mps=config.max_speed_mps,
             aggression=config.aggression,
         )
+        self._actuators = _DriverActuatorState()
 
     @property
     def racing_line(self):
@@ -59,6 +68,8 @@ class RuleBasedDriver:
         heading_rad: float,
         speed_mps: float,
         soc: float = 1.0,
+        battery_temp_c: float = 25.0,
+        dt: float = 0.01,
     ) -> DriverOutputs:
         s_m, lateral_m = project_to_line(self._line, x, y)
         pursuit = pure_pursuit_step(
@@ -73,12 +84,26 @@ class RuleBasedDriver:
             wheelbase_m=self.config.wheelbase_m,
             soc=soc,
             aggression=self.config.aggression,
+            battery_temp_c=battery_temp_c,
+            battery_derate_c=self.config.battery_temp_derate_c,
+            battery_fault_c=self.config.battery_temp_fault_c,
         )
+        throttle = _slew(self._actuators.throttle, pursuit.throttle, 1.2, dt)
+        brake = _slew(self._actuators.brake, pursuit.brake, 2.5, dt)
+        self._actuators.throttle = throttle
+        self._actuators.brake = brake
         return DriverOutputs(
-            throttle=pursuit.throttle,
-            brake=pursuit.brake,
+            throttle=throttle,
+            brake=brake,
             steering=pursuit.steering,
             target_speed_mps=pursuit.target_speed_mps,
             track_s_m=s_m,
             lateral_m=lateral_m,
         )
+
+
+def _slew(current: float, target: float, max_rate_per_s: float, dt: float) -> float:
+    if dt <= 0.0:
+        return target
+    delta = max(-max_rate_per_s * dt, min(max_rate_per_s * dt, target - current))
+    return max(0.0, min(1.0, current + delta))

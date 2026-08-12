@@ -241,6 +241,8 @@ def run_simulation(
                     max_speed_mps=base_limits.max_speed_mps,
                     wheelbase_m=vehicle_model.config.wheelbase_m,
                     aggression=controls.aggression if controls else 1.0,
+                    battery_temp_derate_c=safety_config.battery_temp_derate_c,
+                    battery_temp_fault_c=safety_config.battery_temp_fault_c,
                 ),
             )
             spawn_x, spawn_y, spawn_heading = spawn_on_racing_line(track)
@@ -301,6 +303,11 @@ def run_simulation(
         )
         if auto_drive and auto_driver is not None:
             battery_soc = vehicle_state.battery.soc if vehicle_state.battery else 1.0
+            battery_temp = (
+                vehicle_state.battery_thermal.temperature_c
+                if vehicle_state.battery_thermal is not None
+                else 25.0
+            )
             if safety_state in {SafetyState.DRIVING, SafetyState.ARMED} and not precharging:
                 driver_out = auto_driver.step(
                     x=vehicle_state.position_x_m,
@@ -308,6 +315,8 @@ def run_simulation(
                     heading_rad=vehicle_state.heading_rad,
                     speed_mps=vehicle_state.speed_mps,
                     soc=battery_soc,
+                    battery_temp_c=battery_temp,
+                    dt=dt_s,
                 )
                 throttle = driver_out.throttle
                 brake = driver_out.brake
