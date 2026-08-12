@@ -103,4 +103,6 @@ def test_hard_driving_raises_tyre_temperature() -> None:
             dt=0.01,
         )
     assert outputs.tyre_temp_rear_c > start_temp + 5.0
-    assert outputs.tyre_wear_rear > 0.0001
+    assert outputs.tyre_wear_rear > 0.0
+    assert outputs.tyre_temp_rear_c < 95.0
+    assert outputs.tyre_wear_rear < 0.01

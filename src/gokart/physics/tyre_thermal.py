@@ -109,17 +109,18 @@ def step_axle_tyre(
     speed_mps: float,
     dt: float,
 ) -> AxleTyreState:
-    slip = max(0.0, min(2.0, slip_usage))
+    slip = max(0.0, min(1.5, slip_usage))
     normal = max(normal_load_n, 0.0)
-    # Tyres generate slip energy even at low road speed (scrub, spin-up).
-    effective_speed = max(speed_mps, 1.5)
-    slip_power = slip * slip * normal * effective_speed
-    rolling_heat = normal * effective_speed * 2.5e-5
-    heat_in = (slip_power * params.heating_rate) + rolling_heat
-    airflow = 1.0 + min(speed_mps, 25.0) / 12.0
-    cool = (state.temperature_c - params.ambient_temp_c) * params.cooling_rate * airflow
+    speed = max(speed_mps, 0.0)
+    slip_power = slip * slip * normal * speed if speed > 0.2 else 0.0
+    heat_in = slip_power * params.heating_rate
+    airflow = 1.0 + min(speed, 25.0) / 12.0
+    temp_delta = state.temperature_c - params.ambient_temp_c
+    overtemp = max(0.0, state.temperature_c - params.optimal_temp_c - 12.0)
+    cool_boost = 1.0 + overtemp * 0.03
+    cool = temp_delta * params.cooling_rate * airflow * cool_boost
     temperature_c = state.temperature_c + (heat_in - cool) * dt
-    wear_delta = slip * params.wear_rate * normal * max(speed_mps, 0.5) * dt
+    wear_delta = slip * params.wear_rate * normal * speed * dt if speed > 0.2 else 0.0
     wear = min(params.max_wear, state.wear + wear_delta)
     return AxleTyreState(temperature_c=temperature_c, wear=wear)
 
