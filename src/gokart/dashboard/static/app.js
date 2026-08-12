@@ -93,7 +93,7 @@ const CHANNEL_DISPLAY = {
   grip_rl_effective: { decimals: 2, deadband: 0.02 },
   grip_rr_effective: { decimals: 2, deadband: 0.02 },
   motor_temp_c: { decimals: 1, deadband: 0.3 },
-  battery_temp_c: { decimals: 1, deadband: 0.3 },
+  battery_temp_c: { decimals: 1, deadband: 0.1 },
   traction_limited: { decimals: 0, deadband: 0.5 },
   filtered_throttle: { decimals: 2, deadband: 0.02 },
   torque_permitted: { decimals: 0, deadband: 0.5 },

@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from gokart.driver.pure_pursuit import pure_pursuit_step
-from gokart.driver.racing_line import build_racing_line, project_to_line
+from gokart.driver.racing_line import build_racing_line
 from gokart.driver.speed_profile import SpeedProfile, build_speed_profile
+from gokart.driver.track_progress import advance_track_progress
 from gokart.track.model import Track
 
 
@@ -35,6 +36,7 @@ class DriverOutputs:
 class _DriverActuatorState:
     throttle: float = 0.0
     brake: float = 0.0
+    steering: float = 0.0
 
 
 class RuleBasedDriver:
@@ -51,6 +53,7 @@ class RuleBasedDriver:
             aggression=config.aggression,
         )
         self._actuators = _DriverActuatorState()
+        self._track_s_m: float | None = None
 
     @property
     def racing_line(self):
@@ -59,6 +62,10 @@ class RuleBasedDriver:
     @property
     def speed_profile(self) -> SpeedProfile:
         return self._profile
+
+    def reset_progress(self) -> None:
+        self._track_s_m = None
+        self._actuators = _DriverActuatorState()
 
     def step(
         self,
@@ -71,13 +78,23 @@ class RuleBasedDriver:
         battery_temp_c: float = 25.0,
         dt: float = 0.01,
     ) -> DriverOutputs:
-        s_m, lateral_m = project_to_line(self._line, x, y)
+        s_m, lateral_m, _path_heading = advance_track_progress(
+            self.track,
+            x=x,
+            y=y,
+            speed_mps=speed_mps,
+            heading_rad=heading_rad,
+            prev_s_m=self._track_s_m,
+            dt=dt,
+        )
+        self._track_s_m = s_m
         pursuit = pure_pursuit_step(
             x=x,
             y=y,
             heading_rad=heading_rad,
             speed_mps=speed_mps,
             s_m=s_m,
+            lateral_m=lateral_m,
             line=self._line,
             profile=self._profile,
             track_length_m=self.track.length_m,
@@ -88,14 +105,16 @@ class RuleBasedDriver:
             battery_derate_c=self.config.battery_temp_derate_c,
             battery_fault_c=self.config.battery_temp_fault_c,
         )
-        throttle = _slew(self._actuators.throttle, pursuit.throttle, 1.2, dt)
-        brake = _slew(self._actuators.brake, pursuit.brake, 2.5, dt)
+        throttle = _slew(self._actuators.throttle, pursuit.throttle, 1.0, dt)
+        brake = _slew(self._actuators.brake, pursuit.brake, 2.0, dt)
+        steering = _slew_signed(self._actuators.steering, pursuit.steering, 2.5, dt)
         self._actuators.throttle = throttle
         self._actuators.brake = brake
+        self._actuators.steering = steering
         return DriverOutputs(
             throttle=throttle,
             brake=brake,
-            steering=pursuit.steering,
+            steering=steering,
             target_speed_mps=pursuit.target_speed_mps,
             track_s_m=s_m,
             lateral_m=lateral_m,
@@ -107,3 +126,10 @@ def _slew(current: float, target: float, max_rate_per_s: float, dt: float) -> fl
         return target
     delta = max(-max_rate_per_s * dt, min(max_rate_per_s * dt, target - current))
     return max(0.0, min(1.0, current + delta))
+
+
+def _slew_signed(current: float, target: float, max_rate_per_s: float, dt: float) -> float:
+    if dt <= 0.0:
+        return target
+    delta = max(-max_rate_per_s * dt, min(max_rate_per_s * dt, target - current))
+    return max(-1.0, min(1.0, current + delta))

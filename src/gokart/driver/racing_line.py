@@ -123,7 +123,9 @@ def spawn_on_racing_line(track: Track) -> tuple[float, float, float]:
     """Spawn pose on the racing line at start/finish."""
     line = build_racing_line(track)
     if line:
-        point = point_at_s(line, track.start_finish.s_m, track.length_m)
-        _, _, heading = interpolate_centerline_at_s(track.centerline, track.start_finish.s_m)
+        s_m = track.start_finish.s_m
+        point = point_at_s(line, s_m, track.length_m)
+        ahead = point_at_s(line, s_m + 3.0, track.length_m)
+        heading = math.atan2(ahead.y - point.y, ahead.x - point.x)
         return point.x, point.y, heading
     return interpolate_centerline_at_s(track.centerline, track.start_finish.s_m)
