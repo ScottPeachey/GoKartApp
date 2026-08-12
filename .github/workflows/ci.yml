@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: uv sync
+      - name: Ruff
+        run: uv run ruff check && uv run ruff format --check
+      - name: Pytest
+        run: uv run pytest -q --ignore=tests/test_physics_sim.py
+      - name: Golden vectors and C core
+        run: uv run python tools/generate_golden.py && make -C firmware/core_c/tests test

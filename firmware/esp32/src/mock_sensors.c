@@ -19,11 +19,47 @@ void mock_sensors_init(gokart_app_t *app) {
 
 void mock_sensors_update(gokart_app_t *app, float dt) {
     (void)dt;
-    if (app->safety_state == GK_SAFETY_ARMED || app->safety_state == GK_SAFETY_DRIVING) {
-        app->sensors.throttle = 0.6f;
-        app->sensors.throttle_adc = 2600;
+    if (app->safety_state == GK_SAFETY_READY && app->time_s > 0.3f) {
+        app->sensors.brake = 1.0f;
+        app->sensors.brake_adc = 3900;
+        app->sensors.throttle = 0.0f;
+        app->sensors.throttle_adc = 2000;
     }
+
+    if (
+        app->safety_state == GK_SAFETY_ARMED &&
+        app->timers.precharge_elapsed_s < app->safety_config.precharge_timeout_s
+    ) {
+        app->sensors.brake = 1.0f;
+        app->sensors.brake_adc = 3900;
+        app->sensors.throttle = 0.0f;
+        app->sensors.throttle_adc = 2000;
+    }
+
+    if (
+        app->safety_state == GK_SAFETY_ARMED &&
+        app->timers.precharge_elapsed_s >= app->safety_config.precharge_timeout_s
+    ) {
+        app->sensors.brake = 0.0f;
+        app->sensors.brake_adc = 2000;
+        app->sensors.throttle = 0.55f;
+        app->sensors.throttle_adc = 2700;
+    }
+
+    if (app->safety_state == GK_SAFETY_DRIVING) {
+        app->sensors.throttle = 0.65f;
+        app->sensors.throttle_adc = 2800;
+        app->sensors.brake = 0.0f;
+        app->sensors.brake_adc = 2000;
+    }
+
+    if (app->safety_state == GK_SAFETY_FAULT || app->safety_state == GK_SAFETY_SAFE_SHUTDOWN) {
+        app->sensors.throttle = 0.0f;
+        app->sensors.throttle_adc = 2000;
+    }
+
     app->sensors.speed_mps = app->speed_mps;
     app->sensors.implied_speed_mps = app->speed_mps;
-    app->sensors.motor_rpm = app->speed_mps * 60.0f / (2.0f * 3.14159265f * 0.127f) * app->control_params.gear_ratio;
+    app->sensors.motor_rpm =
+        app->speed_mps * 60.0f / (2.0f * 3.14159265f * 0.127f) * app->control_params.gear_ratio;
 }

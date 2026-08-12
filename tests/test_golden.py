@@ -33,5 +33,7 @@ def test_hard_limits_generator() -> None:
         cwd=ROOT,
         check=True,
     )
-    out = ROOT / "firmware" / "esp32" / "include" / "hard_limits.json"
-    assert out.exists()
+    out_json = ROOT / "firmware" / "esp32" / "include" / "hard_limits.json"
+    out_header = ROOT / "firmware" / "esp32" / "include" / "hard_limits.h"
+    assert out_json.exists()
+    assert out_header.exists()

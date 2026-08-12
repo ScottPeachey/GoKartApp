@@ -125,25 +125,18 @@ def generate_safety_cases() -> list[dict]:
     config = SafetyConfig()
     cases: list[dict] = []
 
-    sequences = [
-        (SafetyState.OFF, {"power_on_request": True}),
-        (SafetyState.BOOT, {}),
-        (SafetyState.SELF_TEST, {}),
-        (SafetyState.SELF_TEST, {}),
-        (SafetyState.READY, {"arm_request": True, "brake_pressed": True}),
-        (SafetyState.ARMED, {}),
-        (SafetyState.ARMED, {}),
-        (SafetyState.ARMED, {"throttle": 0.5}),
-    ]
-
-    state = SafetyState.OFF
-    timers = SafetyTimers()
-    latched: set[FaultId] = set()
-    for _index, (_expected_state, input_overrides) in enumerate(sequences):
-        inputs = SafetyInputs(**input_overrides)
-        next_state, outputs, timers, latched = safety_step(
-            state, inputs, config, timers, latched_faults=latched, dt=0.01
-        )
+    def append_safety_case(
+        *,
+        state: SafetyState,
+        inputs: SafetyInputs,
+        timers_in: SafetyTimers,
+        latched_in: set[FaultId],
+        dt: float,
+        next_state: SafetyState,
+        outputs,
+        timers_out: SafetyTimers,
+        latched_out: set[FaultId],
+    ) -> None:
         cases.append(
             {
                 "state": SAFETY_STATE_TO_INT[state],
@@ -160,9 +153,9 @@ def generate_safety_cases() -> list[dict]:
                     "precharge_feedback_ok": inputs.precharge_feedback_ok,
                 },
                 "config": asdict(config),
-                "timers": asdict(timers),
-                "latched_faults": fault_set_to_mask(latched),
-                "dt": 0.01,
+                "timers": asdict(timers_in),
+                "latched_faults": fault_set_to_mask(latched_in),
+                "dt": dt,
                 "expected": {
                     "state": SAFETY_STATE_TO_INT[next_state],
                     "torque_permitted": outputs.torque_permitted,
@@ -173,6 +166,44 @@ def generate_safety_cases() -> list[dict]:
                     "display_message_code": outputs.display_message_code,
                 },
             }
+        )
+        _ = timers_out, latched_out
+
+    sequences = [
+        (SafetyState.OFF, {"power_on_request": True}),
+        (SafetyState.BOOT, {}),
+        (SafetyState.SELF_TEST, {}),
+        (SafetyState.SELF_TEST, {}),
+        (SafetyState.READY, {"arm_request": True, "brake_pressed": True}),
+        (SafetyState.ARMED, {}),
+        (SafetyState.ARMED, {}),
+        (SafetyState.ARMED, {"throttle": 0.5}),
+    ]
+
+    state = SafetyState.OFF
+    timers = SafetyTimers()
+    latched: set[FaultId] = set()
+    for _index, (_expected_state, input_overrides) in enumerate(sequences):
+        inputs = SafetyInputs(**input_overrides)
+        timers_in = SafetyTimers(
+            state_elapsed_s=timers.state_elapsed_s,
+            precharge_elapsed_s=timers.precharge_elapsed_s,
+            shutdown_elapsed_s=timers.shutdown_elapsed_s,
+        )
+        latched_in = set(latched)
+        next_state, outputs, timers, latched = safety_step(
+            state, inputs, config, timers, latched_faults=latched, dt=0.01
+        )
+        append_safety_case(
+            state=state,
+            inputs=inputs,
+            timers_in=timers_in,
+            latched_in=latched_in,
+            dt=0.01,
+            next_state=next_state,
+            outputs=outputs,
+            timers_out=timers,
+            latched_out=latched,
         )
         state = next_state
 
@@ -207,6 +238,11 @@ def generate_safety_cases() -> list[dict]:
     state = SafetyState.ARMED
     timers = SafetyTimers(precharge_elapsed_s=0.0)
     inputs = SafetyInputs(precharge_feedback_ok=False)
+    timers_in = SafetyTimers(
+        state_elapsed_s=timers.state_elapsed_s,
+        precharge_elapsed_s=timers.precharge_elapsed_s,
+        shutdown_elapsed_s=timers.shutdown_elapsed_s,
+    )
     next_state, outputs, timers, latched = safety_step(
         state, inputs, config, timers, latched_faults=set(), dt=0.01
     )
@@ -218,7 +254,7 @@ def generate_safety_cases() -> list[dict]:
                 "detected_faults": 0,
             },
             "config": asdict(config),
-            "timers": {"state_elapsed_s": 0.0, "precharge_elapsed_s": 0.0, "shutdown_elapsed_s": 0.0},
+            "timers": asdict(timers_in),
             "latched_faults": 0,
             "dt": 0.01,
             "expected": {
@@ -228,6 +264,144 @@ def generate_safety_cases() -> list[dict]:
             },
         }
     )
+
+    # DRIVING -> FAULT on blocking fault, then recover with ack
+    state = SafetyState.DRIVING
+    timers = SafetyTimers()
+    latched = set()
+    faults = {FaultId.OVERSPEED}
+    inputs = SafetyInputs(detected_faults=faults, throttle=0.5)
+    timers_in = SafetyTimers(
+        state_elapsed_s=timers.state_elapsed_s,
+        precharge_elapsed_s=timers.precharge_elapsed_s,
+        shutdown_elapsed_s=timers.shutdown_elapsed_s,
+    )
+    latched_in = set(latched)
+    next_state, outputs, timers, latched = safety_step(
+        state,
+        inputs,
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    append_safety_case(
+        state=state,
+        inputs=inputs,
+        timers_in=timers_in,
+        latched_in=latched_in,
+        dt=0.01,
+        next_state=next_state,
+        outputs=outputs,
+        timers_out=timers,
+        latched_out=latched,
+    )
+    state = next_state
+    inputs = SafetyInputs(detected_faults=set(), fault_ack_request=True)
+    timers_in = SafetyTimers(
+        state_elapsed_s=timers.state_elapsed_s,
+        precharge_elapsed_s=timers.precharge_elapsed_s,
+        shutdown_elapsed_s=timers.shutdown_elapsed_s,
+    )
+    latched_in = set(latched)
+    next_state, outputs, timers, latched = safety_step(
+        state,
+        inputs,
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    append_safety_case(
+        state=state,
+        inputs=inputs,
+        timers_in=timers_in,
+        latched_in=latched_in,
+        dt=0.01,
+        next_state=next_state,
+        outputs=outputs,
+        timers_out=timers,
+        latched_out=latched,
+    )
+
+    # BOOT detects watchdog reset -> FAULT
+    state = SafetyState.BOOT
+    timers = SafetyTimers()
+    latched = set()
+    inputs = SafetyInputs(detected_faults={FaultId.WATCHDOG_RESET})
+    timers_in = SafetyTimers(
+        state_elapsed_s=timers.state_elapsed_s,
+        precharge_elapsed_s=timers.precharge_elapsed_s,
+        shutdown_elapsed_s=timers.shutdown_elapsed_s,
+    )
+    latched_in = set(latched)
+    next_state, outputs, timers, latched = safety_step(
+        state,
+        inputs,
+        config,
+        timers,
+        latched_faults=latched,
+        dt=0.01,
+    )
+    append_safety_case(
+        state=state,
+        inputs=inputs,
+        timers_in=timers_in,
+        latched_in=latched_in,
+        dt=0.01,
+        next_state=next_state,
+        outputs=outputs,
+        timers_out=timers,
+        latched_out=latched,
+    )
+
+    # Randomized safety transitions (fixed seed)
+    rng = random.Random(99)
+    state = SafetyState.OFF
+    timers = SafetyTimers()
+    latched = set()
+    for _ in range(120):
+        inputs = SafetyInputs(
+            power_on_request=rng.random() > 0.85,
+            arm_request=rng.random() > 0.9,
+            disarm_request=rng.random() > 0.95,
+            fault_ack_request=rng.random() > 0.97,
+            brake_pressed=rng.random() > 0.4,
+            throttle=rng.random() * 0.8,
+            detected_faults=set(),
+        )
+        if rng.random() > 0.98:
+            inputs = SafetyInputs(
+                power_on_request=inputs.power_on_request,
+                arm_request=inputs.arm_request,
+                disarm_request=inputs.disarm_request,
+                fault_ack_request=inputs.fault_ack_request,
+                brake_pressed=inputs.brake_pressed,
+                throttle=inputs.throttle,
+                detected_faults={FaultId.THROTTLE_BRAKE_SIMULTANEOUS},
+            )
+        timers_in = SafetyTimers(
+            state_elapsed_s=timers.state_elapsed_s,
+            precharge_elapsed_s=timers.precharge_elapsed_s,
+            shutdown_elapsed_s=timers.shutdown_elapsed_s,
+        )
+        latched_in = set(latched)
+        next_state, outputs, timers, latched = safety_step(
+            state, inputs, config, timers, latched_faults=latched, dt=0.01
+        )
+        append_safety_case(
+            state=state,
+            inputs=inputs,
+            timers_in=timers_in,
+            latched_in=latched_in,
+            dt=0.01,
+            next_state=next_state,
+            outputs=outputs,
+            timers_out=timers,
+            latched_out=latched,
+        )
+        state = next_state
+
     return cases
 
 

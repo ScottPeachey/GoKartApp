@@ -93,9 +93,9 @@ void gk_control_step(
         outputs->motor_torque_request_nm = 0.0f;
         outputs->regen_torque_request_nm = 0.0f;
         outputs->mechanical_brake = brake;
-        outputs->filtered_throttle = filtered;
+        outputs->filtered_throttle = 0.0f;
         outputs->traction_limited = false;
-        state->filtered_throttle = filtered;
+        state->filtered_throttle = 0.0f;
         state->traction_scale = 1.0f;
         return;
     }

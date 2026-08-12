@@ -454,3 +454,6 @@ entry to: date, question, decision, reason.)
 - 2026-08-09 — MVP traction: force-based (`µ·N`) under rigid coupling; true
   RPM slip deferred to Phase 9 with wheel inertia. Reason: RPM-slip is
   physically meaningless while motor speed is kinematically locked to v.
+- 2026-08-12 — Phase 6 golden safety cases store pre-step timer snapshots so
+  each C test case is independent. Reason: host runner replays cases in
+  isolation without carrying timer state across vectors.

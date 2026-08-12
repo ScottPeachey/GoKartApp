@@ -556,17 +556,23 @@ static void run_generated_safety_cases(void) {
     {
         gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.00000000f, 0u, true, false, true};
         gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
-        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
         run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
     }
     {
         gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.00000000f, 0u, true, false, true};
         gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
-        gk_safety_timers_t timers = {0.02000000f, 0.00000000f, 0.00000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
         run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
     }
     {
         gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.00000000f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.00000000f, 0u, true, false, true};
         gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
         gk_safety_timers_t timers = {0.03000000f, 0.00000000f, 0.00000000f};
         run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
@@ -578,15 +584,9 @@ static void run_generated_safety_cases(void) {
         run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
     }
     {
-        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.00000000f, 0u, true, false, true};
-        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
-        gk_safety_timers_t timers = {0.05000000f, 0.00000000f, 0.00000000f};
-        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
-    }
-    {
         gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.50000000f, 0u, true, false, true};
         gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
-        gk_safety_timers_t timers = {0.06000000f, 0.00000000f, 0.00000000f};
+        gk_safety_timers_t timers = {0.05000000f, 0.00000000f, 0.00000000f};
         run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
     }
     {
@@ -655,6 +655,744 @@ static void run_generated_safety_cases(void) {
         gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
         run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)7, false);
     }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.50000000f, 524288u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)5, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, true, false, true, false, 0.00000000f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.00000000f, 1048576u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)1, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.20092081f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)0, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)0, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.49057285f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)0, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)0, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.52845432f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)0, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)1, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.32209818f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)1, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.72019381f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.63347129f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, true, false, false, false, true, false, 0.37898150f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.26375815f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.03000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.32325413f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.04000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.47973443f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.05000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.14211641f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.06000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.09377062f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.07000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.17305773f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.08000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.70365469f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.09000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.52269092f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.10000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.19977646f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.11000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.40252053f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.12000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.70526310f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.13000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.78983397f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.14000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.55546999f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.15000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.59441291f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.16000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.42539875f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.17000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.35529346f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.18000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.50535616f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.19000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.46440879f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.20000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.23613803f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.21000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.10277492f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.22000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.14306725f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.23000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.74955842f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.24000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.19165842f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.25000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.45569436f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.26000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.03799076f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.27000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.55642986f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.28000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.44776077f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.29000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.54229936f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.30000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.13325109f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.31000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.04224923f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.32000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.77331252f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.33000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.18828328f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.34000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.67086155f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.35000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.12706237f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.36000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.05784059f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.37000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.02765345f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.38000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.23101946f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.39000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.16973031f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.40000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.16162889f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.41000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.34450307f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.42000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, true, false, true, false, 0.47058233f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.43000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, false, 0.45830549f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.44000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.59052170f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.45000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.69653403f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.46000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.05798583f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.47000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.03059199f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.48000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)2, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.20393307f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.49000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)2, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.24404775f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.66785871f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.01722918f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.09117106f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.01000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.61413945f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.02000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.74425703f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.03000000f, 0.03000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.35381193f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.04000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.22583877f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.05000000f, 0.05000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.79709788f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.06000000f, 0.06000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.05449705f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.07000000f, 0.07000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, false, 0.45048294f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.08000000f, 0.08000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.01567310f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.09000000f, 0.09000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.75085638f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.10000000f, 0.10000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, true, false, true, true, 0.08374669f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.11000000f, 0.11000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.20015271f, 8u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.12000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.20065006f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.13000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, true, false, true, true, 0.24530555f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.14000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.10300119f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.45832946f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.36631919f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, false, 0.58511644f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.03000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.02011369f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.04000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.43380908f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.05000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.73114621f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.06000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.48298908f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.07000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.27523224f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.08000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.13839040f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.09000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.27453060f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.10000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.43583675f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.11000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)3, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.28139263f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.12000000f, 0.12000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)3, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, false, 0.09937977f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.00000000f, 0.00000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.78527304f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.01000000f, 0.01000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.42803493f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.02000000f, 0.02000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.67010458f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.03000000f, 0.03000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)4, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.62359451f, 8u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.04000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)4, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.77210662f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.05000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.57945107f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.06000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.17330091f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.07000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.73341086f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.08000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.04522963f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.09000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.22738771f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.10000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, true, 0.42901668f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.11000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.31132713f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.12000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, true, false, false, false, true, false, 0.78040000f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.13000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, false, 0.42285396f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.14000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.13273325f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.15000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.14187502f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.16000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.76567251f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.17000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.26279783f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.18000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.12536288f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.19000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.06892563f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.20000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.52192840f, 8u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.21000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.49838034f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.22000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.14663064f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.23000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.38711596f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.24000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {true, false, false, false, false, true, false, 0.71095713f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.25000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.34371859f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.26000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.76373365f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.27000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, true, false, false, true, true, 0.03118243f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.28000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.38101483f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.29000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.13393993f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.30000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, true, 0.22589095f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.31000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.51566018f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.32000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, false, 0.74760667f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.33000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, true, false, false, false, true, false, 0.29813660f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.34000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
+    {
+        gk_safety_inputs_t inputs = {false, false, false, false, false, true, true, 0.73765318f, 0u, true, false, true};
+        gk_safety_config_t config = {100, 3900, 100, 3900, 0.15000000f, 60.00000000f, 40.00000000f, 3.65000000f, 2.80000000f, 100.00000000f, 120.00000000f, 75.00000000f, 85.00000000f, 50.00000000f, 60.00000000f, 20.00000000f, 0.50000000f, 2.00000000f, 0.50000000f, 0.05000000f, 0.25000000f, 0.50000000f};
+        gk_safety_timers_t timers = {0.35000000f, 0.04000000f, 0.00000000f};
+        run_safety_case((gk_safety_state_t)6, &inputs, &config, &timers, 0u, 0.01000000f, (gk_safety_state_t)6, false);
+    }
 }
 static void run_generated_control_cases(void) {
     gk_control_state_t state = {0.0f, 1.0f};
@@ -675,787 +1413,787 @@ static void run_generated_control_cases(void) {
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {false, false, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.15223072f, 0.04000000f, false};
+        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.15223072f, 0.00000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.04000000f;
+    state.filtered_throttle = 0.00000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.42451919f, 0.24805564f, 2.22843530f, 970.63196197f, 50.27433222f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {-2.56111264f, 4.96111298f, 0.24805564f, 0.06000000f, false};
+        gk_control_outputs_t expected = {-4.16111279f, 4.96111298f, 0.24805564f, 0.02000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.06000000f;
+    state.filtered_throttle = 0.02000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.57710295f, 0.11900414f, 17.57259190f, 281.67245441f, 52.58468459f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.81991714f, 2.38008285f, 0.11900415f, 0.08000000f, false};
+        gk_control_outputs_t expected = {-0.78008282f, 2.38008285f, 0.11900415f, 0.04000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.08000000f;
+    state.filtered_throttle = 0.04000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.14425508f, 0.03533767f, 5.55267283f, 3282.89280057f, 45.80726380f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {3.29324651f, 0.70675343f, 0.03533767f, 0.10000000f, false};
+        gk_control_outputs_t expected = {1.69324660f, 0.70675343f, 0.03533767f, 0.06000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.10000000f;
+    state.filtered_throttle = 0.06000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.63891347f, 0.11171926f, 9.85940038f, 344.87700240f, 44.59601170f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {2.56561470f, 2.23438525f, 0.11171927f, 0.12000000f, false};
+        gk_control_outputs_t expected = {0.96561474f, 2.23438525f, 0.11171927f, 0.08000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.12000000f;
+    state.filtered_throttle = 0.08000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.68039997f, 0.12827769f, 5.65464907f, 2383.69126768f, 48.53184376f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {3.03444624f, 2.56555390f, 0.12827769f, 0.14000000f, false};
+        gk_control_outputs_t expected = {1.43444622f, 2.56555390f, 0.12827769f, 0.10000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.14000000f;
+    state.filtered_throttle = 0.10000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.79437948f, 0.20969833f, 4.39373719f, 2340.25247001f, 49.25196504f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {2.20603347f, 4.19396639f, 0.20969833f, 0.16000000f, false};
+        gk_control_outputs_t expected = {0.60603338f, 4.19396639f, 0.20969833f, 0.12000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.16000000f;
+    state.filtered_throttle = 0.12000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.72944529f, 0.08638133f, 17.64314725f, 560.45653519f, 48.18122822f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {5.47237349f, 1.72762656f, 0.08638133f, 0.18000001f, false};
+        gk_control_outputs_t expected = {3.87237334f, 1.72762656f, 0.08638133f, 0.14000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.18000000f;
+    state.filtered_throttle = 0.14000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.15198453f, 0.14668893f, 0.70573063f, 2706.04184048f, 51.64570866f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {3.46622133f, 2.93377852f, 0.14668892f, 0.16000000f, false};
+        gk_control_outputs_t expected = {3.14560270f, 2.93377852f, 0.14668892f, 0.15198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.16000000f;
+    state.filtered_throttle = 0.15198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.87547781f, 0.09412425f, 12.51531659f, 2418.04252071f, 49.79895204f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {5.31751490f, 1.88248503f, 0.09412426f, 0.18000001f, false};
+        gk_control_outputs_t expected = {4.99689627f, 1.88248503f, 0.09412426f, 0.17198454f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.18000000f;
+    state.filtered_throttle = 0.17198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.83996778f, 0.28340433f, 8.53377007f, 2690.19360135f, 44.60669428f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {3.72484708f, 4.27515268f, 0.28340432f, 0.20000000f, false};
+        gk_control_outputs_t expected = {3.40422845f, 4.27515268f, 0.28340432f, 0.19198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.20000000f;
+    state.filtered_throttle = 0.19198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.64712885f, 0.29792878f, 14.79464616f, 1209.92257517f, 47.85791442f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {2.84142447f, 5.95857573f, 0.29792878f, 0.22000000f, false};
+        gk_control_outputs_t expected = {2.52080584f, 5.95857573f, 0.29792878f, 0.21198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.22000000f;
+    state.filtered_throttle = 0.21198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.02256293f, 0.13850859f, 3.02487082f, 556.67359848f, 44.58954419f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {5.22982836f, 2.77017164f, 0.13850859f, 0.20000000f, false};
+        gk_control_outputs_t expected = {4.90920973f, 2.77017164f, 0.13850859f, 0.19198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.20000000f;
+    state.filtered_throttle = 0.19198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.12934022f, 0.07428445f, 7.03709466f, 3498.54569909f, 44.80581301f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {5.71431112f, 1.48568904f, 0.07428445f, 0.18000001f, false};
+        gk_control_outputs_t expected = {5.39369249f, 1.48568904f, 0.07428445f, 0.17198454f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.18000000f;
+    state.filtered_throttle = 0.17198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.54943991f, 0.26501515f, 14.74703708f, 3469.53943182f, 46.78421065f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {4.52333689f, 3.47666335f, 0.26501516f, 0.20000000f, false};
+        gk_control_outputs_t expected = {4.20271826f, 3.47666335f, 0.26501516f, 0.19198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.20000000f;
+    state.filtered_throttle = 0.19198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.35877117f, 0.26525785f, 17.23916167f, 688.59153259f, 45.76217728f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {3.49484301f, 5.30515718f, 0.26525784f, 0.22000000f, false};
+        gk_control_outputs_t expected = {3.17422438f, 5.30515718f, 0.26525784f, 0.21198453f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.22000000f;
+    state.filtered_throttle = 0.21198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.23333608f, 0.14548882f, 10.60422307f, 1124.71181526f, 44.04093603f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {6.42366695f, 2.90977645f, 0.14548881f, 0.23333609f, false};
+        gk_control_outputs_t expected = {6.36960506f, 2.90977645f, 0.14548881f, 0.23198454f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.23333608f;
+    state.filtered_throttle = 0.23198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.36925357f, 0.16990237f, 17.15576266f, 2792.92526283f, 49.15491433f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {6.73539591f, 3.39804745f, 0.16990237f, 0.25333607f, false};
+        gk_control_outputs_t expected = {6.68133402f, 3.39804745f, 0.16990237f, 0.25198454f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.25333608f;
+    state.filtered_throttle = 0.25198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.67620008f, 0.01619787f, 16.19159418f, 3141.88101375f, 52.74513184f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.60948563f, 0.32395735f, 0.01619787f, 0.27333608f, false};
+        gk_control_outputs_t expected = {10.55542374f, 0.32395735f, 0.01619787f, 0.27198455f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.27333608f;
+    state.filtered_throttle = 0.27198453f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.39237891f, 0.11969365f, 1.86366769f, 2573.72930617f, 44.62247822f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {false, false, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.11969365f, 0.29333609f, false};
+        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.11969365f, 0.00000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.29333608f;
+    state.filtered_throttle = 0.00000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.20876319f, 0.04869096f, 6.12096574f, 305.04485517f, 44.00233282f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.95962429f, 0.97381914f, 0.04869096f, 0.27333608f, false};
+        gk_control_outputs_t expected = {-0.17381912f, 0.97381914f, 0.04869096f, 0.02000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.27333608f;
+    state.filtered_throttle = 0.02000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.10146437f, 0.10908298f, 0.45901596f, 3509.89627176f, 50.14068988f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {7.95178366f, 2.18165946f, 0.10908297f, 0.25333607f, false};
+        gk_control_outputs_t expected = {-0.58165956f, 2.18165946f, 0.10908297f, 0.04000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.25333608f;
+    state.filtered_throttle = 0.04000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.25225776f, 0.10421686f, 6.55494191f, 579.08469997f, 52.48936926f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.00597286f, 2.08433723f, 0.10421687f, 0.25225776f, false};
+        gk_control_outputs_t expected = {0.31566271f, 2.08433723f, 0.10421687f, 0.06000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.25225776f;
+    state.filtered_throttle = 0.06000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.46598946f, 0.14515040f, 1.54592391f, 498.53170532f, 47.42635838f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {7.98730230f, 2.90300798f, 0.14515039f, 0.27225775f, false};
+        gk_control_outputs_t expected = {0.29699206f, 2.90300798f, 0.14515039f, 0.08000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.27225776f;
+    state.filtered_throttle = 0.08000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.82885538f, 0.04843158f, 0.41572298f, 3808.84373421f, 49.28257395f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.15160751f, 0.96863168f, 0.04843158f, 0.29225776f, false};
+        gk_control_outputs_t expected = {3.03136826f, 0.96863168f, 0.04843158f, 0.10000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.29225776f;
+    state.filtered_throttle = 0.10000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.54317243f, 0.00811275f, 9.50596994f, 3916.15484660f, 52.63325030f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.38860226f, 0.16225494f, 0.00811275f, 0.31225777f, false};
+        gk_control_outputs_t expected = {4.63774490f, 0.16225494f, 0.00811275f, 0.12000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.31225776f;
+    state.filtered_throttle = 0.12000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.26111520f, 0.11000994f, 3.00675662f, 3110.55784277f, 49.32592397f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.49011135f, 2.20019865f, 0.11000994f, 0.29225776f, false};
+        gk_control_outputs_t expected = {3.39980125f, 2.20019865f, 0.11000994f, 0.14000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.29225776f;
+    state.filtered_throttle = 0.14000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.32966500f, 0.06691250f, 14.60720244f, 3941.21159730f, 52.52628799f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.11584663f, 1.33825004f, 0.06691250f, 0.31225777f, false};
+        gk_control_outputs_t expected = {5.06174994f, 1.33825004f, 0.06691250f, 0.16000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.31225776f;
+    state.filtered_throttle = 0.16000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.81833294f, 0.22196191f, 4.08131082f, 2118.79102455f, 47.55562543f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {false, false, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.22196190f, 0.33225775f, false};
+        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.22196190f, 0.00000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.33225776f;
+    state.filtered_throttle = 0.00000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.02793708f, 0.08382556f, 4.66513854f, 2800.83557263f, 53.56515076f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.81379890f, 1.67651129f, 0.08382556f, 0.31225777f, false};
+        gk_control_outputs_t expected = {-0.87651122f, 1.67651129f, 0.08382556f, 0.02000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.31225776f;
+    state.filtered_throttle = 0.02000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.93702120f, 0.29641142f, 17.19001136f, 1522.07995291f, 46.20462323f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {7.36208200f, 5.92822838f, 0.29641142f, 0.33225775f, false};
+        gk_control_outputs_t expected = {-4.32822847f, 5.92822838f, 0.29641142f, 0.04000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.33225776f;
+    state.filtered_throttle = 0.04000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.19670616f, 0.06131201f, 11.23319515f, 3611.20251775f, 52.40435527f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.24556828f, 1.22624016f, 0.06131201f, 0.31225777f, false};
+        gk_control_outputs_t expected = {1.17375982f, 1.22624016f, 0.06131201f, 0.06000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.31225776f;
+    state.filtered_throttle = 0.06000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.65297804f, 0.23989312f, 1.52601276f, 2676.28403580f, 53.09777138f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.49244785f, 4.79786253f, 0.23989312f, 0.33225775f, false};
+        gk_control_outputs_t expected = {-1.59786248f, 4.79786253f, 0.23989312f, 0.08000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.33225776f;
+    state.filtered_throttle = 0.08000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.75014046f, 0.14340982f, 3.21339093f, 3177.62818098f, 47.32517200f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.93159866f, 2.86819649f, 0.14340982f, 0.35225776f, false};
+        gk_control_outputs_t expected = {1.13180351f, 2.86819649f, 0.14340982f, 0.10000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.35225776f;
+    state.filtered_throttle = 0.10000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.97165729f, 0.11875155f, 7.22496272f, 3792.50832521f, 51.24798666f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.23849678f, 2.37503099f, 0.11875155f, 0.37225777f, false};
+        gk_control_outputs_t expected = {2.42496896f, 2.37503099f, 0.11875155f, 0.12000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.37225776f;
+    state.filtered_throttle = 0.12000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.12703837f, 0.04534521f, 16.28733772f, 3245.35772993f, 45.46174309f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.13228989f, 0.90690422f, 0.04534521f, 0.35225776f, false};
+        gk_control_outputs_t expected = {4.17463064f, 0.90690422f, 0.04534521f, 0.12703837f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.35225776f;
+    state.filtered_throttle = 0.12703837f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.98030594f, 0.19718049f, 6.30733522f, 2239.77417155f, 45.30983852f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {false, false, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.19718049f, 0.37225777f, false};
+        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.19718049f, 0.00000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.37225776f;
+    state.filtered_throttle = 0.00000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.97089018f, 0.19490240f, 9.47845885f, 3741.13673972f, 48.33809437f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {7.77316475f, 3.33135629f, 0.19490241f, 0.39225775f, false};
+        gk_control_outputs_t expected = {-2.53135633f, 3.33135629f, 0.19490241f, 0.02000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.39225776f;
+    state.filtered_throttle = 0.02000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.82615525f, 0.06331270f, 4.53302660f, 1242.56994541f, 46.40539393f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {15.22405624f, 1.26625407f, 0.06331270f, 0.41225776f, false};
+        gk_control_outputs_t expected = {0.33374599f, 1.26625407f, 0.06331270f, 0.04000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.41225776f;
+    state.filtered_throttle = 0.04000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.25936480f, 0.12570377f, 2.35932618f, 3649.06651963f, 47.53784024f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.68214798f, 2.51407528f, 0.12570377f, 0.39225775f, false};
+        gk_control_outputs_t expected = {-0.11407532f, 2.51407528f, 0.12570377f, 0.06000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.39225776f;
+    state.filtered_throttle = 0.06000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.58334877f, 0.27128903f, 7.57130887f, 3679.11222894f, 49.01648941f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.01513958f, 3.43505979f, 0.27128902f, 0.41225776f, false};
+        gk_control_outputs_t expected = {-0.23505989f, 3.43505979f, 0.27128902f, 0.08000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.41225776f;
+    state.filtered_throttle = 0.08000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.52350659f, 0.00561146f, 7.92224842f, 814.12076036f, 44.03932482f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {17.17808151f, 0.11222921f, 0.00561146f, 0.43225774f, false};
+        gk_control_outputs_t expected = {3.88777089f, 0.11222921f, 0.00561146f, 0.10000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.43225776f;
+    state.filtered_throttle = 0.10000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.17234671f, 0.14204788f, 13.05347887f, 2270.25493712f, 47.25982151f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {13.64935303f, 2.84095764f, 0.14204788f, 0.41225776f, false};
+        gk_control_outputs_t expected = {1.95904243f, 2.84095764f, 0.14204788f, 0.12000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.41225776f;
+    state.filtered_throttle = 0.12000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.55544187f, 0.23528174f, 1.90996951f, 2285.15492098f, 46.48494321f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {12.58467579f, 4.70563507f, 0.23528174f, 0.43225774f, false};
+        gk_control_outputs_t expected = {0.89436513f, 4.70563507f, 0.23528174f, 0.14000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.43225776f;
+    state.filtered_throttle = 0.14000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.77226110f, 0.15231420f, 10.11112896f, 3063.97325610f, 53.12488036f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.85510921f, 3.04628396f, 0.15231420f, 0.45225775f, false};
+        gk_control_outputs_t expected = {3.35371614f, 3.04628396f, 0.15231420f, 0.16000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.45225776f;
+    state.filtered_throttle = 0.16000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.61252788f, 0.15166594f, 9.21890650f, 2801.65090994f, 48.52345792f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.85177612f, 3.03331876f, 0.15166594f, 0.47225776f, false};
+        gk_control_outputs_t expected = {4.16668129f, 3.03331876f, 0.15166594f, 0.18000001f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.47225776f;
+    state.filtered_throttle = 0.18000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.47803632f, 0.28245034f, 12.58592188f, 3518.48837894f, 53.42180588f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.13428116f, 3.91469193f, 0.28245035f, 0.47803631f, false};
+        gk_control_outputs_t expected = {4.08530807f, 3.91469193f, 0.28245035f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.47803632f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.55951381f, 0.28298011f, 15.11999610f, 634.82430000f, 45.21621954f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.26185036f, 5.65960217f, 0.28298011f, 0.49803632f, false};
+        gk_control_outputs_t expected = {3.14039779f, 5.65960217f, 0.28298011f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.49803632f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.07254610f, 0.07219163f, 1.31617381f, 2710.94136671f, 51.83936017f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.99055004f, 1.44383252f, 0.07219163f, 0.47803631f, false};
+        gk_control_outputs_t expected = {6.55616760f, 1.44383252f, 0.07219163f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.47803632f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.15444662f, 0.21483596f, 11.88461727f, 657.61809190f, 52.82832834f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.02473354f, 4.29671907f, 0.21483597f, 0.45803630f, false};
+        gk_control_outputs_t expected = {2.90328074f, 4.29671907f, 0.21483597f, 0.18000001f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.45803632f;
+    state.filtered_throttle = 0.18000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.21958783f, 0.28575124f, 7.16862374f, 2000.31702246f, 53.89871455f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.80642796f, 5.71502495f, 0.28575125f, 0.43803632f, false};
+        gk_control_outputs_t expected = {2.28497529f, 5.71502495f, 0.28575125f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.43803632f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.16146606f, 0.12945655f, 9.28089104f, 1422.55296292f, 45.95744666f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.13232136f, 2.58913088f, 0.12945655f, 0.41803631f, false};
+        gk_control_outputs_t expected = {4.61086893f, 2.58913088f, 0.12945655f, 0.18000001f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.41803632f;
+    state.filtered_throttle = 0.18000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.72215084f, 0.00584488f, 9.97290446f, 1817.78659703f, 44.18081981f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {17.40455437f, 0.11689757f, 0.00584488f, 0.43803632f, false};
+        gk_control_outputs_t expected = {7.88310242f, 0.11689757f, 0.00584488f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.43803632f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.62392707f, 0.15367869f, 1.15723427f, 3941.82465212f, 51.88363056f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.23862267f, 3.07357359f, 0.15367869f, 0.45803630f, false};
+        gk_control_outputs_t expected = {5.72642612f, 3.07357359f, 0.15367869f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.45803632f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.10477959f, 0.07966928f, 0.71258742f, 3138.08997726f, 46.70446098f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.19768429f, 1.59338558f, 0.07966928f, 0.43803632f, false};
+        gk_control_outputs_t expected = {6.40661430f, 1.59338558f, 0.07966928f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.43803632f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.42225418f, 0.27342414f, 14.74162164f, 1108.57515770f, 45.49367947f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.42168427f, 5.46848297f, 0.27342415f, 0.42225417f, false};
+        gk_control_outputs_t expected = {3.33151722f, 5.46848297f, 0.27342415f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.42225418f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.57059493f, 0.21012523f, 1.61031974f, 324.35339852f, 50.88205571f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {13.48766232f, 4.20250463f, 0.21012524f, 0.44225419f, false};
+        gk_control_outputs_t expected = {5.39749527f, 4.20250463f, 0.21012524f, 0.23999999f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.44225418f;
+    state.filtered_throttle = 0.24000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.07241409f, 0.28150491f, 11.41991111f, 3226.35150713f, 44.83742526f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.36066723f, 3.58314300f, 0.28150490f, 0.42225417f, false};
+        gk_control_outputs_t expected = {5.21685696f, 3.58314300f, 0.28150490f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.42225418f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.06662253f, 0.25883249f, 8.16792338f, 1422.69193141f, 49.53064118f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.91351700f, 5.17665005f, 0.25883248f, 0.40225419f, false};
+        gk_control_outputs_t expected = {2.82335019f, 5.17665005f, 0.25883248f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.40225418f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.26785975f, 0.03876744f, 9.48447048f, 1029.90106090f, 45.09451465f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.51481819f, 0.77534878f, 0.03876744f, 0.38225418f, false};
+        gk_control_outputs_t expected = {8.02465153f, 0.77534878f, 0.03876744f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.38225418f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.05037972f, 0.06053047f, 5.61586327f, 1289.52105173f, 51.59498255f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {13.27955818f, 1.21060944f, 0.06053048f, 0.36225417f, false};
+        gk_control_outputs_t expected = {6.78939056f, 1.21060944f, 0.06053048f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.36225418f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.50008860f, 0.05336997f, 6.24601840f, 170.83611845f, 46.50448756f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {false, false, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.05336997f, 0.38225418f, false};
+        gk_control_outputs_t expected = {0.00000000f, 0.00000000f, 0.05336997f, 0.00000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.38225418f;
+    state.filtered_throttle = 0.00000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.73308038f, 0.16531474f, 3.41021694f, 1951.56649022f, 53.34642840f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {12.78387260f, 3.30629468f, 0.16531473f, 0.40225419f, false};
+        gk_control_outputs_t expected = {-2.50629473f, 3.30629468f, 0.16531473f, 0.02000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.40225418f;
+    state.filtered_throttle = 0.02000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.81892014f, 0.12965328f, 8.91002832f, 3354.99433999f, 47.93086076f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.68520832f, 2.59306550f, 0.12965328f, 0.42225417f, false};
+        gk_control_outputs_t expected = {-0.99306554f, 2.59306550f, 0.12965328f, 0.04000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.42225418f;
+    state.filtered_throttle = 0.04000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.68774174f, 0.29473216f, 6.16868326f, 3345.91751873f, 51.06725402f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.18204021f, 3.93516016f, 0.29473215f, 0.44225419f, false};
+        gk_control_outputs_t expected = {-1.53516018f, 3.93516016f, 0.29473215f, 0.06000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.44225418f;
+    state.filtered_throttle = 0.06000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.40469771f, 0.10426565f, 0.97899366f, 606.29246649f, 44.70722816f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {14.80485439f, 2.08531308f, 0.10426565f, 0.42225417f, false};
+        gk_control_outputs_t expected = {1.11468697f, 2.08531308f, 0.10426565f, 0.08000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.42225418f;
+    state.filtered_throttle = 0.08000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.25559388f, 0.04897396f, 1.52072771f, 3380.94902922f, 52.70537821f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {12.41821957f, 0.97947913f, 0.04897396f, 0.40225419f, false};
+        gk_control_outputs_t expected = {3.02052093f, 0.97947913f, 0.04897396f, 0.10000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.40225418f;
+    state.filtered_throttle = 0.10000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.28193328f, 0.07266388f, 5.27505287f, 1891.86647924f, 45.57532940f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {13.83688927f, 1.45327759f, 0.07266388f, 0.38225418f, false};
+        gk_control_outputs_t expected = {3.34672236f, 1.45327759f, 0.07266388f, 0.12000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.38225418f;
+    state.filtered_throttle = 0.12000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.26324307f, 0.28853596f, 17.50721396f, 2233.58615906f, 46.44446494f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.12891293f, 5.36125422f, 0.28853595f, 0.36225417f, false};
+        gk_control_outputs_t expected = {0.23874579f, 5.36125422f, 0.28853595f, 0.14000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.36225418f;
+    state.filtered_throttle = 0.14000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.30954792f, 0.10697518f, 0.01924047f, 1588.34376579f, 48.74643627f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.55066395f, 2.13950348f, 0.10697518f, 0.34225419f, false};
+        gk_control_outputs_t expected = {4.26049662f, 2.13950348f, 0.10697518f, 0.16000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.34225418f;
+    state.filtered_throttle = 0.16000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.20098005f, 0.15142069f, 0.08910957f, 1130.25787463f, 44.89753398f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.86175346f, 3.02841377f, 0.15142070f, 0.32225418f, false};
+        gk_control_outputs_t expected = {4.17158604f, 3.02841377f, 0.15142070f, 0.18000001f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.32225418f;
+    state.filtered_throttle = 0.18000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.04166696f, 0.00674824f, 5.47640208f, 1007.95730970f, 49.85583284f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.95520210f, 0.13496488f, 0.00674824f, 0.30225417f, false};
+        gk_control_outputs_t expected = {6.26503515f, 0.13496488f, 0.00674824f, 0.16000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.30225418f;
+    state.filtered_throttle = 0.16000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.75054063f, 0.19726310f, 12.88788192f, 3528.45370491f, 47.89516471f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.16618443f, 3.49979329f, 0.19726311f, 0.32225418f, false};
+        gk_control_outputs_t expected = {3.70020676f, 3.49979329f, 0.19726311f, 0.18000001f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.32225418f;
+    state.filtered_throttle = 0.18000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.98472909f, 0.04483894f, 13.03480392f, 2608.55585385f, 44.43788067f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {12.79338837f, 0.89677888f, 0.04483895f, 0.34225419f, false};
+        gk_control_outputs_t expected = {7.10322094f, 0.89677888f, 0.04483895f, 0.20000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.34225418f;
+    state.filtered_throttle = 0.20000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.89194236f, 0.18819964f, 13.20933822f, 3267.65377128f, 45.39307610f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {8.35729122f, 3.58169603f, 0.18819964f, 0.36225417f, false};
+        gk_control_outputs_t expected = {5.21830416f, 3.58169603f, 0.18819964f, 0.22000000f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.36225418f;
+    state.filtered_throttle = 0.22000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.50437105f, 0.25048128f, 14.48419690f, 3322.99557386f, 49.84061517f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {9.02330303f, 3.86713004f, 0.25048128f, 0.38225418f, false};
+        gk_control_outputs_t expected = {5.73287010f, 3.86713004f, 0.25048128f, 0.23999999f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.38225418f;
+    state.filtered_throttle = 0.24000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.68289537f, 0.20799784f, 4.13893297f, 221.52605253f, 45.33093198f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {11.93021011f, 4.15995693f, 0.20799784f, 0.40225419f, false};
+        gk_control_outputs_t expected = {6.24004316f, 4.15995693f, 0.20799784f, 0.25999999f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.40225418f;
+    state.filtered_throttle = 0.26000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.10491647f, 0.25074636f, 10.05349044f, 2548.29172323f, 50.26226459f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {10.27523994f, 5.01492739f, 0.25074637f, 0.38225418f, false};
+        gk_control_outputs_t expected = {4.58507299f, 5.01492739f, 0.25074637f, 0.23999999f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
-    state.filtered_throttle = 0.38225418f;
+    state.filtered_throttle = 0.24000000f;
     state.traction_scale = 1.00000000f;
     {
         gk_control_inputs_t inputs = {0.48929431f, 0.00099430f, 14.35855594f, 3018.23494387f, 49.02971052f, 180.00000000f, 0.90000000f, 0.00000000f};
         gk_effective_limits_t limits = {20.00000000f, 100.00000000f, 80.00000000f, 30.00000000f, 5000.00000000f, 4500.00000000f, 4.00000000f, 6.00000000f, 0.12000000f};
         gk_safety_outputs_t safety = {true, true, GK_CONTACTOR_CLOSE, {1,1,1,1,1,1,1,1,1}, 0, 0, GK_SAFETY_DRIVING};
         gk_control_params_t params = {{"linear", 2.00000000f, true, "moderate", 0.50000000f}, 40.00000000f, 0.12700000f, 4.33000000f, 0.92000000f, 0.90000000f};
-        gk_control_outputs_t expected = {13.94123173f, 0.01988596f, 0.00099430f, 0.40225419f, false};
+        gk_control_outputs_t expected = {10.38011360f, 0.01988596f, 0.00099430f, 0.25999999f, false};
         run_control_case(&inputs, &limits, &safety, &state, &params, 0.01000000f, &expected);
     }
 }
