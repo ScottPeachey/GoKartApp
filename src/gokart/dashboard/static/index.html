@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=19" />
+  <link rel="stylesheet" href="/static/style.css?v=20" />
 </head>
 <body>
   <header>
@@ -179,6 +179,7 @@
             <option value="scenario">Scenario</option>
             <option value="free">Free drive</option>
             <option value="manual">Manual throttle/brake</option>
+            <option value="auto">Auto drive</option>
           </select>
         </label>
         <label id="scenario-label">Scenario <select id="scenario-select"></select></label>
@@ -191,6 +192,19 @@
             <option value="">No track (free plane)</option>
           </select>
         </label>
+      </div>
+      <div id="auto-drive-panel" class="auto-drive-panel hidden">
+        <p class="config-hint">
+          The rule-based driver follows the racing line, brakes for corners, and stops after the lap count.
+          Pick a <strong>track</strong> above. Aggression 100% = fastest (God); lower = endurance margin.
+        </p>
+        <div class="row">
+          <label>Laps <input id="auto-laps" type="number" min="1" max="50" value="3" /></label>
+          <label>Aggression
+            <input id="auto-aggression" type="range" min="50" max="100" value="100" />
+            <span id="auto-aggression-value">100%</span>
+          </label>
+        </div>
       </div>
       <p id="effective-limits" class="config-hint">Effective max speed: —</p>
       <div id="free-drive-panel" class="free-drive-panel hidden">
@@ -410,7 +424,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=48"></script>
+  <script src="/static/app.js?v=49"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

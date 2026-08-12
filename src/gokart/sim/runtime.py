@@ -18,3 +18,6 @@ class RuntimeControls:
     fault_ack_request: bool = False
     power_cycle_request: bool = False
     stop_requested: bool = False
+    auto_drive: bool = False
+    target_laps: int = 3
+    aggression: float = 1.0

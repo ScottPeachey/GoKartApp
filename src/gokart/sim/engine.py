@@ -19,9 +19,11 @@ from gokart.control.pipeline import (
     SafetyOutputs,
     control_step,
 )
+from gokart.driver.agent import DriverConfig, RuleBasedDriver
+from gokart.driver.racing_line import spawn_on_racing_line
 from gokart.limits.resolver import resolve_limits
-from gokart.physics.drivetrain import motor_rpm_from_speed, speed_from_motor_rpm
 from gokart.physics.attitude import vehicle_attitude_deg
+from gokart.physics.drivetrain import motor_rpm_from_speed, speed_from_motor_rpm
 from gokart.physics.steering import steering_angle_rad
 from gokart.physics.tyres import lateral_accel_from_bicycle_mps2
 from gokart.physics.vehicle import (
@@ -38,9 +40,9 @@ from gokart.sim.fault_injection import FaultInjector
 from gokart.sim.runtime import RuntimeControls
 from gokart.sim.scenarios import Scenario
 from gokart.sim.track_context import TrackSimulationContext
-from gokart.track.model import Track
 from gokart.telemetry.channels import CHANNEL_NAMES
 from gokart.telemetry.recorder import SessionRecorder
+from gokart.track.model import Track
 
 DEFAULT_DT_S = 0.01
 
@@ -202,9 +204,12 @@ def run_simulation(
     mode = load_drive_mode(scenario.mode_name, root=root)
     profile = load_driver_profile(scenario.profile_name, root=root)
     manual_mode = bool(controls and (controls.manual or controls.free_mode))
+    auto_drive = bool(controls and controls.auto_drive)
     free_mode = bool(controls and controls.free_mode)
-    if manual_mode:
-        mode = mode.model_copy(update={"throttle_ramp_per_s": None})
+    if auto_drive and track is None:
+        raise ValueError("auto_drive requires a track")
+    if manual_mode or auto_drive:
+        mode = mode.model_copy(update={"throttle_ramp_per_s": None if manual_mode else 6.0})
 
     validation = validate_vehicle_config(
         vehicle_model.config,
@@ -225,9 +230,22 @@ def run_simulation(
     vehicle_state = vehicle_model.initial_state()
     vehicle_state.speed_mps = initial_speed_mps
     track_context: TrackSimulationContext | None = None
+    auto_driver: RuleBasedDriver | None = None
     if track is not None:
         track_context = TrackSimulationContext(track)
-        spawn_x, spawn_y, spawn_heading = track_context.spawn_pose()
+        if auto_drive:
+            auto_driver = RuleBasedDriver(
+                track,
+                DriverConfig(
+                    grip_coefficient=vehicle_model.grip_coefficient,
+                    max_speed_mps=base_limits.max_speed_mps,
+                    wheelbase_m=vehicle_model.config.wheelbase_m,
+                    aggression=controls.aggression if controls else 1.0,
+                ),
+            )
+            spawn_x, spawn_y, spawn_heading = spawn_on_racing_line(track)
+        else:
+            spawn_x, spawn_y, spawn_heading = track_context.spawn_pose()
         vehicle_state.position_x_m = spawn_x
         vehicle_state.position_y_m = spawn_y
         vehicle_state.heading_rad = spawn_heading
@@ -246,7 +264,7 @@ def run_simulation(
 
     records: list[SimTickRecord] = []
     retain_records = keep_records and recorder is None
-    if controls and (controls.manual or controls.free_mode):
+    if controls and (controls.manual or controls.free_mode or controls.auto_drive):
         steps = 10_000_000
     else:
         steps = int(scenario.duration_s / dt_s)
@@ -277,7 +295,28 @@ def run_simulation(
         if controls and controls.stop_requested:
             break
         time_s = step * dt_s
-        if manual_mode:
+        precharging = (
+            safety_state == SafetyState.ARMED
+            and safety_timers.precharge_elapsed_s < safety_config.precharge_timeout_s
+        )
+        if auto_drive and auto_driver is not None:
+            battery_soc = vehicle_state.battery.soc if vehicle_state.battery else 1.0
+            if safety_state in {SafetyState.DRIVING, SafetyState.ARMED} and not precharging:
+                driver_out = auto_driver.step(
+                    x=vehicle_state.position_x_m,
+                    y=vehicle_state.position_y_m,
+                    heading_rad=vehicle_state.heading_rad,
+                    speed_mps=vehicle_state.speed_mps,
+                    soc=battery_soc,
+                )
+                throttle = driver_out.throttle
+                brake = driver_out.brake
+                steering = driver_out.steering
+            else:
+                throttle = 0.0
+                brake = 1.0 if precharging else 0.0
+                steering = 0.0
+        elif manual_mode:
             throttle = controls.throttle  # type: ignore[union-attr]
             brake = controls.brake  # type: ignore[union-attr]
             steering = controls.steering  # type: ignore[union-attr]
@@ -304,10 +343,6 @@ def run_simulation(
             arm_request = True
             synthetic_brake_hold = True
             auto_arm_sent = True
-        precharging = (
-            safety_state == SafetyState.ARMED
-            and safety_timers.precharge_elapsed_s < safety_config.precharge_timeout_s
-        )
         if precharging:
             synthetic_brake_hold = True
 
@@ -315,6 +350,8 @@ def run_simulation(
             safety_brake_pressed = True
         elif manual_mode and safety_state == SafetyState.DRIVING:
             safety_brake_pressed = False
+        elif auto_drive and safety_state == SafetyState.DRIVING:
+            safety_brake_pressed = brake > 0.1
         elif manual_mode:
             safety_brake_pressed = brake > 0.1
         else:
@@ -326,6 +363,8 @@ def run_simulation(
             power_cycle_event = True
             if safety_state == SafetyState.OFF:
                 power_on = True
+        if auto_drive and fault_ack:
+            power_cycle_event = True
 
         detect_throttle = 0.0 if synthetic_brake_hold else throttle
         detect_brake = 1.0 if synthetic_brake_hold else brake
@@ -549,6 +588,15 @@ def run_simulation(
             on_tick(tick)
         if recorder is not None:
             recorder.record_tick(tick.to_row())
+
+        if (
+            auto_drive
+            and controls
+            and track_context is not None
+            and controls.target_laps > 0
+            and len(track_context.completed_laps) >= controls.target_laps
+        ):
+            break
 
         if speedup > 0:
             clock.tick(dt_s)

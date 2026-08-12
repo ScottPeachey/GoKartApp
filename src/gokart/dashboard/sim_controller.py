@@ -46,13 +46,24 @@ class SimController:
         driver_profile: str = "owner",
         manual: bool = False,
         free_mode: bool = False,
+        auto_drive: bool = False,
+        target_laps: int = 3,
+        aggression: float = 1.0,
         speedup: float = 1.0,
         track_id: str | None = None,
     ) -> str:
         with self._lock:
             if self.status.running:
                 raise RuntimeError("Simulation already running")
-            self.controls = RuntimeControls(manual=manual, free_mode=free_mode)
+            if auto_drive and not track_id:
+                raise RuntimeError("Auto drive requires a track")
+            self.controls = RuntimeControls(
+                manual=manual,
+                free_mode=free_mode,
+                auto_drive=auto_drive,
+                target_laps=target_laps,
+                aggression=aggression,
+            )
             if free_mode:
                 self.controls.power_on_request = True
             self.status = SimStatus(running=True)
@@ -67,6 +78,9 @@ class SimController:
                     "speedup": speedup,
                     "manual": manual,
                     "free_mode": free_mode,
+                    "auto_drive": auto_drive,
+                    "target_laps": target_laps,
+                    "aggression": aggression,
                     "track_id": track_id,
                 },
                 daemon=True,
@@ -131,6 +145,9 @@ class SimController:
         speedup: float,
         manual: bool,
         free_mode: bool,
+        auto_drive: bool,
+        target_laps: int,
+        aggression: float,
         track_id: str | None,
     ) -> None:
         try:
@@ -138,7 +155,20 @@ class SimController:
             base = load_scenario(scenario_name)
             mode_name = drive_mode or base.mode_name
             profile_name = driver_profile or base.profile_name
-            if free_mode:
+            if auto_drive:
+                if track is None:
+                    raise ValueError("Auto drive requires a track")
+                scenario = Scenario(
+                    name="auto_drive",
+                    duration_s=1e9,
+                    mode_name=mode_name,
+                    profile_name=profile_name,
+                    auto_boot=True,
+                )
+                self.controls.auto_drive = True
+                self.controls.target_laps = target_laps
+                self.controls.aggression = aggression
+            elif free_mode:
                 scenario = Scenario(
                     name="free_drive",
                     duration_s=1e9,

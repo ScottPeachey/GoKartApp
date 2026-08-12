@@ -2056,17 +2056,27 @@ function syncDrivingControlsState() {
 function updateSimModeUi() {
   const mode = simMode();
   const free = mode === "free";
-  document.getElementById("scenario-label").classList.toggle("hidden", free);
+  const auto = mode === "auto";
+  document.getElementById("scenario-label").classList.toggle("hidden", free || auto);
   document.getElementById("free-drive-panel").classList.toggle("hidden", !free);
-  document.getElementById("btn-arm-scenario").classList.toggle("hidden", free);
-  document.getElementById("btn-ack-scenario").classList.toggle("hidden", free);
+  document.getElementById("auto-drive-panel")?.classList.toggle("hidden", !auto);
+  document.getElementById("btn-arm-scenario").classList.toggle("hidden", free || auto);
+  document.getElementById("btn-ack-scenario").classList.toggle("hidden", free || auto);
 
   syncDrivingControlsState();
 
   const startBtn = document.getElementById("btn-start");
   const stopBtn = document.getElementById("btn-stop");
-  startBtn.textContent = free ? "Start session" : "Start";
-  stopBtn.textContent = free ? "End session" : "Stop";
+  if (auto) {
+    startBtn.textContent = "Start auto drive";
+    stopBtn.textContent = "Stop";
+  } else if (free) {
+    startBtn.textContent = "Start session";
+    stopBtn.textContent = "End session";
+  } else {
+    startBtn.textContent = "Start";
+    stopBtn.textContent = "Stop";
+  }
   startBtn.classList.toggle("btn-primary", free);
   startBtn.classList.toggle("btn-primary-lg", free);
 
@@ -2354,6 +2364,13 @@ function setupPathMapInteractions() {
 
 function setupControls() {
   document.getElementById("sim-mode").addEventListener("change", updateSimModeUi);
+  const autoAggression = document.getElementById("auto-aggression");
+  const autoAggressionValue = document.getElementById("auto-aggression-value");
+  if (autoAggression && autoAggressionValue) {
+    autoAggression.addEventListener("input", () => {
+      autoAggressionValue.textContent = `${autoAggression.value}%`;
+    });
+  }
   document.getElementById("vehicle-select").addEventListener("change", () => {
     void updateEffectiveLimits();
   });
@@ -2369,10 +2386,15 @@ function setupControls() {
     const mode = simMode();
     const driveSettings = selectedDriveSettings();
     const trackId = document.getElementById("sim-track-select")?.value;
+    if (mode === "auto" && !trackId) {
+      window.alert("Auto drive requires a track — select one in the Track dropdown.");
+      return;
+    }
     if (trackId) {
       syncTrackSelectValue(trackId);
       await loadSelectedTrack(true);
     }
+    const aggressionPct = Number(document.getElementById("auto-aggression")?.value || 100);
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
@@ -2381,8 +2403,11 @@ function setupControls() {
         scenario: document.getElementById("scenario-select").value,
         manual: mode === "manual",
         free_mode: mode === "free",
-        speedup: 5.0,
-        track_id: document.getElementById("sim-track-select")?.value || null,
+        auto_drive: mode === "auto",
+        target_laps: Number(document.getElementById("auto-laps")?.value || 3),
+        aggression: aggressionPct / 100,
+        speedup: mode === "auto" ? 20.0 : 5.0,
+        track_id: trackId || null,
       }),
     });
     state.simRunning = true;

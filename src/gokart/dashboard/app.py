@@ -62,6 +62,9 @@ class SimStartRequest(BaseModel):
     driver_profile: str = "owner"
     manual: bool = False
     free_mode: bool = False
+    auto_drive: bool = False
+    target_laps: int = Field(default=3, ge=1, le=50)
+    aggression: float = Field(default=1.0, ge=0.5, le=1.0)
     speedup: float = Field(default=1.0, ge=0.0)
     track_id: str | None = None
 
@@ -383,6 +386,9 @@ def create_app(
                 driver_profile=request.driver_profile,
                 manual=request.manual,
                 free_mode=request.free_mode,
+                auto_drive=request.auto_drive,
+                target_laps=request.target_laps,
+                aggression=request.aggression,
                 speedup=request.speedup,
                 track_id=request.track_id,
             )

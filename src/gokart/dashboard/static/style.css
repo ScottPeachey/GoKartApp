@@ -1205,6 +1205,29 @@ th, td {
   display: none;
 }
 
+.auto-drive-panel {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  background: #1a2434;
+  border-radius: 8px;
+  border: 1px solid #2a3548;
+}
+
+.auto-drive-panel.hidden {
+  display: none;
+}
+
+.auto-drive-panel input[type="number"] {
+  width: 4rem;
+  margin-left: 0.35rem;
+}
+
+.auto-drive-panel input[type="range"] {
+  vertical-align: middle;
+  width: 8rem;
+  margin: 0 0.5rem;
+}
+
 .fault-recovery h4 {
   margin: 0 0 0.5rem;
   font-size: 0.95rem;

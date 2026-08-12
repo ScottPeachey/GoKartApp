@@ -1,9 +1,9 @@
 # Electric Go-Kart Software
 
 A configuration-driven platform for a custom electric go-kart: virtual
-simulation before the kart exists, real-time control firmware (ESP32),
-a driver dashboard, and telemetry logging/analysis — all built on **one
-shared vehicle model**, per the requirements specification in this repo.
+simulation before the kart exists, a driver dashboard, and telemetry
+logging/analysis — all built on **one shared vehicle model**, per the
+requirements specification in this repo.
 
 ## Documents
 
@@ -13,8 +13,7 @@ Read in this order:
    system must do (v1.1, the authoritative requirements).
 2. `docs/ARCHITECTURE.md` — how the system is designed: repository layout,
    technology choices, data model, limit hierarchy, control pipeline, safety
-   state machine, physics engine, telemetry, firmware strategy, and the key
-   decisions with rationale.
+   state machine, physics engine, and telemetry.
 3. `docs/IMPLEMENTATION_PLAN.md` — the phased build order with concrete
    tasks, required tests, and acceptance criteria per phase.
 
@@ -26,6 +25,7 @@ Read in this order:
   questions by the plan. Genuine ambiguities: pick the simplest option
   consistent with the architecture, record it under `## Decisions` at the
   bottom of the plan, and continue.
+
 ## Pre-build testing (Phases 0–5)
 
 You can configure and test the full software loop **before the kart exists**:
@@ -42,18 +42,17 @@ In the dashboard, open the **Configuration** tab to swap components or change
 sprocket sizes. Saving creates a new vehicle version automatically (no JSON or
 hashes).
 
-## Firmware (Phase 6+)
+## Autonomous track racing (in progress)
 
-Phase 6 adds the ESP32 firmware skeleton and a C port of the safety/limits/control
-core, verified by golden test vectors:
+Import kart-scale circuits and run a rule-based autonomous driver from the
+dashboard (**Auto drive** mode) or extend with RL/benchmarking per the autonomous
+racing plan.
 
 ```bash
-gokart firmware golden
-make -C firmware/core_c/tests test
-# ESP32 (requires PlatformIO): cd firmware/esp32 && pio run -e esp32s3_mock
-gokart telemetry ingest --file firmware_capture.jsonl
+gokart track import /path/to/circuit.geojson
+gokart track list
+gokart dashboard   # Simulation → Auto drive, pick a track and lap count
 ```
-
 
 ## Status
 
@@ -66,5 +65,6 @@ gokart telemetry ingest --file firmware_capture.jsonl
 - [x] Phase 3 — safety state machine, fault injection, mode/profile switching
 - [x] Phase 4 — telemetry storage and virtual dashboard
 - [x] Phase 5 — analysis and virtual tuning
-- [x] Phase 6 — portable C core and ESP32 firmware skeleton
-- [ ] Phases 7–9 — drivers, real telemetry, HIL
+- [x] Autonomous racing Phases 1–5 — tracks, lap timing, 4-wheel physics, tyre model
+- [x] Autonomous racing Phase 6 — rule-based driver + Auto drive sessions
+- [ ] Autonomous racing Phases 7–9 — RL driver, benchmarking, 3D viz
