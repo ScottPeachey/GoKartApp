@@ -133,10 +133,12 @@ class SimulationSession:
         )
         self.mode = load_drive_mode(self.scenario.mode_name, root=self.root)
         self.profile = load_driver_profile(self.scenario.profile_name, root=self.root)
-        if config.control_source in {ControlSource.MANUAL, ControlSource.RL}:
+        if config.control_source in {
+            ControlSource.MANUAL,
+            ControlSource.RL,
+            ControlSource.AUTO,
+        }:
             self.mode = self.mode.model_copy(update={"throttle_ramp_per_s": None})
-        elif config.control_source == ControlSource.AUTO:
-            self.mode = self.mode.model_copy(update={"throttle_ramp_per_s": 6.0})
 
         validation = validate_vehicle_config(
             self.vehicle_model.config,
@@ -312,7 +314,12 @@ class SimulationSession:
         ):
             ctx.detection_state.previous_throttle_adc = sensors.throttle_adc
 
-        detected = detect_faults(sensors, safety_config, detection_state=ctx.detection_state)
+        detected = detect_faults(
+            sensors,
+            safety_config,
+            detection_state=ctx.detection_state,
+            dt=self.dt_s,
+        )
         if manual_mode or self.config.control_source == ControlSource.RL:
             detected.discard(FaultId.THROTTLE_BRAKE_SIMULTANEOUS)
             detected.discard(FaultId.THROTTLE_IMPLAUSIBLE)

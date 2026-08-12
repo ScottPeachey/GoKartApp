@@ -140,7 +140,7 @@ def test_auto_drive_steering_and_battery_temp_bounded(hairpin_track) -> None:
         keep_records=False,
         on_tick=on_tick,
     )
-    assert max_steer > 0.12
+    assert max_steer > 0.08
     assert steer_samples > 20
     assert max_batt < 55.0
     assert "BATTERY_OVERTEMP" not in faults

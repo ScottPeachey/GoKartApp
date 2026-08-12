@@ -212,7 +212,8 @@ def run_simulation(
     if (auto_drive or learned_drive) and track is None:
         raise ValueError("auto_drive and learned_drive require a track")
     if manual_mode or auto_drive or learned_drive:
-        mode = mode.model_copy(update={"throttle_ramp_per_s": None if manual_mode else 6.0})
+        instant_throttle = manual_mode or auto_drive
+        mode = mode.model_copy(update={"throttle_ramp_per_s": None if instant_throttle else 6.0})
 
     validation = validate_vehicle_config(
         vehicle_model.config,
@@ -404,7 +405,12 @@ def run_simulation(
         ):
             detection_state.previous_throttle_adc = sensors.throttle_adc
 
-        detected = detect_faults(sensors, safety_config, detection_state=detection_state)
+        detected = detect_faults(
+            sensors,
+            safety_config,
+            detection_state=detection_state,
+            dt=dt_s,
+        )
         if manual_mode or learned_drive:
             detected.discard(FaultId.THROTTLE_BRAKE_SIMULTANEOUS)
             detected.discard(FaultId.THROTTLE_IMPLAUSIBLE)

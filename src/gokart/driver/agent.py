@@ -104,8 +104,16 @@ class RuleBasedDriver:
             battery_temp_c=battery_temp_c,
             battery_derate_c=self.config.battery_temp_derate_c,
             battery_fault_c=self.config.battery_temp_fault_c,
+            max_speed_mps=self.config.max_speed_mps,
+            grip_coefficient=self.config.grip_coefficient,
         )
-        throttle = _slew(self._actuators.throttle, pursuit.throttle, 1.0, dt)
+        throttle = _slew_asymmetric(
+            self._actuators.throttle,
+            pursuit.throttle,
+            up_rate_per_s=3.0,
+            down_rate_per_s=15.0,
+            dt=dt,
+        )
         brake = _slew(self._actuators.brake, pursuit.brake, 2.0, dt)
         steering = _slew_signed(self._actuators.steering, pursuit.steering, 2.5, dt)
         self._actuators.throttle = throttle
@@ -119,6 +127,21 @@ class RuleBasedDriver:
             track_s_m=s_m,
             lateral_m=lateral_m,
         )
+
+
+def _slew_asymmetric(
+    current: float,
+    target: float,
+    *,
+    up_rate_per_s: float,
+    down_rate_per_s: float,
+    dt: float,
+) -> float:
+    if dt <= 0.0:
+        return target
+    rate = up_rate_per_s if target > current else down_rate_per_s
+    delta = max(-rate * dt, min(rate * dt, target - current))
+    return max(0.0, min(1.0, current + delta))
 
 
 def _slew(current: float, target: float, max_rate_per_s: float, dt: float) -> float:

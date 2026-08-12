@@ -177,6 +177,7 @@ class SafetyConfig:
     battery_temp_fault_c: float = 60.0
     max_speed_mps: float = 20.0
     overspeed_margin_mps: float = 0.5
+    overspeed_confirm_s: float = 0.35
     can_timeout_s: float = 0.5
     precharge_timeout_s: float = 2.0
     self_test_duration_s: float = 0.5
@@ -215,6 +216,7 @@ class SensorInputs:
 @dataclass
 class DetectionState:
     previous_throttle_adc: int = 0
+    overspeed_elapsed_s: float = 0.0
 
 
 def detect_faults(
@@ -222,6 +224,7 @@ def detect_faults(
     config: SafetyConfig,
     *,
     detection_state: DetectionState | None = None,
+    dt: float = 0.01,
 ) -> set[FaultId]:
     """Pure fault detection from sensor and bus signals."""
     active: set[FaultId] = set()
@@ -289,7 +292,15 @@ def detect_faults(
     elif inputs.battery_temp_c >= config.battery_temp_derate_c:
         active.add(FaultId.BATTERY_OVERTEMP_DERATE)
 
-    if inputs.speed_mps > config.max_speed_mps + config.overspeed_margin_mps:
+    over_limit = inputs.speed_mps > config.max_speed_mps + config.overspeed_margin_mps
+    if detection_state is not None:
+        if over_limit:
+            detection_state.overspeed_elapsed_s += max(0.0, dt)
+        else:
+            detection_state.overspeed_elapsed_s = 0.0
+        if detection_state.overspeed_elapsed_s >= config.overspeed_confirm_s:
+            active.add(FaultId.OVERSPEED)
+    elif over_limit:
         active.add(FaultId.OVERSPEED)
 
     if inputs.watchdog_reset_detected:

@@ -316,8 +316,10 @@ def apply_cornering_speed_bleed(
             new_speed = max(speed_cap, new_speed * (1.0 - bleed))
         else:
             new_speed *= 1.0 - bleed
-    else:
-        scrub_accel = (demand_ratio * demand_ratio) * max_lat * 0.5
+    elif demand_ratio > 0.88:
+        # Only bleed speed when cornering load is near the friction limit.
+        scrub_fraction = (demand_ratio - 0.88) / 0.12
+        scrub_accel = (scrub_fraction * scrub_fraction) * max_lat * 0.35
         new_speed = max(0.0, new_speed - scrub_accel * dt)
 
     return max(0.0, new_speed)

@@ -16,6 +16,7 @@ from gokart.config.schemas.modes import DriveMode
 from gokart.control.pipeline import ControlInputs, ControlParams, ControlState, control_step
 from gokart.limits.resolver import DeratingFactors, EffectiveLimits, resolve_limits
 from gokart.safety.faults import (
+    DetectionState,
     FAULT_REGISTRY,
     SafetyConfig,
     SensorInputs,
@@ -114,6 +115,30 @@ def test_overspeed_uses_margin_above_configured_limit() -> None:
     above = detect_faults(SensorInputs(speed_mps=13.1), config)
     assert FaultId.OVERSPEED not in below
     assert FaultId.OVERSPEED in above
+
+
+def test_overspeed_requires_sustained_violation_with_detection_state() -> None:
+    config = SafetyConfig(
+        max_speed_mps=12.5,
+        overspeed_margin_mps=0.5,
+        overspeed_confirm_s=0.35,
+    )
+    state = DetectionState()
+    faults = detect_faults(
+        SensorInputs(speed_mps=13.1),
+        config,
+        detection_state=state,
+        dt=0.01,
+    )
+    assert FaultId.OVERSPEED not in faults
+    for _ in range(40):
+        faults = detect_faults(
+            SensorInputs(speed_mps=13.1),
+            config,
+            detection_state=state,
+            dt=0.01,
+        )
+    assert FaultId.OVERSPEED in faults
 
 
 def test_precharge_failure_critical_shutdown() -> None:

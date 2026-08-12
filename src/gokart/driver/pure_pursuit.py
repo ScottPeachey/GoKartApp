@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from gokart.driver.racing_line import RacingLinePoint, point_at_s
 from gokart.driver.speed_profile import SpeedProfile
 from gokart.physics.steering import MAX_STEER_ANGLE_DEG
+from gokart.physics.tyres import cornering_speed_limit_mps
 
 
 @dataclass(frozen=True)
@@ -32,9 +33,11 @@ def pure_pursuit_step(
     wheelbase_m: float,
     lookahead_base_m: float = 3.5,
     lookahead_gain: float = 0.28,
-    speed_kp_throttle: float = 0.055,
-    speed_kp_brake: float = 0.18,
-    max_throttle: float = 0.72,
+    speed_kp_throttle: float = 0.10,
+    speed_kp_brake: float = 0.25,
+    max_throttle: float = 0.88,
+    max_speed_mps: float = 0.0,
+    grip_coefficient: float = 1.1,
     soc: float = 1.0,
     aggression: float = 1.0,
     battery_temp_c: float = 25.0,
@@ -58,6 +61,9 @@ def pure_pursuit_step(
         hot_fraction = (battery_temp_c - warn_c) / hot_span
         target_speed *= max(0.35, 1.0 - hot_fraction * 0.9)
 
+    if max_speed_mps > 0.0:
+        target_speed = min(target_speed, max_speed_mps * 0.96)
+
     curvature = abs(_curvature_at_s(line, s_m, track_length_m))
     lookahead = lookahead_base_m + lookahead_gain * max(speed_mps, 0.0)
     lookahead *= max(0.5, 1.0 - min(curvature * 50.0, 0.5))
@@ -79,7 +85,17 @@ def pure_pursuit_step(
     max_steer_rad = math.radians(MAX_STEER_ANGLE_DEG)
     steering = max(-1.0, min(1.0, steer_rad / max_steer_rad))
 
+    corner_cap = cornering_speed_limit_mps(
+        steer_rad,
+        wheelbase_m,
+        grip_coefficient,
+    )
+    if corner_cap is not None:
+        target_speed = min(target_speed, corner_cap * 0.95)
+
     throttle_cap = max_throttle
+    steer_mag = abs(steering)
+    throttle_cap *= max(0.25, 1.0 - steer_mag * steer_mag * 0.75)
     if battery_temp_c >= battery_derate_c - 2.0:
         throttle_cap = min(throttle_cap, 0.2)
     elif battery_temp_c > warn_c:
@@ -88,10 +104,22 @@ def pure_pursuit_step(
     speed_error = target_speed - speed_mps
     throttle = 0.0
     brake = 0.0
-    if speed_error > 0.2:
+    if speed_error > 0.05:
         throttle = max(0.0, min(throttle_cap, speed_kp_throttle * speed_error))
-    elif speed_error < -0.35:
+    elif speed_error < -0.15:
         brake = max(0.0, min(1.0, speed_kp_brake * abs(speed_error)))
+
+    if max_speed_mps > 0.0:
+        mode_headroom = max_speed_mps * 0.96 - speed_mps
+        if mode_headroom < 0.0:
+            brake = max(brake, min(1.0, 0.35 + speed_kp_brake * abs(mode_headroom)))
+            throttle = 0.0
+        elif speed_mps > max_speed_mps * 0.82:
+            throttle = 0.0
+            if mode_headroom < max_speed_mps * 0.04:
+                brake = max(brake, min(1.0, speed_kp_brake * (max_speed_mps * 0.96 - speed_mps) * -1.0))
+            else:
+                throttle = min(throttle_cap, speed_kp_throttle * max(0.0, mode_headroom))
 
     if battery_temp_c >= battery_derate_c:
         hot_span = max(battery_fault_c - battery_derate_c, 1.0)

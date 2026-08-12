@@ -144,13 +144,19 @@ def control_step(
             motor_torque *= traction_scale
             traction_limited = True
 
+    governor_brake = 0.0
     if inputs.speed_mps > 0 and limits.max_speed_mps > 0:
-        taper_start = limits.max_speed_mps * 0.9
-        if inputs.speed_mps > taper_start:
-            span = limits.max_speed_mps - taper_start
-            if span > 0:
-                taper = max(0.0, (limits.max_speed_mps - inputs.speed_mps) / span)
-                motor_torque *= taper
+        if inputs.speed_mps >= limits.max_speed_mps:
+            motor_torque = 0.0
+            overspeed_mps = inputs.speed_mps - limits.max_speed_mps
+            governor_brake = min(1.0, 0.2 + overspeed_mps * 0.35)
+        else:
+            taper_start = limits.max_speed_mps * 0.85
+            if inputs.speed_mps > taper_start:
+                span = limits.max_speed_mps - taper_start
+                if span > 0:
+                    taper = max(0.0, (limits.max_speed_mps - inputs.speed_mps) / span)
+                    motor_torque *= taper
 
     motor_torque = min(motor_torque, params.motor_peak_torque_nm)
     if limits.max_power_w > 0 and inputs.pack_voltage_v > 1.0:
@@ -168,9 +174,9 @@ def control_step(
         motor_torque *= limits.max_motor_current_a / est_current
 
     regen_torque = 0.0
-    mechanical_brake = brake
-    if safety.regen_permitted and brake > 0:
-        regen_torque = brake * params.motor_peak_torque_nm * params.mode.regen_strength
+    mechanical_brake = max(brake, governor_brake)
+    if safety.regen_permitted and mechanical_brake > 0:
+        regen_torque = mechanical_brake * params.motor_peak_torque_nm * params.mode.regen_strength
         if limits.max_regen_current_a > 0 and inputs.pack_voltage_v > 1.0:
             from gokart.units import rpm_to_rads
 
