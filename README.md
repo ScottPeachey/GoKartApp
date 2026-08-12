@@ -67,4 +67,4 @@ gokart dashboard   # Simulation → Auto drive, pick a track and lap count
 - [x] Phase 5 — analysis and virtual tuning
 - [x] Autonomous racing Phases 1–5 — tracks, lap timing, 4-wheel physics, tyre model
 - [x] Autonomous racing Phase 6 — rule-based driver + Auto drive sessions
-- [ ] Autonomous racing Phases 7–9 — RL driver, benchmarking, 3D viz
+- [ ] Autonomous racing Phases 7–9 — per-config RL training to clean ceiling, ceiling validation/benchmarking, 3D viz
