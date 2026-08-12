@@ -80,8 +80,14 @@ const CHANNEL_DISPLAY = {
   tyre_temp_rear_c: { decimals: 1, deadband: 0.1 },
   tyre_wear_front: { decimals: 4, deadband: 0.00005 },
   tyre_wear_rear: { decimals: 4, deadband: 0.00005 },
-  grip_front_effective: { decimals: 2, deadband: 0.02 },
-  grip_rear_effective: { decimals: 2, deadband: 0.02 },
+  tyre_wear_fl: { decimals: 4, deadband: 0.00005 },
+  tyre_wear_fr: { decimals: 4, deadband: 0.00005 },
+  tyre_wear_rl: { decimals: 4, deadband: 0.00005 },
+  tyre_wear_rr: { decimals: 4, deadband: 0.00005 },
+  grip_fl_effective: { decimals: 2, deadband: 0.02 },
+  grip_fr_effective: { decimals: 2, deadband: 0.02 },
+  grip_rl_effective: { decimals: 2, deadband: 0.02 },
+  grip_rr_effective: { decimals: 2, deadband: 0.02 },
   motor_temp_c: { decimals: 1, deadband: 0.3 },
   battery_temp_c: { decimals: 1, deadband: 0.3 },
   traction_limited: { decimals: 0, deadband: 0.5 },
@@ -265,19 +271,35 @@ function formatTyreWear(wear) {
   return `${pct.toFixed(2)}%`;
 }
 
+function updateWheelCard(wheelId, sample) {
+  const normal = Number(sample[`normal_${wheelId}_n`] || 0);
+  const gripCoeff = Number(sample[`grip_${wheelId}_effective`] || DISPLAY_GRIP_COEFF);
+  const isRear = wheelId === "rl" || wheelId === "rr";
+  const usedForce = isRear
+    ? Math.abs(Number(sample[`longitudinal_${wheelId}_n`] || 0))
+    : Math.abs(Number(sample[`lateral_${wheelId}_n`] || 0));
+  const limit = normal * (gripCoeff > 0 ? gripCoeff : DISPLAY_GRIP_COEFF);
+  const gripPct = limit > 0 ? (usedForce / limit) * 100 : 0;
+  const temp = Number(sample[`tyre_temp_${wheelId}_c`] ?? 25);
+  const wear = sample[`tyre_wear_${wheelId}`];
+
+  document.getElementById(`wheel-${wheelId}-load`).textContent = normal > 1 ? `${Math.round(normal)} N` : "—";
+  setGripMeterBar(`wheel-${wheelId}-grip-bar`, gripPct);
+  document.getElementById(`wheel-${wheelId}-grip-label`).textContent = isRear
+    ? `Drive ${Math.min(999, gripPct).toFixed(0)}%`
+    : `Lateral ${Math.min(999, gripPct).toFixed(0)}%`;
+  document.getElementById(`wheel-${wheelId}-tyre-meta`).textContent =
+    `${temp.toFixed(1)}°C · wear ${formatTyreWear(wear)}`;
+  return { normal, gripPct, isRear, usedForce };
+}
+
 function updateAxlePhysicsPanel(sample) {
   const panel = document.getElementById("axle-physics-panel");
   if (!panel) return;
 
-  const frontTemp = Number(sample.tyre_temp_front_c ?? 25);
-  const rearTemp = Number(sample.tyre_temp_rear_c ?? 25);
-  document.getElementById("front-tyre-meta").textContent =
-    `${frontTemp.toFixed(1)}°C · wear ${formatTyreWear(sample.tyre_wear_front)}`;
-  document.getElementById("rear-tyre-meta").textContent =
-    `${rearTemp.toFixed(1)}°C · wear ${formatTyreWear(sample.tyre_wear_rear)}`;
-
-  const frontN = Number(sample.front_normal_n || 0);
-  const rearN = Number(sample.rear_normal_n || 0);
+  const wheelStats = WHEEL_IDS.map((wheelId) => updateWheelCard(wheelId, sample));
+  const frontN = Number(sample.front_normal_n || wheelStats[0].normal + wheelStats[1].normal);
+  const rearN = Number(sample.rear_normal_n || wheelStats[2].normal + wheelStats[3].normal);
   const total = frontN + rearN;
   const hasData = total > 1;
   panel.classList.toggle("inactive", !hasData);
@@ -292,34 +314,27 @@ function updateAxlePhysicsPanel(sample) {
   document.getElementById("rear-load-segment").style.width = `${rearPct}%`;
   document.getElementById("front-load-pct").textContent = `F ${frontPct.toFixed(0)}%`;
   document.getElementById("rear-load-pct").textContent = `R ${rearPct.toFixed(0)}%`;
-  document.getElementById("front-load-value").textContent = `${Math.round(frontN)} N`;
-  document.getElementById("rear-load-value").textContent = `${Math.round(rearN)} N`;
 
   const frontLat = Math.abs(Number(sample.front_lateral_n || 0));
   const rearTrac = Math.abs(Number(sample.rear_traction_n || sample.traction_force_n || 0));
-  const frontLimit = frontN * DISPLAY_GRIP_COEFF;
-  const rearLimit = rearN * DISPLAY_GRIP_COEFF;
-  const frontGripPct = frontLimit > 0 ? (frontLat / frontLimit) * 100 : 0;
-  const rearGripPct = rearLimit > 0 ? (rearTrac / rearLimit) * 100 : 0;
-
-  setGripMeterBar("front-grip-bar", frontGripPct);
-  setGripMeterBar("rear-grip-bar", rearGripPct);
-  document.getElementById("front-grip-label").textContent = `Lateral ${Math.min(999, frontGripPct).toFixed(0)}%`;
-  document.getElementById("rear-grip-label").textContent = `Rear grip ${Math.min(999, rearGripPct).toFixed(0)}%`;
-
   const speed = Number(sample.speed_mps || 0);
   const brake = Number(sample.brake || 0);
   const loadAccel = effectiveLoadTransferAccel(sample);
   const hint = document.getElementById("load-transfer-hint");
+  const outsideLoaded = sample.normal_fr_n > sample.normal_fl_n + 5;
   if (speed <= 0.05 && brake > 0.1) {
     hint.textContent = "Brakes held";
   } else if (loadAccel > 0.8) {
     hint.textContent = "Load → rear";
   } else if (loadAccel < -0.8) {
     hint.textContent = "Load → front";
+  } else if (outsideLoaded) {
+    hint.textContent = "Load → right (turning left)";
+  } else if (sample.normal_fl_n > sample.normal_fr_n + 5) {
+    hint.textContent = "Load → left (turning right)";
   } else if (frontLat > 200) {
     hint.textContent = "Front cornering";
-  } else if (rearGripPct > 75) {
+  } else if (wheelStats[2].gripPct > 75 || wheelStats[3].gripPct > 75) {
     hint.textContent = "Rear grip limited";
   } else {
     hint.textContent = "Balanced";
@@ -334,15 +349,14 @@ function resetAxlePhysicsPanel() {
   document.getElementById("rear-load-segment").style.width = "50%";
   document.getElementById("front-load-pct").textContent = "F 50%";
   document.getElementById("rear-load-pct").textContent = "R 50%";
-  document.getElementById("front-load-value").textContent = "—";
-  document.getElementById("rear-load-value").textContent = "—";
-  document.getElementById("front-grip-label").textContent = "Lateral —";
-  document.getElementById("rear-grip-label").textContent = "Rear grip —";
-  document.getElementById("front-tyre-meta").textContent = "— °C · wear —";
-  document.getElementById("rear-tyre-meta").textContent = "— °C · wear —";
+  for (const wheelId of WHEEL_IDS) {
+    document.getElementById(`wheel-${wheelId}-load`).textContent = "—";
+    document.getElementById(`wheel-${wheelId}-grip-label`).textContent =
+      wheelId === "rl" || wheelId === "rr" ? "Drive —" : "Lateral —";
+    document.getElementById(`wheel-${wheelId}-tyre-meta`).textContent = "— °C · wear —";
+    setGripMeterBar(`wheel-${wheelId}-grip-bar`, 0);
+  }
   document.getElementById("load-transfer-hint").textContent = "—";
-  setGripMeterBar("front-grip-bar", 0);
-  setGripMeterBar("rear-grip-bar", 0);
 }
 
 const STEER_MAX_DEG = 28;
@@ -511,6 +525,14 @@ const CHANNEL_UI = {
   rear_normal_n: { icon: "⬇", label: "Rear load" },
   front_lateral_n: { icon: "↔", label: "Front lateral" },
   rear_traction_n: { icon: "🛞", label: "Rear traction" },
+  normal_fl_n: { icon: "⬇", label: "FL load" },
+  normal_fr_n: { icon: "⬇", label: "FR load" },
+  normal_rl_n: { icon: "⬇", label: "RL load" },
+  normal_rr_n: { icon: "⬇", label: "RR load" },
+  lateral_fl_n: { icon: "↔", label: "FL lateral" },
+  lateral_fr_n: { icon: "↔", label: "FR lateral" },
+  longitudinal_rl_n: { icon: "🛞", label: "RL drive" },
+  longitudinal_rr_n: { icon: "🛞", label: "RR drive" },
   tyre_temp_front_c: { icon: "🌡", label: "Front tyre temp" },
   tyre_temp_rear_c: { icon: "🌡", label: "Rear tyre temp" },
   tyre_temp_fl_c: { icon: "🌡", label: "FL temp" },
@@ -519,8 +541,16 @@ const CHANNEL_UI = {
   tyre_temp_rr_c: { icon: "🌡", label: "RR temp" },
   tyre_wear_front: { icon: "🛞", label: "Front wear" },
   tyre_wear_rear: { icon: "🛞", label: "Rear wear" },
+  tyre_wear_fl: { icon: "🛞", label: "FL wear" },
+  tyre_wear_fr: { icon: "🛞", label: "FR wear" },
+  tyre_wear_rl: { icon: "🛞", label: "RL wear" },
+  tyre_wear_rr: { icon: "🛞", label: "RR wear" },
   grip_front_effective: { icon: "🛞", label: "Front grip" },
   grip_rear_effective: { icon: "🛞", label: "Rear grip" },
+  grip_fl_effective: { icon: "🛞", label: "FL grip" },
+  grip_fr_effective: { icon: "🛞", label: "FR grip" },
+  grip_rl_effective: { icon: "🛞", label: "RL grip" },
+  grip_rr_effective: { icon: "🛞", label: "RR grip" },
   motor_temp_c: { icon: "🌡", label: "Motor temp" },
   battery_temp_c: { icon: "🌡", label: "Battery temp" },
   traction_limited: { icon: "🛞", label: "Traction limited" },

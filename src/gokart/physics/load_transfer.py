@@ -14,6 +14,28 @@ class AxleLoads:
     rear_normal_n: float
 
 
+@dataclass(frozen=True)
+class WheelLoads:
+    fl_normal_n: float
+    fr_normal_n: float
+    rl_normal_n: float
+    rr_normal_n: float
+
+    @property
+    def front_normal_n(self) -> float:
+        return self.fl_normal_n + self.fr_normal_n
+
+    @property
+    def rear_normal_n(self) -> float:
+        return self.rl_normal_n + self.rr_normal_n
+
+    def as_axle_loads(self) -> AxleLoads:
+        return AxleLoads(
+            front_normal_n=self.front_normal_n,
+            rear_normal_n=self.rear_normal_n,
+        )
+
+
 def axle_normal_loads_n(
     *,
     mass_kg: float,
@@ -51,4 +73,60 @@ def axle_normal_loads_n(
     return AxleLoads(
         front_normal_n=max(0.0, front),
         rear_normal_n=max(0.0, rear),
+    )
+
+
+def wheel_normal_loads_n(
+    *,
+    mass_kg: float,
+    wheelbase_m: float,
+    cg_longitudinal_m: float,
+    cg_height_m: float,
+    front_track_m: float,
+    rear_track_m: float,
+    long_accel_mps2: float = 0.0,
+    lat_accel_mps2: float = 0.0,
+    gradient_rad: float = 0.0,
+) -> WheelLoads:
+    """Split axle loads across left/right wheels with roll transfer."""
+    axle = axle_normal_loads_n(
+        mass_kg=mass_kg,
+        wheelbase_m=wheelbase_m,
+        cg_longitudinal_m=cg_longitudinal_m,
+        cg_height_m=cg_height_m,
+        long_accel_mps2=long_accel_mps2,
+        lat_accel_mps2=0.0,
+        gradient_rad=gradient_rad,
+    )
+    front_half = axle.front_normal_n * 0.5
+    rear_half = axle.rear_normal_n * 0.5
+
+    if abs(lat_accel_mps2) <= 1e-9 or cg_height_m <= 0.0:
+        return WheelLoads(
+            fl_normal_n=front_half,
+            fr_normal_n=front_half,
+            rl_normal_n=rear_half,
+            rr_normal_n=rear_half,
+        )
+
+    front_track = max(front_track_m, 0.1)
+    rear_track = max(rear_track_m, 0.1)
+    front_roll = mass_kg * abs(lat_accel_mps2) * cg_height_m / front_track
+    rear_roll = mass_kg * abs(lat_accel_mps2) * cg_height_m / rear_track
+    front_roll = min(front_roll, front_half * 0.42)
+    rear_roll = min(rear_roll, rear_half * 0.42)
+
+    # Positive lateral accel (left turn) transfers load to the right-side wheels.
+    if lat_accel_mps2 > 0.0:
+        return WheelLoads(
+            fl_normal_n=max(0.0, front_half - front_roll),
+            fr_normal_n=front_half + front_roll,
+            rl_normal_n=max(0.0, rear_half - rear_roll),
+            rr_normal_n=rear_half + rear_roll,
+        )
+    return WheelLoads(
+        fl_normal_n=front_half + front_roll,
+        fr_normal_n=max(0.0, front_half - front_roll),
+        rl_normal_n=rear_half + rear_roll,
+        rr_normal_n=max(0.0, rear_half - rear_roll),
     )

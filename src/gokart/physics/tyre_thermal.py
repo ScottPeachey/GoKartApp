@@ -1,4 +1,4 @@
-"""Per-axle tyre temperature and wear affecting effective grip."""
+"""Per-wheel tyre temperature and wear affecting effective grip."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import math
 from dataclasses import dataclass, field
 
 from gokart.config.schemas.components import Tyre
+from gokart.physics.tyres import WheelTyreOutputs
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,12 @@ class TyreThermalParams:
 
 
 @dataclass
+class WheelTyreState:
+    temperature_c: float = 25.0
+    wear: float = 0.0
+
+
+@dataclass
 class AxleTyreState:
     temperature_c: float = 25.0
     wear: float = 0.0
@@ -41,19 +48,49 @@ class AxleTyreState:
 
 @dataclass
 class TyreThermalState:
-    front: AxleTyreState = field(default_factory=AxleTyreState)
-    rear: AxleTyreState = field(default_factory=AxleTyreState)
+    fl: WheelTyreState = field(default_factory=WheelTyreState)
+    fr: WheelTyreState = field(default_factory=WheelTyreState)
+    rl: WheelTyreState = field(default_factory=WheelTyreState)
+    rr: WheelTyreState = field(default_factory=WheelTyreState)
 
     @classmethod
     def initial(cls, ambient_temp_c: float = 25.0) -> TyreThermalState:
         return cls(
-            front=AxleTyreState(temperature_c=ambient_temp_c),
-            rear=AxleTyreState(temperature_c=ambient_temp_c),
+            fl=WheelTyreState(temperature_c=ambient_temp_c),
+            fr=WheelTyreState(temperature_c=ambient_temp_c),
+            rl=WheelTyreState(temperature_c=ambient_temp_c),
+            rr=WheelTyreState(temperature_c=ambient_temp_c),
+        )
+
+    @property
+    def front(self) -> AxleTyreState:
+        return AxleTyreState(
+            temperature_c=(self.fl.temperature_c + self.fr.temperature_c) * 0.5,
+            wear=(self.fl.wear + self.fr.wear) * 0.5,
+        )
+
+    @property
+    def rear(self) -> AxleTyreState:
+        return AxleTyreState(
+            temperature_c=(self.rl.temperature_c + self.rr.temperature_c) * 0.5,
+            wear=(self.rl.wear + self.rr.wear) * 0.5,
         )
 
 
 @dataclass(frozen=True)
 class TyreThermalOutputs:
+    fl_temp_c: float
+    fr_temp_c: float
+    rl_temp_c: float
+    rr_temp_c: float
+    fl_wear: float
+    fr_wear: float
+    rl_wear: float
+    rr_wear: float
+    fl_grip_multiplier: float
+    fr_grip_multiplier: float
+    rl_grip_multiplier: float
+    rr_grip_multiplier: float
     front_temp_c: float
     rear_temp_c: float
     front_wear: float
@@ -86,6 +123,20 @@ def wear_grip_multiplier(
     return max(0.55, 1.0 - grip_falloff_per_wear * ratio)
 
 
+def wheel_grip_multiplier(state: WheelTyreState, params: TyreThermalParams) -> float:
+    temp_factor = temperature_grip_multiplier(
+        state.temperature_c,
+        optimal_temp_c=params.optimal_temp_c,
+        temp_window_c=params.temp_window_c,
+    )
+    wear_factor = wear_grip_multiplier(
+        state.wear,
+        max_wear=params.max_wear,
+        grip_falloff_per_wear=params.grip_falloff_per_wear,
+    )
+    return temp_factor * wear_factor
+
+
 def axle_grip_multiplier(state: AxleTyreState, params: TyreThermalParams) -> float:
     temp_factor = temperature_grip_multiplier(
         state.temperature_c,
@@ -100,15 +151,15 @@ def axle_grip_multiplier(state: AxleTyreState, params: TyreThermalParams) -> flo
     return temp_factor * wear_factor
 
 
-def step_axle_tyre(
-    state: AxleTyreState,
+def step_wheel_tyre(
+    state: WheelTyreState,
     params: TyreThermalParams,
     *,
     slip_usage: float,
     normal_load_n: float,
     speed_mps: float,
     dt: float,
-) -> AxleTyreState:
+) -> WheelTyreState:
     slip = max(0.0, min(1.5, slip_usage))
     normal = max(normal_load_n, 0.0)
     speed = max(speed_mps, 0.0)
@@ -122,10 +173,10 @@ def step_axle_tyre(
     temperature_c = state.temperature_c + (heat_in - cool) * dt
     wear_delta = slip * params.wear_rate * normal * speed * dt if speed > 0.2 else 0.0
     wear = min(params.max_wear, state.wear + wear_delta)
-    return AxleTyreState(temperature_c=temperature_c, wear=wear)
+    return WheelTyreState(temperature_c=temperature_c, wear=wear)
 
 
-def axle_slip_usage(
+def wheel_slip_usage(
     *,
     longitudinal_n: float,
     lateral_n: float,
@@ -142,51 +193,65 @@ def step_tyre_thermal(
     front_params: TyreThermalParams,
     rear_params: TyreThermalParams,
     *,
-    front_longitudinal_n: float,
-    front_lateral_n: float,
-    rear_longitudinal_n: float,
-    rear_lateral_n: float,
-    front_normal_n: float,
-    rear_normal_n: float,
+    tyre_out: WheelTyreOutputs,
     front_grip_coefficient: float,
     rear_grip_coefficient: float,
     speed_mps: float,
     dt: float,
 ) -> tuple[TyreThermalState, TyreThermalOutputs]:
-    front_slip = axle_slip_usage(
-        longitudinal_n=front_longitudinal_n,
-        lateral_n=front_lateral_n,
-        normal_load_n=front_normal_n,
-        grip_coefficient=front_grip_coefficient,
+    loads = tyre_out.wheel_loads
+    wheels = (
+        ("fl", state.fl, front_params, tyre_out.fl_longitudinal_n, tyre_out.fl_lateral_n, loads.fl_normal_n),
+        ("fr", state.fr, front_params, tyre_out.fr_longitudinal_n, tyre_out.fr_lateral_n, loads.fr_normal_n),
+        ("rl", state.rl, rear_params, tyre_out.rl_longitudinal_n, tyre_out.rl_lateral_n, loads.rl_normal_n),
+        ("rr", state.rr, rear_params, tyre_out.rr_longitudinal_n, tyre_out.rr_lateral_n, loads.rr_normal_n),
     )
-    rear_slip = axle_slip_usage(
-        longitudinal_n=rear_longitudinal_n,
-        lateral_n=rear_lateral_n,
-        normal_load_n=rear_normal_n,
-        grip_coefficient=rear_grip_coefficient,
+    updated: dict[str, WheelTyreState] = {}
+    grip_multipliers: dict[str, float] = {}
+    for key, wheel_state, params, long_n, lat_n, normal_n in wheels:
+        grip_base = front_grip_coefficient if key in {"fl", "fr"} else rear_grip_coefficient
+        slip = wheel_slip_usage(
+            longitudinal_n=long_n,
+            lateral_n=lat_n,
+            normal_load_n=normal_n,
+            grip_coefficient=grip_base,
+        )
+        new_wheel = step_wheel_tyre(
+            wheel_state,
+            params,
+            slip_usage=slip,
+            normal_load_n=normal_n,
+            speed_mps=speed_mps,
+            dt=dt,
+        )
+        updated[key] = new_wheel
+        grip_multipliers[key] = wheel_grip_multiplier(new_wheel, params)
+
+    new_state = TyreThermalState(
+        fl=updated["fl"],
+        fr=updated["fr"],
+        rl=updated["rl"],
+        rr=updated["rr"],
     )
-    front = step_axle_tyre(
-        state.front,
-        front_params,
-        slip_usage=front_slip,
-        normal_load_n=front_normal_n,
-        speed_mps=speed_mps,
-        dt=dt,
-    )
-    rear = step_axle_tyre(
-        state.rear,
-        rear_params,
-        slip_usage=rear_slip,
-        normal_load_n=rear_normal_n,
-        speed_mps=speed_mps,
-        dt=dt,
-    )
-    new_state = TyreThermalState(front=front, rear=rear)
+    front_grip = (grip_multipliers["fl"] + grip_multipliers["fr"]) * 0.5
+    rear_grip = (grip_multipliers["rl"] + grip_multipliers["rr"]) * 0.5
     return new_state, TyreThermalOutputs(
-        front_temp_c=front.temperature_c,
-        rear_temp_c=rear.temperature_c,
-        front_wear=front.wear,
-        rear_wear=rear.wear,
-        front_grip_multiplier=axle_grip_multiplier(front, front_params),
-        rear_grip_multiplier=axle_grip_multiplier(rear, rear_params),
+        fl_temp_c=updated["fl"].temperature_c,
+        fr_temp_c=updated["fr"].temperature_c,
+        rl_temp_c=updated["rl"].temperature_c,
+        rr_temp_c=updated["rr"].temperature_c,
+        fl_wear=updated["fl"].wear,
+        fr_wear=updated["fr"].wear,
+        rl_wear=updated["rl"].wear,
+        rr_wear=updated["rr"].wear,
+        fl_grip_multiplier=grip_multipliers["fl"],
+        fr_grip_multiplier=grip_multipliers["fr"],
+        rl_grip_multiplier=grip_multipliers["rl"],
+        rr_grip_multiplier=grip_multipliers["rr"],
+        front_temp_c=new_state.front.temperature_c,
+        rear_temp_c=new_state.rear.temperature_c,
+        front_wear=new_state.front.wear,
+        rear_wear=new_state.rear.wear,
+        front_grip_multiplier=front_grip,
+        rear_grip_multiplier=rear_grip,
     )

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=15" />
+  <link rel="stylesheet" href="/static/style.css?v=16" />
 </head>
 <body>
   <header>
@@ -73,29 +73,51 @@
             <span class="load-split-title">Weight balance</span>
             <span id="rear-load-pct">R 50%</span>
           </div>
-          <div class="axle-grip-grid">
-            <div class="axle-grip-card">
-              <div class="axle-grip-head">
-                <span>Front axle</span>
-                <span id="front-load-value" class="axle-force">—</span>
+          <div class="wheel-grid" aria-label="Per-wheel loads, grip, temperature, and wear">
+            <div class="wheel-card">
+              <div class="wheel-card-head">
+                <span>FL</span>
+                <span id="wheel-fl-load" class="axle-force">—</span>
               </div>
-              <div class="grip-meter" title="Lateral grip usage">
-                <div id="front-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+              <div class="grip-meter" title="Front-left grip usage">
+                <div id="wheel-fl-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
               </div>
-                <span id="front-grip-label" class="grip-caption">Lateral —</span>
-                <span id="front-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+              <span id="wheel-fl-grip-label" class="grip-caption">Lateral —</span>
+              <span id="wheel-fl-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+            </div>
+            <div class="wheel-card">
+              <div class="wheel-card-head">
+                <span>FR</span>
+                <span id="wheel-fr-load" class="axle-force">—</span>
               </div>
-              <div class="axle-grip-card">
-              <div class="axle-grip-head">
-                <span>Rear axle</span>
-                <span id="rear-load-value" class="axle-force">—</span>
+              <div class="grip-meter" title="Front-right grip usage">
+                <div id="wheel-fr-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
               </div>
-              <div class="grip-meter" title="Rear longitudinal grip usage">
-                <div id="rear-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+              <span id="wheel-fr-grip-label" class="grip-caption">Lateral —</span>
+              <span id="wheel-fr-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+            </div>
+            <div class="wheel-card">
+              <div class="wheel-card-head">
+                <span>RL</span>
+                <span id="wheel-rl-load" class="axle-force">—</span>
               </div>
-                <span id="rear-grip-label" class="grip-caption">Rear grip —</span>
-                <span id="rear-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+              <div class="grip-meter" title="Rear-left grip usage">
+                <div id="wheel-rl-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
               </div>
+              <span id="wheel-rl-grip-label" class="grip-caption">Drive —</span>
+              <span id="wheel-rl-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+            </div>
+            <div class="wheel-card">
+              <div class="wheel-card-head">
+                <span>RR</span>
+                <span id="wheel-rr-load" class="axle-force">—</span>
+              </div>
+              <div class="grip-meter" title="Rear-right grip usage">
+                <div id="wheel-rr-grip-bar" class="grip-meter-fill grip-low" style="width: 0%"></div>
+              </div>
+              <span id="wheel-rr-grip-label" class="grip-caption">Drive —</span>
+              <span id="wheel-rr-tyre-meta" class="tyre-meta-caption">— °C · wear —</span>
+            </div>
           </div>
         </div>
         <div class="cockpit-controls-col">
@@ -377,7 +399,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=42"></script>
+  <script src="/static/app.js?v=43"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

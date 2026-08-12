@@ -6,12 +6,13 @@ import math
 
 import pytest
 
-from gokart.physics.load_transfer import axle_normal_loads_n
+from gokart.physics.load_transfer import axle_normal_loads_n, wheel_normal_loads_n
 from gokart.physics.steering import steering_angle_rad
 from gokart.physics.tyres import (
     lateral_force_from_steering_n,
     saturate_axle_forces,
     saturate_traction_friction_circle,
+    saturate_wheel_forces,
 )
 
 
@@ -124,3 +125,45 @@ def test_front_steering_reduces_available_rear_drive() -> None:
     assert turning.rear_longitudinal_n > 0.0
     assert turning.rear_longitudinal_n <= loads.rear_normal_n * grip + 1.0
     assert legacy.traction_force_n < straight.traction_force_n
+
+
+def test_cornering_transfers_load_to_outside_wheels() -> None:
+    straight = wheel_normal_loads_n(
+        mass_kg=193.0,
+        wheelbase_m=1.04,
+        cg_longitudinal_m=0.52,
+        cg_height_m=0.28,
+        front_track_m=0.9,
+        rear_track_m=0.95,
+        lat_accel_mps2=0.0,
+    )
+    turning = wheel_normal_loads_n(
+        mass_kg=193.0,
+        wheelbase_m=1.04,
+        cg_longitudinal_m=0.52,
+        cg_height_m=0.28,
+        front_track_m=0.9,
+        rear_track_m=0.95,
+        lat_accel_mps2=6.0,
+    )
+    assert turning.fr_normal_n > turning.fl_normal_n
+    assert turning.rr_normal_n > turning.rl_normal_n
+    assert turning.front_normal_n == pytest.approx(straight.front_normal_n, rel=0.02)
+    assert turning.rear_normal_n == pytest.approx(straight.rear_normal_n, rel=0.02)
+
+
+def test_wheel_forces_sum_to_axle_model() -> None:
+    mass = 193.0
+    wheelbase = 1.04
+    grip = 1.1
+    loads = wheel_normal_loads_n(
+        mass_kg=mass,
+        wheelbase_m=wheelbase,
+        cg_longitudinal_m=0.52,
+        cg_height_m=0.28,
+        front_track_m=0.9,
+        rear_track_m=0.95,
+    )
+    wheel_out = saturate_wheel_forces(1500.0, 0.0, 0.0, loads, grip, grip, grip, grip)
+    axle_out = saturate_axle_forces(1500.0, 0.0, 0.0, loads.as_axle_loads(), grip, grip)
+    assert wheel_out.traction_force_n == pytest.approx(axle_out.traction_force_n, rel=0.02)

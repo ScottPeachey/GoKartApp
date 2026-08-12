@@ -216,6 +216,29 @@ main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
   margin-top: 0.28rem;
 }
 
+.wheel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.28rem 0.35rem;
+  margin-top: 0.28rem;
+}
+
+.wheel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.wheel-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.58rem;
+  color: #8aa0b8;
+  font-weight: 600;
+}
+
 .axle-grip-card {
   display: flex;
   flex-direction: column;

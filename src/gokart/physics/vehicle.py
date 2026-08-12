@@ -24,12 +24,12 @@ from gokart.physics.drivetrain import (
 )
 from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_motor
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
-from gokart.physics.load_transfer import axle_normal_loads_n
+from gokart.physics.load_transfer import wheel_normal_loads_n
 from gokart.physics.steering import step_steering, steering_angle_rad
 from gokart.physics.tyre_thermal import (
     TyreThermalParams,
     TyreThermalState,
-    axle_grip_multiplier,
+    wheel_grip_multiplier,
     step_tyre_thermal,
 )
 from gokart.physics.tyres import (
@@ -37,7 +37,7 @@ from gokart.physics.tyres import (
     cornering_scrub_force_n,
     lateral_accel_from_bicycle_mps2,
     lateral_force_from_steering_n,
-    saturate_axle_forces,
+    saturate_wheel_forces,
 )
 
 
@@ -104,12 +104,32 @@ class VehicleStepOutputs:
     rear_normal_n: float
     front_lateral_n: float
     rear_traction_n: float
+    normal_fl_n: float
+    normal_fr_n: float
+    normal_rl_n: float
+    normal_rr_n: float
+    lateral_fl_n: float
+    lateral_fr_n: float
+    longitudinal_rl_n: float
+    longitudinal_rr_n: float
     tyre_temp_front_c: float
     tyre_temp_rear_c: float
+    tyre_temp_fl_c: float
+    tyre_temp_fr_c: float
+    tyre_temp_rl_c: float
+    tyre_temp_rr_c: float
     tyre_wear_front: float
     tyre_wear_rear: float
+    tyre_wear_fl: float
+    tyre_wear_fr: float
+    tyre_wear_rl: float
+    tyre_wear_rr: float
     grip_front_effective: float
     grip_rear_effective: float
+    grip_fl_effective: float
+    grip_fr_effective: float
+    grip_rl_effective: float
+    grip_rr_effective: float
     motor_temp_c: float
     battery_temp_c: float
     power_w: float
@@ -260,11 +280,13 @@ class VehicleModel:
             steering_angle_rad(steering),
             self.config.wheelbase_m,
         )
-        loads = axle_normal_loads_n(
+        loads = wheel_normal_loads_n(
             mass_kg=self.mass_kg,
             wheelbase_m=self.config.wheelbase_m,
             cg_longitudinal_m=self.config.cg_longitudinal_m,
             cg_height_m=self.config.cg_height_m,
+            front_track_m=self.config.front_track_m,
+            rear_track_m=self.config.rear_track_m,
             long_accel_mps2=long_accel_mps2,
             lat_accel_mps2=lat_accel,
             gradient_rad=gradient_rad,
@@ -272,7 +294,7 @@ class VehicleModel:
         from gokart.physics.tyres import max_traction_force_at_rear
 
         return max_traction_force_at_rear(
-            loads,
+            loads.as_axle_loads(),
             self.rear_grip_coefficient * surface_mu_scale,
         )
 
@@ -300,8 +322,12 @@ class VehicleModel:
         )
         front_grip_base = self.front_grip_coefficient * surface_mu
         rear_grip_base = self.rear_grip_coefficient * surface_mu
-        front_grip = front_grip_base * axle_grip_multiplier(state.tyre_thermal.front, front_params)
-        rear_grip = rear_grip_base * axle_grip_multiplier(state.tyre_thermal.rear, rear_params)
+        grip_fl = front_grip_base * wheel_grip_multiplier(state.tyre_thermal.fl, front_params)
+        grip_fr = front_grip_base * wheel_grip_multiplier(state.tyre_thermal.fr, front_params)
+        grip_rl = rear_grip_base * wheel_grip_multiplier(state.tyre_thermal.rl, rear_params)
+        grip_rr = rear_grip_base * wheel_grip_multiplier(state.tyre_thermal.rr, rear_params)
+        front_grip = (grip_fl + grip_fr) * 0.5
+        rear_grip = (grip_rl + grip_rr) * 0.5
         motor_rpm = motor_rpm_from_speed(self.drivetrain_params, state.speed_mps)
 
         motor_state, motor_out = step_motor(
@@ -340,11 +366,13 @@ class VehicleModel:
             steer_rad,
             self.config.wheelbase_m,
         )
-        axle_loads = axle_normal_loads_n(
+        wheel_loads = wheel_normal_loads_n(
             mass_kg=self.mass_kg,
             wheelbase_m=self.config.wheelbase_m,
             cg_longitudinal_m=self.config.cg_longitudinal_m,
             cg_height_m=self.config.cg_height_m,
+            front_track_m=self.config.front_track_m,
+            rear_track_m=self.config.rear_track_m,
             long_accel_mps2=0.0,
             lat_accel_mps2=lat_accel,
             gradient_rad=env.gradient_rad,
@@ -362,13 +390,15 @@ class VehicleModel:
             self.brake_params,
         )
 
-        tyre_out = saturate_axle_forces(
+        tyre_out = saturate_wheel_forces(
             force_req,
             brake_out.mechanical_force_n,
             lateral_force,
-            axle_loads,
-            front_grip,
-            rear_grip,
+            wheel_loads,
+            grip_fl,
+            grip_fr,
+            grip_rl,
+            grip_rr,
         )
 
         f_aero = aero_drag_force_n(state.speed_mps, self.drag_coefficient, self.frontal_area_m2)
@@ -396,22 +426,26 @@ class VehicleModel:
         accel = f_net / self.mass_kg if self.mass_kg > 0 else 0.0
         load_accel = load_transfer_long_accel_mps2(state.speed_mps, accel)
 
-        axle_loads = axle_normal_loads_n(
+        wheel_loads = wheel_normal_loads_n(
             mass_kg=self.mass_kg,
             wheelbase_m=self.config.wheelbase_m,
             cg_longitudinal_m=self.config.cg_longitudinal_m,
             cg_height_m=self.config.cg_height_m,
+            front_track_m=self.config.front_track_m,
+            rear_track_m=self.config.rear_track_m,
             long_accel_mps2=load_accel,
             lat_accel_mps2=lat_accel,
             gradient_rad=env.gradient_rad,
         )
-        tyre_out = saturate_axle_forces(
+        tyre_out = saturate_wheel_forces(
             force_req,
             brake_out.mechanical_force_n,
             lateral_force,
-            axle_loads,
-            front_grip,
-            rear_grip,
+            wheel_loads,
+            grip_fl,
+            grip_fr,
+            grip_rl,
+            grip_rr,
         )
         f_net = (
             tyre_out.traction_force_n
@@ -432,7 +466,7 @@ class VehicleModel:
             env.gradient_rad,
             dt,
             mass_kg=self.mass_kg,
-            front_normal_n=axle_loads.front_normal_n,
+            front_normal_n=wheel_loads.front_normal_n,
         )
         achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt
@@ -441,12 +475,7 @@ class VehicleModel:
             state.tyre_thermal,
             front_params,
             rear_params,
-            front_longitudinal_n=tyre_out.front_longitudinal_n,
-            front_lateral_n=tyre_out.front_lateral_n,
-            rear_longitudinal_n=tyre_out.rear_longitudinal_n,
-            rear_lateral_n=tyre_out.rear_lateral_n,
-            front_normal_n=axle_loads.front_normal_n,
-            rear_normal_n=axle_loads.rear_normal_n,
+            tyre_out=tyre_out,
             front_grip_coefficient=front_grip_base,
             rear_grip_coefficient=rear_grip_base,
             speed_mps=new_speed,
@@ -525,12 +554,32 @@ class VehicleModel:
             rear_normal_n=tyre_out.rear_normal_n,
             front_lateral_n=tyre_out.front_lateral_n,
             rear_traction_n=tyre_out.rear_longitudinal_n,
+            normal_fl_n=wheel_loads.fl_normal_n,
+            normal_fr_n=wheel_loads.fr_normal_n,
+            normal_rl_n=wheel_loads.rl_normal_n,
+            normal_rr_n=wheel_loads.rr_normal_n,
+            lateral_fl_n=tyre_out.fl_lateral_n,
+            lateral_fr_n=tyre_out.fr_lateral_n,
+            longitudinal_rl_n=tyre_out.rl_longitudinal_n,
+            longitudinal_rr_n=tyre_out.rr_longitudinal_n,
             tyre_temp_front_c=thermal_out.front_temp_c,
             tyre_temp_rear_c=thermal_out.rear_temp_c,
+            tyre_temp_fl_c=thermal_out.fl_temp_c,
+            tyre_temp_fr_c=thermal_out.fr_temp_c,
+            tyre_temp_rl_c=thermal_out.rl_temp_c,
+            tyre_temp_rr_c=thermal_out.rr_temp_c,
             tyre_wear_front=thermal_out.front_wear,
             tyre_wear_rear=thermal_out.rear_wear,
+            tyre_wear_fl=thermal_out.fl_wear,
+            tyre_wear_fr=thermal_out.fr_wear,
+            tyre_wear_rl=thermal_out.rl_wear,
+            tyre_wear_rr=thermal_out.rr_wear,
             grip_front_effective=front_grip,
             grip_rear_effective=rear_grip,
+            grip_fl_effective=grip_fl,
+            grip_fr_effective=grip_fr,
+            grip_rl_effective=grip_rl,
+            grip_rr_effective=grip_rr,
             motor_temp_c=motor_thermal_out.temperature_c,
             battery_temp_c=battery_thermal_out.temperature_c,
             power_w=battery_out.power_w,

@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 
 from gokart.physics.constants import GRAVITY_MPS2
-from gokart.physics.load_transfer import AxleLoads
+from gokart.physics.load_transfer import AxleLoads, WheelLoads
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,45 @@ class TyreOutputs:
     rear_longitudinal_n: float = 0.0
     front_lateral_n: float = 0.0
     rear_lateral_n: float = 0.0
+
+
+@dataclass(frozen=True)
+class WheelTyreOutputs:
+    wheel_loads: WheelLoads
+    fl_longitudinal_n: float
+    fl_lateral_n: float
+    fr_longitudinal_n: float
+    fr_lateral_n: float
+    rl_longitudinal_n: float
+    rl_lateral_n: float
+    rr_longitudinal_n: float
+    rr_lateral_n: float
+    traction_force_n: float
+    traction_force_requested_n: float
+    normal_load_n: float
+    lateral_force_n: float
+    longitudinal_grip_limit_n: float
+    front_normal_n: float
+    rear_normal_n: float
+    front_longitudinal_n: float
+    rear_longitudinal_n: float
+    front_lateral_n: float
+    rear_lateral_n: float
+
+    def as_axle_outputs(self) -> TyreOutputs:
+        return TyreOutputs(
+            traction_force_n=self.traction_force_n,
+            traction_force_requested_n=self.traction_force_requested_n,
+            normal_load_n=self.normal_load_n,
+            lateral_force_n=self.lateral_force_n,
+            longitudinal_grip_limit_n=self.longitudinal_grip_limit_n,
+            front_normal_n=self.front_normal_n,
+            rear_normal_n=self.rear_normal_n,
+            front_longitudinal_n=self.front_longitudinal_n,
+            rear_longitudinal_n=self.rear_longitudinal_n,
+            front_lateral_n=self.front_lateral_n,
+            rear_lateral_n=self.rear_lateral_n,
+        )
 
 
 def clip_friction_circle(
@@ -55,6 +94,78 @@ def max_traction_force_at_rear(
     rear_max = axle_loads.rear_normal_n * rear_grip_coefficient
     long_available, _ = clip_friction_circle(rear_max, 0.0, rear_max)
     return long_available
+
+
+def saturate_wheel_forces(
+    drive_force_requested_n: float,
+    brake_force_n: float,
+    lateral_force_n: float,
+    wheel_loads: WheelLoads,
+    front_grip_fl: float,
+    front_grip_fr: float,
+    rear_grip_rl: float,
+    rear_grip_rr: float,
+    *,
+    front_brake_bias: float = 0.55,
+) -> WheelTyreOutputs:
+    """Resolve per-wheel friction circles for drive, brake, and steering."""
+    front_brake = max(0.0, brake_force_n) * front_brake_bias
+    rear_brake = max(0.0, brake_force_n) * (1.0 - front_brake_bias)
+    front_lat_each = lateral_force_n * 0.5
+    rear_drive_each = drive_force_requested_n * 0.5
+
+    fl_long, fl_lat = clip_friction_circle(
+        -front_brake * 0.5,
+        front_lat_each,
+        wheel_loads.fl_normal_n * front_grip_fl,
+    )
+    fr_long, fr_lat = clip_friction_circle(
+        -front_brake * 0.5,
+        front_lat_each,
+        wheel_loads.fr_normal_n * front_grip_fr,
+    )
+    rl_long, rl_lat = clip_friction_circle(
+        rear_drive_each - rear_brake * 0.5,
+        0.0,
+        wheel_loads.rl_normal_n * rear_grip_rl,
+    )
+    rr_long, rr_lat = clip_friction_circle(
+        rear_drive_each - rear_brake * 0.5,
+        0.0,
+        wheel_loads.rr_normal_n * rear_grip_rr,
+    )
+
+    front_long = fl_long + fr_long
+    front_lat = fl_lat + fr_lat
+    rear_long = rl_long + rr_long
+    rear_lat = rl_lat + rr_lat
+    rear_max = (
+        wheel_loads.rl_normal_n * rear_grip_rl + wheel_loads.rr_normal_n * rear_grip_rr
+    )
+    total_normal = wheel_loads.front_normal_n + wheel_loads.rear_normal_n
+
+    return WheelTyreOutputs(
+        wheel_loads=wheel_loads,
+        fl_longitudinal_n=fl_long,
+        fl_lateral_n=fl_lat,
+        fr_longitudinal_n=fr_long,
+        fr_lateral_n=fr_lat,
+        rl_longitudinal_n=rl_long,
+        rl_lateral_n=rl_lat,
+        rr_longitudinal_n=rr_long,
+        rr_lateral_n=rr_lat,
+        traction_force_n=rear_long,
+        traction_force_requested_n=drive_force_requested_n,
+        normal_load_n=total_normal,
+        lateral_force_n=lateral_force_n,
+        longitudinal_grip_limit_n=rear_max,
+        front_normal_n=wheel_loads.front_normal_n,
+        rear_normal_n=wheel_loads.rear_normal_n,
+        front_longitudinal_n=front_long,
+        rear_longitudinal_n=rear_long,
+        front_lateral_n=front_lat,
+        rear_lateral_n=rear_lat,
+    )
 
 
 def saturate_axle_forces(
