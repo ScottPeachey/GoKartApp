@@ -157,6 +157,13 @@ class Tyre(ComponentBase):
     wet_grip_coefficient: float | None = Field(default=None, gt=0)
     max_speed_mps: float = Field(gt=0)
     max_load_kg: float = Field(gt=0)
+    optimal_temp_c: float = Field(default=60.0)
+    temp_window_c: float = Field(default=18.0, gt=0)
+    heating_rate: float = Field(default=0.018, gt=0)
+    cooling_rate: float = Field(default=0.32, gt=0)
+    wear_rate: float = Field(default=2.5e-8, ge=0)
+    grip_falloff_per_wear: float = Field(default=0.4, ge=0)
+    max_wear: float = Field(default=1.0, gt=0)
     hardware_limits: HardwareLimits = Field(default_factory=HardwareLimits)
 
 

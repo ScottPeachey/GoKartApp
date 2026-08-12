@@ -26,6 +26,12 @@ from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_moto
 from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
 from gokart.physics.load_transfer import axle_normal_loads_n
 from gokart.physics.steering import step_steering, steering_angle_rad
+from gokart.physics.tyre_thermal import (
+    TyreThermalParams,
+    TyreThermalState,
+    axle_grip_multiplier,
+    step_tyre_thermal,
+)
 from gokart.physics.tyres import (
     apply_cornering_speed_bleed,
     cornering_scrub_force_n,
@@ -53,6 +59,7 @@ class VehicleState:
     battery: BatteryState | None = None
     motor_thermal: ThermalState | None = None
     battery_thermal: ThermalState | None = None
+    tyre_thermal: TyreThermalState | None = None
     pack_voltage_v: float = 48.0
 
     def __post_init__(self) -> None:
@@ -64,6 +71,8 @@ class VehicleState:
             self.motor_thermal = ThermalState()
         if self.battery_thermal is None:
             self.battery_thermal = ThermalState()
+        if self.tyre_thermal is None:
+            self.tyre_thermal = TyreThermalState()
 
 
 @dataclass(frozen=True)
@@ -95,6 +104,12 @@ class VehicleStepOutputs:
     rear_normal_n: float
     front_lateral_n: float
     rear_traction_n: float
+    tyre_temp_front_c: float
+    tyre_temp_rear_c: float
+    tyre_wear_front: float
+    tyre_wear_rear: float
+    grip_front_effective: float
+    grip_rear_effective: float
     motor_temp_c: float
     battery_temp_c: float
     power_w: float
@@ -118,6 +133,8 @@ class VehicleModel:
     rolling_resistance_coefficient: float
     motor_thermal_params: ThermalParams
     battery_thermal_params: ThermalParams
+    front_tyre_thermal_params: TyreThermalParams
+    rear_tyre_thermal_params: TyreThermalParams
     nominal_voltage_v: float
     motor_efficiency_scale: float = 1.0
 
@@ -160,10 +177,28 @@ class VehicleModel:
 
         front_grip = 1.0
         rear_grip = 1.0
+        default_tyre = Tyre(
+            id="default_tyre",
+            manufacturer="default",
+            model="default",
+            diameter_m=0.254,
+            width_m=0.114,
+            rolling_resistance_coefficient=0.015,
+            dry_grip_coefficient=1.1,
+            max_speed_mps=22.0,
+            max_load_kg=120.0,
+        )
         if isinstance(front_tyre, Tyre):
             front_grip = front_tyre.dry_grip_coefficient
+        else:
+            front_tyre = default_tyre
         if isinstance(rear_tyre, Tyre):
             rear_grip = rear_tyre.dry_grip_coefficient
+        else:
+            rear_tyre = default_tyre
+
+        front_tyre_thermal = TyreThermalParams.from_tyre(front_tyre)
+        rear_tyre_thermal = TyreThermalParams.from_tyre(rear_tyre)
 
         accessory_params = None
         if isinstance(dcdc, DcDcConverter):
@@ -193,11 +228,18 @@ class VehicleModel:
                 thermal_capacity_j_per_k=5000.0,
                 thermal_resistance_k_per_w=0.2,
             ),
+            front_tyre_thermal_params=front_tyre_thermal,
+            rear_tyre_thermal_params=rear_tyre_thermal,
             nominal_voltage_v=battery.nominal_voltage_v,
         )
 
     def initial_state(self) -> VehicleState:
-        return VehicleState(pack_voltage_v=self.nominal_voltage_v)
+        return VehicleState(
+            pack_voltage_v=self.nominal_voltage_v,
+            tyre_thermal=TyreThermalState.initial(
+                self.front_tyre_thermal_params.ambient_temp_c,
+            ),
+        )
 
     @property
     def grip_coefficient(self) -> float:
@@ -247,8 +289,19 @@ class VehicleModel:
 
         env = inputs.environment
         surface_mu = env.surface_mu_scale
-        front_grip = self.front_grip_coefficient * surface_mu
-        rear_grip = self.rear_grip_coefficient * surface_mu
+        assert state.tyre_thermal is not None
+        front_params = replace(
+            self.front_tyre_thermal_params,
+            ambient_temp_c=env.ambient_temp_c,
+        )
+        rear_params = replace(
+            self.rear_tyre_thermal_params,
+            ambient_temp_c=env.ambient_temp_c,
+        )
+        front_grip_base = self.front_grip_coefficient * surface_mu
+        rear_grip_base = self.rear_grip_coefficient * surface_mu
+        front_grip = front_grip_base * axle_grip_multiplier(state.tyre_thermal.front, front_params)
+        rear_grip = rear_grip_base * axle_grip_multiplier(state.tyre_thermal.rear, rear_params)
         motor_rpm = motor_rpm_from_speed(self.drivetrain_params, state.speed_mps)
 
         motor_state, motor_out = step_motor(
@@ -384,6 +437,21 @@ class VehicleModel:
         achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt
 
+        tyre_thermal_state, thermal_out = step_tyre_thermal(
+            state.tyre_thermal,
+            front_params,
+            rear_params,
+            front_longitudinal_n=tyre_out.front_longitudinal_n,
+            front_lateral_n=tyre_out.front_lateral_n,
+            rear_longitudinal_n=tyre_out.rear_longitudinal_n,
+            front_normal_n=axle_loads.front_normal_n,
+            rear_normal_n=axle_loads.rear_normal_n,
+            front_grip_coefficient=front_grip_base,
+            rear_grip_coefficient=rear_grip_base,
+            speed_mps=new_speed,
+            dt=dt,
+        )
+
         steering_out = step_steering(
             heading_rad=state.heading_rad,
             position_x_m=state.position_x_m,
@@ -433,6 +501,7 @@ class VehicleModel:
             battery=battery_state,
             motor_thermal=motor_thermal,
             battery_thermal=battery_thermal,
+            tyre_thermal=tyre_thermal_state,
             pack_voltage_v=battery_out.pack_voltage_v,
         )
 
@@ -455,6 +524,12 @@ class VehicleModel:
             rear_normal_n=tyre_out.rear_normal_n,
             front_lateral_n=tyre_out.front_lateral_n,
             rear_traction_n=tyre_out.rear_longitudinal_n,
+            tyre_temp_front_c=thermal_out.front_temp_c,
+            tyre_temp_rear_c=thermal_out.rear_temp_c,
+            tyre_wear_front=thermal_out.front_wear,
+            tyre_wear_rear=thermal_out.rear_wear,
+            grip_front_effective=front_grip,
+            grip_rear_effective=rear_grip,
             motor_temp_c=motor_thermal_out.temperature_c,
             battery_temp_c=battery_thermal_out.temperature_c,
             power_w=battery_out.power_w,

@@ -75,6 +75,12 @@ const CHANNEL_DISPLAY = {
   soc: { decimals: 1, deadband: 0.005 },
   power_w: { decimals: 0, deadband: 10 },
   traction_force_n: { decimals: 0, deadband: 5 },
+  tyre_temp_front_c: { decimals: 1, deadband: 0.3 },
+  tyre_temp_rear_c: { decimals: 1, deadband: 0.3 },
+  tyre_wear_front: { decimals: 3, deadband: 0.0005 },
+  tyre_wear_rear: { decimals: 3, deadband: 0.0005 },
+  grip_front_effective: { decimals: 2, deadband: 0.02 },
+  grip_rear_effective: { decimals: 2, deadband: 0.02 },
   motor_temp_c: { decimals: 1, deadband: 0.3 },
   battery_temp_c: { decimals: 1, deadband: 0.3 },
   traction_limited: { decimals: 0, deadband: 0.5 },
@@ -279,6 +285,8 @@ function updateAxlePhysicsPanel(sample) {
   setGripMeterBar("rear-grip-bar", rearGripPct);
   document.getElementById("front-grip-label").textContent = `Lateral ${Math.min(999, frontGripPct).toFixed(0)}%`;
   document.getElementById("rear-grip-label").textContent = `Rear grip ${Math.min(999, rearGripPct).toFixed(0)}%`;
+  document.getElementById("front-tyre-meta").textContent = `${Number(sample.tyre_temp_front_c || 0).toFixed(0)}°C · wear ${(Number(sample.tyre_wear_front || 0) * 100).toFixed(1)}%`;
+  document.getElementById("rear-tyre-meta").textContent = `${Number(sample.tyre_temp_rear_c || 0).toFixed(0)}°C · wear ${(Number(sample.tyre_wear_rear || 0) * 100).toFixed(1)}%`;
 
   const speed = Number(sample.speed_mps || 0);
   const brake = Number(sample.brake || 0);
@@ -311,6 +319,8 @@ function resetAxlePhysicsPanel() {
   document.getElementById("rear-load-value").textContent = "—";
   document.getElementById("front-grip-label").textContent = "Lateral —";
   document.getElementById("rear-grip-label").textContent = "Rear grip —";
+  document.getElementById("front-tyre-meta").textContent = "— °C · wear —";
+  document.getElementById("rear-tyre-meta").textContent = "— °C · wear —";
   document.getElementById("load-transfer-hint").textContent = "—";
   setGripMeterBar("front-grip-bar", 0);
   setGripMeterBar("rear-grip-bar", 0);
@@ -482,6 +492,16 @@ const CHANNEL_UI = {
   rear_normal_n: { icon: "⬇", label: "Rear load" },
   front_lateral_n: { icon: "↔", label: "Front lateral" },
   rear_traction_n: { icon: "🛞", label: "Rear traction" },
+  tyre_temp_front_c: { icon: "🌡", label: "Front tyre temp" },
+  tyre_temp_rear_c: { icon: "🌡", label: "Rear tyre temp" },
+  tyre_temp_fl_c: { icon: "🌡", label: "FL temp" },
+  tyre_temp_fr_c: { icon: "🌡", label: "FR temp" },
+  tyre_temp_rl_c: { icon: "🌡", label: "RL temp" },
+  tyre_temp_rr_c: { icon: "🌡", label: "RR temp" },
+  tyre_wear_front: { icon: "🛞", label: "Front wear" },
+  tyre_wear_rear: { icon: "🛞", label: "Rear wear" },
+  grip_front_effective: { icon: "🛞", label: "Front grip" },
+  grip_rear_effective: { icon: "🛞", label: "Rear grip" },
   motor_temp_c: { icon: "🌡", label: "Motor temp" },
   battery_temp_c: { icon: "🌡", label: "Battery temp" },
   traction_limited: { icon: "🛞", label: "Traction limited" },
