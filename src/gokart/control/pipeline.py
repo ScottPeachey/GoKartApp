@@ -118,10 +118,10 @@ def control_step(
                 motor_torque_request_nm=0.0,
                 regen_torque_request_nm=0.0,
                 mechanical_brake=brake,
-                filtered_throttle=filtered,
+                filtered_throttle=0.0,
                 traction_limited=False,
             ),
-            ControlState(filtered_throttle=filtered, traction_scale=1.0),
+            ControlState(filtered_throttle=0.0, traction_scale=1.0),
         )
 
     motor_torque = shaped * params.motor_peak_torque_nm

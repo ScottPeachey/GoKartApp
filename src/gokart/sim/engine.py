@@ -270,6 +270,8 @@ def run_simulation(
     )
     limits = base_limits
     prev_synthetic_brake_hold = False
+    prev_safety_state = safety_state
+    fault_active_states = {SafetyState.FAULT, SafetyState.SAFE_SHUTDOWN}
 
     for step in range(steps):
         if controls and controls.stop_requested:
@@ -378,6 +380,11 @@ def run_simulation(
             latched_faults=latched_faults,
             dt=dt_s,
         )
+
+        if safety_state in fault_active_states:
+            throttle = 0.0
+            if prev_safety_state not in fault_active_states:
+                control_state = ControlState()
 
         if safety_state == SafetyState.READY:
             new_mode = scenario.mode_at(time_s)
@@ -545,6 +552,8 @@ def run_simulation(
 
         if speedup > 0:
             clock.tick(dt_s)
+
+        prev_safety_state = safety_state
 
     completed_laps = track_context.completed_laps if track_context is not None else []
     return SimulationResult(

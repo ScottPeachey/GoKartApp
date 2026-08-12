@@ -15,6 +15,7 @@ const state = {
   channelRowsBuilt: false,
   channelStableValues: {},
   faultAckPending: false,
+  faultControlsActive: false,
   hiddenChannels: new Set(),
   channelCustomiseOpen: false,
   historySessionListKey: "",
@@ -166,6 +167,32 @@ async function api(path, options = {}) {
   return response.json();
 }
 
+function isFaultSafetyState(safetyState) {
+  return safetyState === "FAULT" || safetyState === "SAFE_SHUTDOWN";
+}
+
+function setDrivingControlsFaultMode(active) {
+  const driving = document.getElementById("driving-controls");
+  if (!driving) return;
+  driving.classList.toggle("fault-active", active);
+  if (active) {
+    document.getElementById("throttle").value = "0";
+    updateSliderReadouts();
+  }
+}
+
+function syncFaultDrivingControls(safetyState) {
+  const active = isFaultSafetyState(safetyState);
+  if (active && !state.faultControlsActive) {
+    state.faultControlsActive = true;
+    setDrivingControlsFaultMode(true);
+    void sendInputs();
+  } else if (!active && state.faultControlsActive) {
+    state.faultControlsActive = false;
+    setDrivingControlsFaultMode(false);
+  }
+}
+
 function setFaultBanner(sample) {
   const banner = document.getElementById("fault-banner");
   const faults = sample.active_faults || "";
@@ -233,6 +260,7 @@ function updateDrivePanel(sample, speedKmh) {
   }
 
   setFaultBanner(sample);
+  syncFaultDrivingControls(safetyState);
   updateFreeDriveGuide(safetyState);
   updateAxlePhysicsPanel(sample);
 }
@@ -456,6 +484,8 @@ function resetDriveUi() {
   document.getElementById("brake").value = "0";
   document.getElementById("steering").value = "0";
   setBrakeHold(false);
+  state.faultControlsActive = false;
+  setDrivingControlsFaultMode(false);
   state.lastSample = {};
   state.pendingLiveSample = null;
   document.getElementById("speed-value").textContent = "0";
@@ -1729,13 +1759,15 @@ function selectedVehicle() {
 
 async function sendInputs() {
   if (!interactiveInputsEnabled()) return;
+  const safetyState = state.lastSample?.safety_state || "";
+  const faultActive = state.faultControlsActive || isFaultSafetyState(safetyState);
   const brake = state.brakeHold
     ? 1.0
     : Number(document.getElementById("brake").value) / 100;
   await api("/api/sim/inputs", {
     method: "POST",
     body: JSON.stringify({
-      throttle: Number(document.getElementById("throttle").value) / 100,
+      throttle: faultActive ? 0 : Number(document.getElementById("throttle").value) / 100,
       brake,
       steering: -Number(document.getElementById("steering").value) / 100,
     }),
@@ -1850,22 +1882,24 @@ function updateFreeDriveGuide(safetyState) {
         || String(faults).includes("PRECHARGE");
       const waitingToRecover = state.faultAckPending;
       hint.innerHTML = waitingToRecover
-        ? "<strong>Recovering…</strong> Clear fault was acknowledged — release throttle/brake and wait for speed or voltage to settle."
+        ? "<strong>Recovering…</strong> Power and regen are off — use the <strong>brake</strong> to slow down, then click <strong>Clear fault</strong>."
         : safetyState === "SAFE_SHUTDOWN"
         ? isCritical
-          ? "<strong>Critical fault</strong> — release brake if you were regen-braking, wait for voltage to settle, then click <strong>Clear fault</strong>."
-          : "<strong>System shut down</strong> — click <strong>Clear fault</strong> to recover, or use <strong>New session</strong>."
+          ? "<strong>Power cut</strong> — throttle and regen are off. Use the <strong>brake</strong> to stop, wait for voltage to settle, then click <strong>Clear fault</strong>."
+          : "<strong>System shut down</strong> — use the <strong>brake</strong> to stop, then click <strong>Clear fault</strong>."
         : isCritical
-          ? "Critical fault — fix the cause (see below), wait a moment, then click <strong>Clear fault</strong>."
-          : "Fault active — click <strong>Clear fault</strong> to return to READY.";
+          ? "Critical fault — power and regen are off. Use the <strong>brake</strong> to slow down, then click <strong>Clear fault</strong>."
+          : "Fault active — power and regen are off. Use the <strong>brake</strong> to slow down, then click <strong>Clear fault</strong>.";
       armBtn.disabled = true;
-      driving.classList.add("locked");
+      driving.classList.remove("locked");
+      driving.classList.add("fault-active");
       break;
     }
     default:
       hint.textContent = `Safety state: ${safetyState}`;
       armBtn.disabled = true;
       driving.classList.add("locked");
+      driving.classList.remove("fault-active");
   }
 }
 
