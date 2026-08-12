@@ -362,10 +362,12 @@ def run_simulation(
 
         if synthetic_brake_hold:
             safety_brake_pressed = True
-        elif manual_mode and safety_state == SafetyState.DRIVING:
+        elif (
+            safety_state == SafetyState.DRIVING
+            and (manual_mode or auto_drive or learned_drive)
+        ):
+            # Autonomous braking and sim pedals are not an operator disarm request.
             safety_brake_pressed = False
-        elif auto_drive and safety_state == SafetyState.DRIVING:
-            safety_brake_pressed = brake > 0.1
         elif manual_mode:
             safety_brake_pressed = brake > 0.1
         else:

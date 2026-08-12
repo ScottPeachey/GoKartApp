@@ -659,15 +659,21 @@ button.btn-path-follow {
   display: block;
 }
 
-#history-chart {
-  display: block;
+.history-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
   width: 100%;
   max-width: 100%;
-  max-height: 220px;
-  height: auto;
-  background: #121a26;
-  border-radius: 8px;
   margin-top: 0.75rem;
+  border-radius: 8px;
+  background: #121a26;
+}
+
+#history-chart {
+  display: block;
+  height: 220px;
+  max-height: 220px;
+  background: #121a26;
 }
 
 @media (min-width: 1200px) {

@@ -141,6 +141,9 @@ const FAULT_HELP = {
 };
 
 const OVERSPEED_FAULT_MARGIN_KMH = 1.8;
+const HISTORY_CHART_VIEWPORT_WIDTH = 900;
+const HISTORY_CHART_HEIGHT = 220;
+const HISTORY_CHART_PX_PER_SAMPLE = 1.5;
 
 function describeFaultCode(code, sample = {}, context = null) {
   const trimmed = code.trim();
@@ -1703,6 +1706,33 @@ function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
   ctx.stroke();
 }
 
+function historyChartWidthPx(sampleCount) {
+  return Math.max(
+    HISTORY_CHART_VIEWPORT_WIDTH,
+    Math.ceil(sampleCount * HISTORY_CHART_PX_PER_SAMPLE),
+  );
+}
+
+function prepareHistoryChartCanvas(canvas, sampleCount) {
+  const width = historyChartWidthPx(sampleCount);
+  if (canvas.width !== width) {
+    canvas.width = width;
+  }
+  canvas.height = HISTORY_CHART_HEIGHT;
+  return width;
+}
+
+function scrollHistoryChartToEnd(force = false) {
+  const scrollEl = document.getElementById("history-chart-scroll");
+  if (!scrollEl) return;
+  const followingLive = state.simRunning || state.trainingRunning;
+  if (!force && !followingLive) return;
+  const nearEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 48;
+  if (force || nearEnd) {
+    scrollEl.scrollLeft = scrollEl.scrollWidth;
+  }
+}
+
 function speedToPathColor(speedKmh, maxSpeedKmh) {
   const t = Math.min(1, Math.max(0, speedKmh / Math.max(maxSpeedKmh, 0.1)));
   const hue = 240 * (1 - t);
@@ -1817,8 +1847,9 @@ async function drawSessionChart(sessionId) {
     if (shouldDrawCharts) {
       const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
       const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
-      const panelHeight = (canvas.height - 50) / 2;
+      const panelHeight = (HISTORY_CHART_HEIGHT - 50) / 2;
 
+      prepareHistoryChartCanvas(canvas, samples.length);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
       plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
@@ -1826,6 +1857,7 @@ async function drawSessionChart(sessionId) {
       ctx.font = "12px sans-serif";
       ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
       ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
+      scrollHistoryChartToEnd(sessionChanged);
       state.historyChartLastDrawMs = now;
     }
 

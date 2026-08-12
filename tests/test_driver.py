@@ -182,3 +182,43 @@ def test_auto_drive_reaches_driving_on_hairpin(hairpin_track) -> None:
         on_tick=on_tick,
     )
     assert seen_driving
+
+
+def test_auto_drive_braking_does_not_disarm(hairpin_track) -> None:
+    from gokart.sim.session import ControlSource, SessionConfig, SimulationSession
+    from gokart.sim.scenarios import Scenario
+
+    session = SimulationSession(
+        SessionConfig(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            track=hairpin_track,
+            control_source=ControlSource.AUTO,
+            aggression=1.0,
+            target_laps=99,
+            scenario=Scenario(
+                name="auto_brake_disarm",
+                duration_s=1e9,
+                mode_name="default",
+                profile_name="owner",
+                auto_boot=True,
+            ),
+        )
+    )
+    session.reset()
+    driving_ticks = 0
+    ready_after_driving = False
+    saw_brake = False
+    for _ in range(int(35.0 / session.config.dt_s)):
+        result = session.step()
+        row = result.tick.to_row()
+        if float(row.get("brake", 0.0)) > 0.1:
+            saw_brake = True
+        if row.get("safety_state") == "DRIVING":
+            driving_ticks += 1
+        elif driving_ticks > 0 and row.get("safety_state") == "READY":
+            ready_after_driving = True
+            break
+    assert driving_ticks > 100
+    assert saw_brake
+    assert not ready_after_driving
