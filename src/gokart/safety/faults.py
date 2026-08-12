@@ -176,6 +176,7 @@ class SafetyConfig:
     battery_temp_derate_c: float = 50.0
     battery_temp_fault_c: float = 60.0
     max_speed_mps: float = 20.0
+    overspeed_margin_mps: float = 0.5
     can_timeout_s: float = 0.5
     precharge_timeout_s: float = 2.0
     self_test_duration_s: float = 0.5
@@ -288,7 +289,7 @@ def detect_faults(
     elif inputs.battery_temp_c >= config.battery_temp_derate_c:
         active.add(FaultId.BATTERY_OVERTEMP_DERATE)
 
-    if inputs.speed_mps > config.max_speed_mps:
+    if inputs.speed_mps > config.max_speed_mps + config.overspeed_margin_mps:
         active.add(FaultId.OVERSPEED)
 
     if inputs.watchdog_reset_detected:

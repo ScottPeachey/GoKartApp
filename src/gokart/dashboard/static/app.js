@@ -75,10 +75,10 @@ const CHANNEL_DISPLAY = {
   soc: { decimals: 1, deadband: 0.005 },
   power_w: { decimals: 0, deadband: 10 },
   traction_force_n: { decimals: 0, deadband: 5 },
-  tyre_temp_front_c: { decimals: 1, deadband: 0.3 },
-  tyre_temp_rear_c: { decimals: 1, deadband: 0.3 },
-  tyre_wear_front: { decimals: 3, deadband: 0.0005 },
-  tyre_wear_rear: { decimals: 3, deadband: 0.0005 },
+  tyre_temp_front_c: { decimals: 1, deadband: 0.1 },
+  tyre_temp_rear_c: { decimals: 1, deadband: 0.1 },
+  tyre_wear_front: { decimals: 4, deadband: 0.00005 },
+  tyre_wear_rear: { decimals: 4, deadband: 0.00005 },
   grip_front_effective: { decimals: 2, deadband: 0.02 },
   grip_rear_effective: { decimals: 2, deadband: 0.02 },
   motor_temp_c: { decimals: 1, deadband: 0.3 },
@@ -113,6 +113,11 @@ const FAULT_HELP = {
   BRAKE_SENSOR_FAULT: "Brake reading out of range — release the brake slider.",
   WHEEL_SPEED_FAULT: "Wheel speed sensor fault.",
   SENSOR_DISAGREEMENT: "Sensor readings disagree.",
+  OVERSPEED: "Speed exceeded the drive-mode limit — ease off the throttle.",
+  MOTOR_OVERTEMP: "Motor temperature too high — reduce throttle and let it cool.",
+  MOTOR_OVERTEMP_DERATE: "Motor is hot — power is reduced until it cools.",
+  CONTROLLER_OVERTEMP: "Controller temperature too high — reduce throttle.",
+  BATTERY_OVERTEMP: "Battery temperature too high — stop and let the pack cool.",
   PRECHARGE_TIMEOUT: "Precharge did not complete in time — try arming again with brake held.",
   CONTACTOR_WELDED: "Contactor welded — critical fault; use New session.",
   PACK_OVERVOLTAGE:
@@ -251,9 +256,24 @@ function effectiveLoadTransferAccel(sample) {
   return accel;
 }
 
+function formatTyreWear(wear) {
+  const pct = Number(wear || 0) * 100;
+  if (pct < 0.01) {
+    return `${(pct * 10).toFixed(2)}‰`;
+  }
+  return `${pct.toFixed(2)}%`;
+}
+
 function updateAxlePhysicsPanel(sample) {
   const panel = document.getElementById("axle-physics-panel");
   if (!panel) return;
+
+  const frontTemp = Number(sample.tyre_temp_front_c ?? 25);
+  const rearTemp = Number(sample.tyre_temp_rear_c ?? 25);
+  document.getElementById("front-tyre-meta").textContent =
+    `${frontTemp.toFixed(1)}°C · wear ${formatTyreWear(sample.tyre_wear_front)}`;
+  document.getElementById("rear-tyre-meta").textContent =
+    `${rearTemp.toFixed(1)}°C · wear ${formatTyreWear(sample.tyre_wear_rear)}`;
 
   const frontN = Number(sample.front_normal_n || 0);
   const rearN = Number(sample.rear_normal_n || 0);
@@ -285,8 +305,6 @@ function updateAxlePhysicsPanel(sample) {
   setGripMeterBar("rear-grip-bar", rearGripPct);
   document.getElementById("front-grip-label").textContent = `Lateral ${Math.min(999, frontGripPct).toFixed(0)}%`;
   document.getElementById("rear-grip-label").textContent = `Rear grip ${Math.min(999, rearGripPct).toFixed(0)}%`;
-  document.getElementById("front-tyre-meta").textContent = `${Number(sample.tyre_temp_front_c || 0).toFixed(0)}°C · wear ${(Number(sample.tyre_wear_front || 0) * 100).toFixed(1)}%`;
-  document.getElementById("rear-tyre-meta").textContent = `${Number(sample.tyre_temp_rear_c || 0).toFixed(0)}°C · wear ${(Number(sample.tyre_wear_rear || 0) * 100).toFixed(1)}%`;
 
   const speed = Number(sample.speed_mps || 0);
   const brake = Number(sample.brake || 0);

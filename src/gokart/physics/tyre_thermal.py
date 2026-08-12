@@ -109,13 +109,17 @@ def step_axle_tyre(
     speed_mps: float,
     dt: float,
 ) -> AxleTyreState:
-    slip = max(0.0, min(1.5, slip_usage))
-    slip_power = slip * slip * max(normal_load_n, 0.0) * max(speed_mps, 0.0)
-    heat_in = slip_power * params.heating_rate
+    slip = max(0.0, min(2.0, slip_usage))
+    normal = max(normal_load_n, 0.0)
+    # Tyres generate slip energy even at low road speed (scrub, spin-up).
+    effective_speed = max(speed_mps, 1.5)
+    slip_power = slip * slip * normal * effective_speed
+    rolling_heat = normal * effective_speed * 2.5e-5
+    heat_in = (slip_power * params.heating_rate) + rolling_heat
     airflow = 1.0 + min(speed_mps, 25.0) / 12.0
     cool = (state.temperature_c - params.ambient_temp_c) * params.cooling_rate * airflow
     temperature_c = state.temperature_c + (heat_in - cool) * dt
-    wear_delta = slip * params.wear_rate * max(normal_load_n, 0.0) * dt
+    wear_delta = slip * params.wear_rate * normal * max(speed_mps, 0.5) * dt
     wear = min(params.max_wear, state.wear + wear_delta)
     return AxleTyreState(temperature_c=temperature_c, wear=wear)
 
@@ -140,6 +144,7 @@ def step_tyre_thermal(
     front_longitudinal_n: float,
     front_lateral_n: float,
     rear_longitudinal_n: float,
+    rear_lateral_n: float,
     front_normal_n: float,
     rear_normal_n: float,
     front_grip_coefficient: float,
@@ -155,7 +160,7 @@ def step_tyre_thermal(
     )
     rear_slip = axle_slip_usage(
         longitudinal_n=rear_longitudinal_n,
-        lateral_n=0.0,
+        lateral_n=rear_lateral_n,
         normal_load_n=rear_normal_n,
         grip_coefficient=rear_grip_coefficient,
     )

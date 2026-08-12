@@ -444,6 +444,7 @@ class VehicleModel:
             front_longitudinal_n=tyre_out.front_longitudinal_n,
             front_lateral_n=tyre_out.front_lateral_n,
             rear_longitudinal_n=tyre_out.rear_longitudinal_n,
+            rear_lateral_n=tyre_out.rear_lateral_n,
             front_normal_n=axle_loads.front_normal_n,
             rear_normal_n=axle_loads.rear_normal_n,
             front_grip_coefficient=front_grip_base,

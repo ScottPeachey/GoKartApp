@@ -108,6 +108,14 @@ def test_can_timeout_after_silence() -> None:
     assert FaultId.CAN_TIMEOUT in detect_faults(sensors, config)
 
 
+def test_overspeed_uses_margin_above_configured_limit() -> None:
+    config = SafetyConfig(max_speed_mps=12.5, overspeed_margin_mps=0.5)
+    below = detect_faults(SensorInputs(speed_mps=12.7), config)
+    above = detect_faults(SensorInputs(speed_mps=13.1), config)
+    assert FaultId.OVERSPEED not in below
+    assert FaultId.OVERSPEED in above
+
+
 def test_precharge_failure_critical_shutdown() -> None:
     config = SafetyConfig(self_test_duration_s=0.05, precharge_timeout_s=1.0)
     state = SafetyState.READY

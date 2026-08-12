@@ -53,6 +53,7 @@ def test_slip_heats_tyres() -> None:
         front_longitudinal_n=-800.0,
         front_lateral_n=600.0,
         rear_longitudinal_n=900.0,
+        rear_lateral_n=0.0,
         front_normal_n=900.0,
         rear_normal_n=900.0,
         front_grip_coefficient=1.1,
@@ -83,3 +84,23 @@ def test_vehicle_step_reports_tyre_telemetry() -> None:
     assert outputs.tyre_temp_front_c >= 20.0
     assert outputs.grip_front_effective > 0.0
     assert outputs.tyre_wear_front >= 0.0
+
+
+def test_hard_driving_raises_tyre_temperature() -> None:
+    vehicle = load_validated_vehicle_model("Scott_Kart_V2", "V2.0")
+    state = vehicle.initial_state()
+    start_temp = state.tyre_thermal.rear.temperature_c if state.tyre_thermal else 25.0
+    for _ in range(800):
+        state, outputs = vehicle.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=45.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                steering=0.75,
+            ),
+            dt=0.01,
+        )
+    assert outputs.tyre_temp_rear_c > start_temp + 5.0
+    assert outputs.tyre_wear_rear > 0.0001
