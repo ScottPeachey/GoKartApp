@@ -33,6 +33,7 @@ const state = {
     panX: 0,
     panY: 0,
   },
+  pathFollowKart: false,
   pathPan: {
     active: false,
     pointerId: null,
@@ -1086,6 +1087,59 @@ function resetPathView() {
   state.pathView.panY = 0;
 }
 
+function getPathFollowWorldPosition() {
+  const layer = state.historyPathLayer;
+  if (layer?.marker) {
+    const x = Number(layer.marker.x);
+    const y = Number(layer.marker.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return { x, y };
+    }
+  }
+  const sample = state.lastSample;
+  if (sample) {
+    const x = Number(sample.position_x_m);
+    const y = Number(sample.position_y_m);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return { x, y };
+    }
+  }
+  return null;
+}
+
+function centerPathViewOnWorld(x, y) {
+  const base = state.historyPathBaseTransform;
+  if (!base) return;
+  const view = state.pathView;
+  const cx = base.inset + base.plotW / 2;
+  const cy = base.inset + base.plotH / 2;
+  const px0 = base.offsetX + (x - base.minX) * base.scale;
+  const py0 = base.offsetY + base.drawH - (y - base.minY) * base.scale;
+  view.panX = (cx - px0) * view.zoom;
+  view.panY = (cy - py0) * view.zoom;
+}
+
+function applyPathFollowIfEnabled() {
+  if (!state.pathFollowKart) return false;
+  const position = getPathFollowWorldPosition();
+  if (!position) return false;
+  centerPathViewOnWorld(position.x, position.y);
+  return true;
+}
+
+function setPathFollowKart(active) {
+  state.pathFollowKart = active;
+  const btn = document.getElementById("btn-path-follow");
+  if (btn) {
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  }
+  if (active) {
+    applyPathFollowIfEnabled();
+    schedulePathRedraw();
+  }
+}
+
 function buildPathTransformFromTrack(track, canvas) {
   const bbox = track.bbox;
   return buildPathTransform(
@@ -1130,7 +1184,7 @@ function ensureTrackMapVisible(resetView = false) {
   const pathCanvas = document.getElementById("history-path");
   if (!pathCanvas || !state.track.data) return false;
   state.historyPathBaseTransform = buildPathTransformFromTrack(state.track.data, pathCanvas);
-  if (resetView) {
+  if (resetView && !state.pathFollowKart) {
     resetPathView();
   }
   if (!state.historyPathLayer) {
@@ -1153,6 +1207,7 @@ function zoomPathViewAt(canvasX, canvasY, factor) {
   const after = worldToScreen(before.x, before.y, base, view);
   view.panX += canvasX - after.px;
   view.panY += canvasY - after.py;
+  applyPathFollowIfEnabled();
   redrawPathLayer();
 }
 
@@ -1170,6 +1225,8 @@ function redrawPathLayer() {
   const layer = state.historyPathLayer;
   const base = state.historyPathBaseTransform;
   if (!layer || !base) return;
+
+  applyPathFollowIfEnabled();
 
   const pathCanvas = document.getElementById("history-path");
   const markerCanvas = document.getElementById("history-marker");
@@ -1196,8 +1253,9 @@ function redrawPathLayer() {
   pathCtx.font = "12px sans-serif";
   const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
   const zoomLabel = view.zoom === 1 ? "" : ` · ${view.zoom.toFixed(1)}×`;
+  const followLabel = state.pathFollowKart ? " · follow on" : "";
   pathCtx.fillText(
-    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}`,
+    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}`,
     10,
     16,
   );
@@ -1649,7 +1707,7 @@ async function drawSessionChart(sessionId) {
       const bounds = collectPathBounds(marker);
       state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
     }
-    if (sessionChanged) {
+    if (sessionChanged && !state.pathFollowKart) {
       resetPathView();
     }
 
@@ -1744,6 +1802,9 @@ function updateHistoryMarkerFromLive() {
     };
     state.historyPathLayer.speeds = speeds;
     if (moved) {
+      schedulePathRedraw();
+    } else if (state.pathFollowKart) {
+      applyPathFollowIfEnabled();
       schedulePathRedraw();
     }
   }
@@ -2186,6 +2247,9 @@ function setupPathMapInteractions() {
     const dy = event.clientY - state.pathPan.startY;
     if (Math.hypot(dx, dy) > 4) {
       state.pathPan.moved = true;
+      if (state.pathFollowKart) {
+        setPathFollowKart(false);
+      }
     }
     const rect = pathCanvas.getBoundingClientRect();
     const scaleX = pathCanvas.width / rect.width;
@@ -2206,6 +2270,7 @@ function setupPathMapInteractions() {
 
   stack.addEventListener("dblclick", () => {
     if (!state.historyPathBaseTransform) return;
+    setPathFollowKart(false);
     resetPathView();
     redrawPathLayer();
   });
@@ -2213,6 +2278,13 @@ function setupPathMapInteractions() {
   stack.addEventListener("contextmenu", (event) => {
     event.preventDefault();
   });
+
+  const followBtn = document.getElementById("btn-path-follow");
+  if (followBtn) {
+    followBtn.addEventListener("click", () => {
+      setPathFollowKart(!state.pathFollowKart);
+    });
+  }
 }
 
 function setupControls() {

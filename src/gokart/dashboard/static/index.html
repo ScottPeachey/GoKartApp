@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=17" />
+  <link rel="stylesheet" href="/static/style.css?v=18" />
 </head>
 <body>
   <header>
@@ -288,9 +288,20 @@
         <p id="track-edit-hint" class="config-hint hidden">
           Click on the track map to place the start/finish line.
         </p>
-        <p id="track-map-hint" class="config-hint">
-          Scroll to zoom · drag to pan · double-click to reset view
-        </p>
+        <div class="track-map-toolbar">
+          <p id="track-map-hint" class="config-hint">
+            Scroll to zoom · drag to pan · double-click to reset view
+          </p>
+          <button
+            id="btn-path-follow"
+            type="button"
+            class="btn-toggle btn-path-follow"
+            aria-pressed="false"
+            title="Keep the kart centered on the map while driving"
+          >
+            Follow kart
+          </button>
+        </div>
         <canvas id="history-chart" width="900" height="220"></canvas>
         <div class="history-path-stack" id="history-path-stack">
           <canvas id="history-path" width="900" height="480"></canvas>
@@ -399,7 +410,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=46"></script>
+  <script src="/static/app.js?v=47"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
