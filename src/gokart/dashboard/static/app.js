@@ -1749,15 +1749,15 @@ function drawPathMarker(pathCtx, x, y, toPx, canvas) {
 async function drawSessionChart(sessionId) {
   if (!isHistoryTabActive()) return;
 
-  await applySessionTrack(sessionId);
-  await renderSessionLaps(sessionId);
-
   const sessionChanged = sessionId !== state.historyViewSessionId;
   if (sessionChanged) {
+    await applySessionTrack(sessionId);
     state.historyViewSessionId = sessionId;
     state.historySamplesFingerprint = "";
     state.historyMarkerFingerprint = "";
   }
+
+  await renderSessionLaps(sessionId);
 
   const [samples, session] = await Promise.all([
     api(`/api/sessions/${sessionId}/samples?limit=5000`),
@@ -2326,6 +2326,12 @@ async function loadTrackCatalog() {
   }
 }
 
+function getSelectedTrackId() {
+  const simTrack = document.getElementById("sim-track-select")?.value;
+  if (simTrack) return simTrack;
+  return document.getElementById("track-select")?.value || "";
+}
+
 function syncTrackSelectValue(trackId) {
   for (const selectId of ["track-select", "sim-track-select"]) {
     const select = document.getElementById(selectId);
@@ -2378,7 +2384,7 @@ async function applySessionTrack(sessionId) {
 }
 
 async function loadSelectedTrack(force = false, redrawSession = true) {
-  const trackId = document.getElementById("track-select").value;
+  const trackId = getSelectedTrackId();
   const directionSelect = document.getElementById("track-direction-select");
   if (!trackId) {
     state.track.id = null;
@@ -2388,6 +2394,7 @@ async function loadSelectedTrack(force = false, redrawSession = true) {
       directionSelect.value = "clockwise";
     }
     invalidateHistoryDrawCache();
+    resetLivePathLayer();
     const sessionId = document.getElementById("session-select").value;
     if (sessionId) await drawSessionChart(sessionId);
     return;
@@ -2397,14 +2404,17 @@ async function loadSelectedTrack(force = false, redrawSession = true) {
   state.track.id = trackId;
   syncTrackDirectionControls();
   syncTrackSelectValue(trackId);
+  invalidateHistoryDrawCache();
+  resetLivePathLayer();
+  if (!state.simRunning && !state.trainingRunning) {
+    resetPathView();
+  }
+  ensureTrackMapVisible(true);
   const sessionId = document.getElementById("session-select").value;
   if (sessionId && redrawSession) {
-    invalidateHistoryDrawCache();
     await drawSessionChart(sessionId);
   } else if (!sessionId) {
-    ensureTrackMapVisible(true);
-  } else {
-    ensureTrackMapVisible(false);
+    redrawPathLayer();
   }
 }
 
@@ -2569,7 +2579,10 @@ function setupControls() {
     void updateEffectiveLimits();
     void updateAutoPolicyStatus();
   });
-  document.getElementById("sim-track-select")?.addEventListener("change", () => {
+  document.getElementById("sim-track-select")?.addEventListener("change", (event) => {
+    setStartFinishEditMode(false);
+    syncTrackSelectValue(event.target.value);
+    void loadSelectedTrack(true);
     void updateAutoPolicyStatus();
   });
   document.getElementById("auto-objective")?.addEventListener("change", () => {
@@ -2689,14 +2702,11 @@ function setupControls() {
     invalidateHistoryDrawCache();
     void drawSessionChart(event.target.value);
   });
-  document.getElementById("track-select").addEventListener("change", () => {
+  document.getElementById("track-select").addEventListener("change", (event) => {
     setStartFinishEditMode(false);
-    syncTrackSelectValue(document.getElementById("track-select").value);
-    void loadSelectedTrack(true);
-  });
-  document.getElementById("sim-track-select")?.addEventListener("change", (event) => {
     syncTrackSelectValue(event.target.value);
     void loadSelectedTrack(true);
+    void updateAutoPolicyStatus();
   });
   document.getElementById("track-direction-select").addEventListener("change", (event) => {
     if (state.track.suppressDirectionChange) return;
