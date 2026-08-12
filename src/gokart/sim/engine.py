@@ -502,6 +502,8 @@ def run_simulation(
                 "normal_rr_n": physics_out.normal_rr_n,
                 "lateral_fl_n": physics_out.lateral_fl_n,
                 "lateral_fr_n": physics_out.lateral_fr_n,
+                "longitudinal_fl_n": physics_out.longitudinal_fl_n,
+                "longitudinal_fr_n": physics_out.longitudinal_fr_n,
                 "longitudinal_rl_n": physics_out.longitudinal_rl_n,
                 "longitudinal_rr_n": physics_out.longitudinal_rr_n,
                 "tyre_temp_front_c": physics_out.tyre_temp_front_c,

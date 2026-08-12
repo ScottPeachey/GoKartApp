@@ -237,6 +237,7 @@ function updateDrivePanel(sample, speedKmh) {
   updateAxlePhysicsPanel(sample);
 }
 
+const WHEEL_IDS = ["fl", "fr", "rl", "rr"];
 const DISPLAY_GRIP_COEFF = 1.1;
 
 function setGripMeterBar(barId, pct) {
@@ -278,18 +279,23 @@ function updateWheelCard(wheelId, sample) {
   const speed = Number(sample.speed_mps || 0);
   const driving = sample.safety_state === "DRIVING";
   const brake = Number(sample.brake || 0);
+  const lateralForce = Math.abs(Number(sample[`lateral_${wheelId}_n`] || 0));
+  const longitudinalForce = Math.abs(Number(sample[`longitudinal_${wheelId}_n`] || 0));
   const usedForce = isRear
-    ? Math.abs(Number(sample[`longitudinal_${wheelId}_n`] || 0))
-    : Math.abs(Number(sample[`lateral_${wheelId}_n`] || 0));
+    ? longitudinalForce
+    : Math.hypot(lateralForce, longitudinalForce);
   const limit = normal * (gripCoeff > 0 ? gripCoeff : DISPLAY_GRIP_COEFF);
   const gripPct = limit > 0 ? (usedForce / limit) * 100 : 0;
   const temp = Number(sample[`tyre_temp_${wheelId}_c`] ?? 25);
   const wear = sample[`tyre_wear_${wheelId}`];
 
   document.getElementById(`wheel-${wheelId}-load`).textContent = normal > 1 ? `${Math.round(normal)} N` : "—";
-  if (!driving || speed < 0.2) {
+  const showGrip = driving && (speed >= 0.05 || usedForce > 25);
+  if (!showGrip) {
     setGripMeterBar(`wheel-${wheelId}-grip-bar`, 0);
-    const parkedLabel = brake > 0.1 ? "Brake hold" : "Parked";
+    const parkedLabel = !driving
+      ? (brake > 0.1 ? "Brake hold" : "Parked")
+      : "Rolling";
     document.getElementById(`wheel-${wheelId}-grip-label`).textContent = parkedLabel;
   } else {
     setGripMeterBar(`wheel-${wheelId}-grip-bar`, gripPct);
@@ -545,6 +551,8 @@ const CHANNEL_UI = {
   normal_rr_n: { icon: "⬇", label: "RR load" },
   lateral_fl_n: { icon: "↔", label: "FL lateral" },
   lateral_fr_n: { icon: "↔", label: "FR lateral" },
+  longitudinal_fl_n: { icon: "🛞", label: "FL brake" },
+  longitudinal_fr_n: { icon: "🛞", label: "FR brake" },
   longitudinal_rl_n: { icon: "🛞", label: "RL drive" },
   longitudinal_rr_n: { icon: "🛞", label: "RR drive" },
   tyre_temp_front_c: { icon: "🌡", label: "Front tyre temp" },

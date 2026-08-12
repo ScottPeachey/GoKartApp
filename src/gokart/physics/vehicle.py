@@ -110,6 +110,8 @@ class VehicleStepOutputs:
     normal_rr_n: float
     lateral_fl_n: float
     lateral_fr_n: float
+    longitudinal_fl_n: float
+    longitudinal_fr_n: float
     longitudinal_rl_n: float
     longitudinal_rr_n: float
     tyre_temp_front_c: float
@@ -560,6 +562,8 @@ class VehicleModel:
             normal_rr_n=wheel_loads.rr_normal_n,
             lateral_fl_n=tyre_out.fl_lateral_n,
             lateral_fr_n=tyre_out.fr_lateral_n,
+            longitudinal_fl_n=tyre_out.fl_longitudinal_n,
+            longitudinal_fr_n=tyre_out.fr_longitudinal_n,
             longitudinal_rl_n=tyre_out.rl_longitudinal_n,
             longitudinal_rr_n=tyre_out.rr_longitudinal_n,
             tyre_temp_front_c=thermal_out.front_temp_c,

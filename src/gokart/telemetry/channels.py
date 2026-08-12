@@ -54,6 +54,8 @@ TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
     TelemetryChannel("normal_rr_n", "N"),
     TelemetryChannel("lateral_fl_n", "N"),
     TelemetryChannel("lateral_fr_n", "N"),
+    TelemetryChannel("longitudinal_fl_n", "N"),
+    TelemetryChannel("longitudinal_fr_n", "N"),
     TelemetryChannel("longitudinal_rl_n", "N"),
     TelemetryChannel("longitudinal_rr_n", "N"),
     TelemetryChannel("tyre_temp_front_c", "C"),
