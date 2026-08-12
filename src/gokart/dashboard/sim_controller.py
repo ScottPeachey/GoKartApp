@@ -47,6 +47,8 @@ class SimController:
         manual: bool = False,
         free_mode: bool = False,
         auto_drive: bool = False,
+        learned_drive: bool = False,
+        policy_objective: str = "god",
         target_laps: int = 3,
         aggression: float = 1.0,
         speedup: float = 1.0,
@@ -55,12 +57,14 @@ class SimController:
         with self._lock:
             if self.status.running:
                 raise RuntimeError("Simulation already running")
-            if auto_drive and not track_id:
+            if (auto_drive or learned_drive) and not track_id:
                 raise RuntimeError("Auto drive requires a track")
             self.controls = RuntimeControls(
                 manual=manual,
                 free_mode=free_mode,
                 auto_drive=auto_drive,
+                learned_drive=learned_drive,
+                policy_objective=policy_objective,
                 target_laps=target_laps,
                 aggression=aggression,
             )
@@ -79,6 +83,8 @@ class SimController:
                     "manual": manual,
                     "free_mode": free_mode,
                     "auto_drive": auto_drive,
+                    "learned_drive": learned_drive,
+                    "policy_objective": policy_objective,
                     "target_laps": target_laps,
                     "aggression": aggression,
                     "track_id": track_id,
@@ -146,6 +152,8 @@ class SimController:
         manual: bool,
         free_mode: bool,
         auto_drive: bool,
+        learned_drive: bool,
+        policy_objective: str,
         target_laps: int,
         aggression: float,
         track_id: str | None,
@@ -155,7 +163,36 @@ class SimController:
             base = load_scenario(scenario_name)
             mode_name = drive_mode or base.mode_name
             profile_name = driver_profile or base.profile_name
-            if auto_drive:
+            policy_runner = None
+            policy_key = None
+            if learned_drive:
+                if track is None:
+                    raise ValueError("Learned drive requires a track")
+                from gokart.rl.inference import PolicyRunner
+                from gokart.rl.policy_key import build_policy_identity
+
+                identity = build_policy_identity(
+                    vehicle_name=vehicle_name,
+                    vehicle_version=vehicle_version,
+                    track_id=track.id,
+                    drive_mode=mode_name,
+                    driver_profile=profile_name,
+                    objective=policy_objective,  # type: ignore[arg-type]
+                )
+                policy_runner = PolicyRunner.from_identity(identity)
+                policy_key = identity.policy_key
+                scenario = Scenario(
+                    name="learned_drive",
+                    duration_s=1e9,
+                    mode_name=mode_name,
+                    profile_name=profile_name,
+                    auto_boot=True,
+                )
+                self.controls.learned_drive = True
+                self.controls.manual = True
+                self.controls.target_laps = target_laps
+                self.controls.policy_objective = policy_objective
+            elif auto_drive:
                 if track is None:
                     raise ValueError("Auto drive requires a track")
                 scenario = Scenario(
@@ -219,8 +256,40 @@ class SimController:
             )
             self.status.session_id = self._recorder.session_id
 
+            step_index = 0
+            max_steps = 1_000_000
+
             def on_tick(tick) -> None:
-                self.sync_controls_after_tick(tick.to_row())
+                nonlocal step_index
+                row = tick.to_row()
+                self.sync_controls_after_tick(row)
+                if policy_runner is not None and track is not None:
+                    lap_number = int(float(row.get("lap_number", 0.0)))
+                    step_info = {
+                        "track_s_m": float(row.get("track_s_m", 0.0)),
+                        "lateral_offset_m": float(row.get("track_lateral_m", 0.0)),
+                        "off_track": float(
+                            abs(float(row.get("track_lateral_m", 0.0))) > track.width_m * 0.5
+                        ),
+                        "track_width_m": track.width_m,
+                        "battery_temp_derate_c": 50.0,
+                        "battery_temp_fault_c": 60.0,
+                        "completed_laps": max(0, lap_number - 1),
+                        "lap_number": float(lap_number),
+                        "lap_time_s": float(row.get("lap_time_s", 0.0)),
+                    }
+                    throttle, brake, steering = policy_runner.predict_from_tick(
+                        tick_values=row,
+                        step_info=step_info,
+                        track=track,
+                        target_laps=target_laps,
+                        max_steps=max_steps,
+                        step_index=step_index,
+                    )
+                    self.set_inputs(throttle=throttle, brake=brake, steering=steering)
+                step_index += 1
+                if policy_key:
+                    row["policy_key"] = policy_key
 
             result = run_simulation(
                 vehicle_name,

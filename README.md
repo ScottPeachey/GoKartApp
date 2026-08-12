@@ -44,14 +44,20 @@ hashes).
 
 ## Autonomous track racing (in progress)
 
-Import kart-scale circuits and run a rule-based autonomous driver from the
-dashboard (**Auto drive** mode) or extend with RL/benchmarking per the autonomous
-racing plan.
+Import kart-scale circuits and run autonomous drivers from the dashboard
+(**Auto drive** → rule-based or learned RL) or train per-config policies from the CLI.
 
 ```bash
 gokart track import /path/to/circuit.geojson
 gokart track list
-gokart dashboard   # Simulation → Auto drive, pick a track and lap count
+gokart dashboard   # Simulation → Auto drive (rule-based or learned)
+
+# Train a per-config policy (requires Python 3.12 + uv sync --group rl)
+uv sync --group rl
+gokart rl train --track test-hairpin --vehicle "Scott Kart V1" --version V1.0 \
+  --mode default --profile owner --objective god --timesteps 50000
+gokart rl list
+gokart rl verify --track test-hairpin
 ```
 
 ## Status
@@ -67,4 +73,6 @@ gokart dashboard   # Simulation → Auto drive, pick a track and lap count
 - [x] Phase 5 — analysis and virtual tuning
 - [x] Autonomous racing Phases 1–5 — tracks, lap timing, 4-wheel physics, tyre model
 - [x] Autonomous racing Phase 6 — rule-based driver + Auto drive sessions
-- [ ] Autonomous racing Phases 7–9 — per-config RL training to clean ceiling, ceiling validation/benchmarking, 3D viz
+- [x] Autonomous racing Phase 7 — RL driver (env, rewards, training CLI, learned dashboard mode)
+- [ ] Autonomous racing Phase 8 — ceiling validation and config benchmarking
+- [ ] Autonomous racing Phase 9 — 3D viz

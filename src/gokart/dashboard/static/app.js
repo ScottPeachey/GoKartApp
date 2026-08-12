@@ -2101,7 +2101,7 @@ function updateSimModeUi() {
   const stopBtn = document.getElementById("btn-stop");
   if (auto) {
     startBtn.textContent = "Start auto drive";
-    stopBtn.textContent = "Stop";
+    void updateAutoPolicyStatus();
   } else if (free) {
     startBtn.textContent = "Start session";
     stopBtn.textContent = "End session";
@@ -2113,6 +2113,37 @@ function updateSimModeUi() {
   startBtn.classList.toggle("btn-primary-lg", free);
 
   updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
+}
+
+async function updateAutoPolicyStatus() {
+  const pill = document.getElementById("auto-policy-status");
+  if (!pill || simMode() !== "auto") return;
+  const vehicle = selectedVehicle();
+  const trackId = document.getElementById("sim-track-select")?.value;
+  const driveSettings = selectedDriveSettings();
+  const objective = document.getElementById("auto-objective")?.value || "god";
+  if (!trackId) {
+    pill.textContent = "Policy: select a track";
+    return;
+  }
+  try {
+    const status = await api(
+      `/api/rl/policy?vehicle_name=${encodeURIComponent(vehicle.vehicle_name)}`
+      + `&vehicle_version=${encodeURIComponent(vehicle.vehicle_version)}`
+      + `&track_id=${encodeURIComponent(trackId)}`
+      + `&drive_mode=${encodeURIComponent(driveSettings.drive_mode)}`
+      + `&driver_profile=${encodeURIComponent(driveSettings.driver_profile)}`
+      + `&objective=${encodeURIComponent(objective)}`,
+    );
+    if (status.available) {
+      const lap = status.ceiling_lap_s ? `, ceiling ${Number(status.ceiling_lap_s).toFixed(1)}s` : "";
+      pill.textContent = `Policy ${status.policy_key}: ${status.status}${lap}`;
+    } else {
+      pill.textContent = `Policy ${status.policy_key}: not trained — run gokart rl train`;
+    }
+  } catch (_err) {
+    pill.textContent = "Policy: —";
+  }
 }
 
 function stopManualInputPolling() {
@@ -2405,12 +2436,21 @@ function setupControls() {
   }
   document.getElementById("vehicle-select").addEventListener("change", () => {
     void updateEffectiveLimits();
+    void updateAutoPolicyStatus();
   });
   document.getElementById("drive-mode-select").addEventListener("change", () => {
     void updateEffectiveLimits();
+    void updateAutoPolicyStatus();
   });
   document.getElementById("driver-profile-select").addEventListener("change", () => {
     void updateEffectiveLimits();
+    void updateAutoPolicyStatus();
+  });
+  document.getElementById("sim-track-select")?.addEventListener("change", () => {
+    void updateAutoPolicyStatus();
+  });
+  document.getElementById("auto-objective")?.addEventListener("change", () => {
+    void updateAutoPolicyStatus();
   });
 
   document.getElementById("btn-start").addEventListener("click", async () => {
@@ -2427,6 +2467,25 @@ function setupControls() {
       await loadSelectedTrack(true);
     }
     const aggressionPct = Number(document.getElementById("auto-aggression")?.value || 100);
+    const driverType = document.getElementById("auto-driver-type")?.value || "rule";
+    const policyObjective = document.getElementById("auto-objective")?.value || "god";
+    if (mode === "auto" && driverType === "learned") {
+      const status = await api(
+        `/api/rl/policy?vehicle_name=${encodeURIComponent(vehicle.vehicle_name)}`
+        + `&vehicle_version=${encodeURIComponent(vehicle.vehicle_version)}`
+        + `&track_id=${encodeURIComponent(trackId)}`
+        + `&drive_mode=${encodeURIComponent(driveSettings.drive_mode)}`
+        + `&driver_profile=${encodeURIComponent(driveSettings.driver_profile)}`
+        + `&objective=${encodeURIComponent(policyObjective)}`,
+      );
+      if (!status.available) {
+        window.alert(
+          `No trained policy for this config (key ${status.policy_key}). `
+          + "Train with: gokart rl train --track ...",
+        );
+        return;
+      }
+    }
     await api("/api/sim/start", {
       method: "POST",
       body: JSON.stringify({
@@ -2435,7 +2494,9 @@ function setupControls() {
         scenario: document.getElementById("scenario-select").value,
         manual: mode === "manual",
         free_mode: mode === "free",
-        auto_drive: mode === "auto",
+        auto_drive: mode === "auto" && driverType === "rule",
+        learned_drive: mode === "auto" && driverType === "learned",
+        policy_objective: policyObjective,
         target_laps: Number(document.getElementById("auto-laps")?.value || 3),
         aggression: aggressionPct / 100,
         speedup: mode === "auto" ? 20.0 : 5.0,

@@ -1,0 +1,153 @@
+"""RL driver tests (no full training run)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+
+from gokart.rl.observations import OBS_DIM, build_observation
+from gokart.rl.policy_key import build_policy_identity
+from gokart.rl.registry import PolicyManifest, save_manifest
+from gokart.rl.rewards import RewardState, compute_reward, reward_preset
+from gokart.rl.env import make_env
+from gokart.track.importer import import_geojson_track
+
+FIXTURES = Path(__file__).parent / "fixtures"
+HAIRPIN = FIXTURES / "test-hairpin.geojson"
+
+
+@pytest.fixture
+def hairpin_track():
+    return import_geojson_track(HAIRPIN, track_id="test-hairpin", fetch_elevation=False)
+
+
+def test_policy_key_stable(hairpin_track) -> None:
+    a = build_policy_identity(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track_id=hairpin_track.id,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+    )
+    b = build_policy_identity(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track_id=hairpin_track.id,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+    )
+    assert a.policy_key == b.policy_key
+    assert len(a.policy_key) == 16
+
+
+def test_reward_penalizes_blocking_fault() -> None:
+    state = RewardState()
+    reward, _, components = compute_reward(
+        tick_values={
+            "active_faults": "BATTERY_OVERTEMP",
+            "speed_mps": 5.0,
+            "battery_temp_c": 65.0,
+            "motor_temp_c": 40.0,
+            "soc": 0.9,
+            "throttle": 0.5,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 0.5,
+            "torque_permitted": 0.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.5,
+            "lateral_offset_m": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert reward < 0.0
+    assert "blocking" in components
+
+
+def test_observation_shape(hairpin_track) -> None:
+    obs = build_observation(
+        tick_values={
+            "speed_mps": 8.0,
+            "heading_deg": 45.0,
+            "position_x_m": hairpin_track.centerline[0].x,
+            "position_y_m": hairpin_track.centerline[0].y,
+            "soc": 0.95,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+            "active_faults": "",
+            "throttle": 0.4,
+            "brake": 0.0,
+            "steering": 0.1,
+            "max_speed_mps": 12.5,
+        },
+        step_info={
+            "track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "off_track": 0.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "completed_laps": 0,
+        },
+        track=hairpin_track,
+        target_laps=3,
+        max_steps=5000,
+        step_index=10,
+    )
+    assert obs.shape == (OBS_DIM,)
+    assert np.isfinite(obs).all()
+
+
+def test_env_reset_and_step(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=500,
+    )
+    obs, info = env.reset()
+    assert obs.shape == (OBS_DIM,)
+    assert "safety_state" in info
+    total_reward = 0.0
+    for _ in range(50):
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, _info = env.step(action)
+        total_reward += reward
+        if terminated or truncated:
+            break
+    assert np.isfinite(total_reward)
+
+
+def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
+    identity = build_policy_identity(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track_id=hairpin_track.id,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+    )
+    manifest = PolicyManifest(identity=identity, status="training")
+    path = save_manifest(manifest, root=tmp_path)
+    assert path.exists()
+    loaded = PolicyManifest.from_dict(
+        __import__("json").loads(path.read_text(encoding="utf-8"))
+    )
+    assert loaded.identity.policy_key == identity.policy_key

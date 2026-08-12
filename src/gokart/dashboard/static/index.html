@@ -195,9 +195,23 @@
       </div>
       <div id="auto-drive-panel" class="auto-drive-panel hidden">
         <p class="config-hint">
-          The rule-based driver follows the racing line, brakes for corners, and stops after the lap count.
-          Pick a <strong>track</strong> above. Aggression 100% = fastest (God); lower = endurance margin.
+          Autonomous driving requires a <strong>track</strong> above. Use rule-based for instant laps,
+          or <strong>learned</strong> after training a policy with <code>gokart rl train</code>.
         </p>
+        <div class="row">
+          <label>Driver
+            <select id="auto-driver-type">
+              <option value="rule">Rule-based</option>
+              <option value="learned">Learned (RL)</option>
+            </select>
+          </label>
+          <label>Objective
+            <select id="auto-objective">
+              <option value="god">God (min lap)</option>
+              <option value="endurance">Endurance</option>
+            </select>
+          </label>
+        </div>
         <div class="row">
           <label>Laps <input id="auto-laps" type="number" min="1" max="50" value="3" /></label>
           <label>Aggression
@@ -205,6 +219,7 @@
             <span id="auto-aggression-value">100%</span>
           </label>
         </div>
+        <p id="auto-policy-status" class="config-hint">Policy: —</p>
       </div>
       <p id="effective-limits" class="config-hint">Effective max speed: —</p>
       <div id="free-drive-panel" class="free-drive-panel hidden">
@@ -424,7 +439,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=51"></script>
+  <script src="/static/app.js?v=52"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

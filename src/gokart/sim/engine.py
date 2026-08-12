@@ -203,12 +203,15 @@ def run_simulation(
         apply_overlay(vehicle_model, overlay)
     mode = load_drive_mode(scenario.mode_name, root=root)
     profile = load_driver_profile(scenario.profile_name, root=root)
-    manual_mode = bool(controls and (controls.manual or controls.free_mode))
+    manual_mode = bool(
+        controls and (controls.manual or controls.free_mode or controls.learned_drive)
+    )
     auto_drive = bool(controls and controls.auto_drive)
+    learned_drive = bool(controls and controls.learned_drive)
     free_mode = bool(controls and controls.free_mode)
-    if auto_drive and track is None:
-        raise ValueError("auto_drive requires a track")
-    if manual_mode or auto_drive:
+    if (auto_drive or learned_drive) and track is None:
+        raise ValueError("auto_drive and learned_drive require a track")
+    if manual_mode or auto_drive or learned_drive:
         mode = mode.model_copy(update={"throttle_ramp_per_s": None if manual_mode else 6.0})
 
     validation = validate_vehicle_config(
@@ -245,6 +248,7 @@ def run_simulation(
                     battery_temp_fault_c=safety_config.battery_temp_fault_c,
                 ),
             )
+        if auto_drive or learned_drive:
             spawn_x, spawn_y, spawn_heading = spawn_on_racing_line(track)
         else:
             spawn_x, spawn_y, spawn_heading = track_context.spawn_pose()
@@ -266,7 +270,7 @@ def run_simulation(
 
     records: list[SimTickRecord] = []
     retain_records = keep_records and recorder is None
-    if controls and (controls.manual or controls.free_mode or controls.auto_drive):
+    if controls and (controls.manual or controls.free_mode or controls.auto_drive or controls.learned_drive):
         steps = 10_000_000
     else:
         steps = int(scenario.duration_s / dt_s)
@@ -401,7 +405,7 @@ def run_simulation(
             detection_state.previous_throttle_adc = sensors.throttle_adc
 
         detected = detect_faults(sensors, safety_config, detection_state=detection_state)
-        if manual_mode:
+        if manual_mode or learned_drive:
             detected.discard(FaultId.THROTTLE_BRAKE_SIMULTANEOUS)
             detected.discard(FaultId.THROTTLE_IMPLAUSIBLE)
         detection_state.previous_throttle_adc = sensors.throttle_adc
@@ -599,7 +603,7 @@ def run_simulation(
             recorder.record_tick(tick.to_row())
 
         if (
-            auto_drive
+            (auto_drive or learned_drive)
             and controls
             and track_context is not None
             and controls.target_laps > 0

@@ -63,6 +63,8 @@ class SimStartRequest(BaseModel):
     manual: bool = False
     free_mode: bool = False
     auto_drive: bool = False
+    learned_drive: bool = False
+    policy_objective: str = "god"
     target_laps: int = Field(default=3, ge=1, le=50)
     aggression: float = Field(default=1.0, ge=0.5, le=1.0)
     speedup: float = Field(default=1.0, ge=0.0)
@@ -375,6 +377,35 @@ def create_app(
             for lap in laps
         ]
 
+    @app.get("/api/rl/policy")
+    def api_rl_policy(
+        vehicle_name: str,
+        vehicle_version: str,
+        track_id: str,
+        drive_mode: str = "default",
+        driver_profile: str = "owner",
+        objective: str = "god",
+    ) -> dict[str, Any]:
+        from gokart.rl.policy_key import build_policy_identity
+        from gokart.rl.registry import load_manifest, model_path
+
+        identity = build_policy_identity(
+            vehicle_name=vehicle_name,
+            vehicle_version=vehicle_version,
+            track_id=track_id,
+            drive_mode=drive_mode,
+            driver_profile=driver_profile,
+            objective=objective,  # type: ignore[arg-type]
+        )
+        manifest = load_manifest(identity)
+        return {
+            "policy_key": identity.policy_key,
+            "available": manifest is not None and model_path(identity).exists(),
+            "status": manifest.status if manifest else None,
+            "ceiling_lap_s": manifest.ceiling_lap_s if manifest else None,
+            "clean_lap_rate": manifest.clean_lap_rate if manifest else None,
+        }
+
     @app.post("/api/sim/start")
     def api_sim_start(request: SimStartRequest) -> dict[str, Any]:
         try:
@@ -387,6 +418,8 @@ def create_app(
                 manual=request.manual,
                 free_mode=request.free_mode,
                 auto_drive=request.auto_drive,
+                learned_drive=request.learned_drive,
+                policy_objective=request.policy_objective,
                 target_laps=request.target_laps,
                 aggression=request.aggression,
                 speedup=request.speedup,

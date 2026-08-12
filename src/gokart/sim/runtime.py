@@ -19,5 +19,7 @@ class RuntimeControls:
     power_cycle_request: bool = False
     stop_requested: bool = False
     auto_drive: bool = False
+    learned_drive: bool = False
+    policy_objective: str = "god"
     target_laps: int = 3
     aggression: float = 1.0

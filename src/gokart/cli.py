@@ -267,6 +267,67 @@ def cmd_track_import_f1(args: argparse.Namespace) -> int:
     return 1 if fail_count else 0
 
 
+def cmd_rl_train(args: argparse.Namespace) -> int:
+    from gokart.rl.trainer import TrainingConfig, train_policy
+
+    result = train_policy(
+        TrainingConfig(
+            vehicle_name=args.vehicle,
+            vehicle_version=args.version,
+            track_id=args.track,
+            drive_mode=args.mode,
+            driver_profile=args.profile,
+            objective=args.objective,
+            target_laps=args.laps,
+            total_timesteps=args.timesteps,
+            seed=args.seed,
+        )
+    )
+    print(f"Policy key: {result.identity.policy_key}")
+    print(f"Status: {result.manifest.status}")
+    print(f"Model: {result.model_path}")
+    if result.best_lap_s is not None:
+        print(f"Ceiling lap: {result.best_lap_s:.2f}s (clean rate {result.clean_lap_rate:.0%})")
+    return 0 if result.manifest.status == "ceiling_reached" else 1
+
+
+def cmd_rl_list(args: argparse.Namespace) -> int:
+    from gokart.rl.registry import list_policies
+
+    policies = list_policies()
+    if not policies:
+        print("No trained policies.")
+        return 0
+    for manifest in policies:
+        lap = (
+            f"{manifest.ceiling_lap_s:.2f}s"
+            if manifest.ceiling_lap_s is not None
+            else "—"
+        )
+        print(
+            f"{manifest.identity.policy_key}  {manifest.status:<16}  "
+            f"{manifest.identity.track_id}  {manifest.identity.drive_mode}  lap {lap}"
+        )
+    return 0
+
+
+def cmd_rl_verify(args: argparse.Namespace) -> int:
+    from gokart.rl.policy_key import build_policy_identity
+    from gokart.rl.trainer import verify_policy
+
+    identity = build_policy_identity(
+        vehicle_name=args.vehicle,
+        vehicle_version=args.version,
+        track_id=args.track,
+        drive_mode=args.mode,
+        driver_profile=args.profile,
+        objective=args.objective,
+    )
+    report = verify_policy(identity, episodes=args.episodes)
+    print(json.dumps(report, indent=2))
+    return 0 if report["passed"] else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="gokart", description="Go-kart configuration tools")
     parser.add_argument("--actor", default="cli", help="Actor name for audit log entries")
@@ -397,6 +458,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow overwrite existing tracks",
     )
     track_import_f1.set_defaults(func=cmd_track_import_f1)
+
+    rl = sub.add_parser("rl", help="Reinforcement-learning driver commands")
+    rl_sub = rl.add_subparsers(dest="rl_command", required=True)
+
+    rl_train = rl_sub.add_parser("train", help="Train a per-config policy to clean ceiling")
+    rl_train.add_argument("--vehicle", default="Scott Kart V1")
+    rl_train.add_argument("--version", default="V1.0")
+    rl_train.add_argument("--track", required=True, help="Track id")
+    rl_train.add_argument("--mode", default="default", help="Drive mode")
+    rl_train.add_argument("--profile", default="owner", help="Driver profile")
+    rl_train.add_argument("--objective", choices=["god", "endurance"], default="god")
+    rl_train.add_argument("--laps", type=int, default=3)
+    rl_train.add_argument("--timesteps", type=int, default=50_000)
+    rl_train.add_argument("--seed", type=int, default=0)
+    rl_train.set_defaults(func=cmd_rl_train)
+
+    rl_list = rl_sub.add_parser("list", help="List trained policies")
+    rl_list.set_defaults(func=cmd_rl_list)
+
+    rl_verify = rl_sub.add_parser("verify", help="Verify a trained policy ceiling")
+    rl_verify.add_argument("--vehicle", default="Scott Kart V1")
+    rl_verify.add_argument("--version", default="V1.0")
+    rl_verify.add_argument("--track", required=True)
+    rl_verify.add_argument("--mode", default="default")
+    rl_verify.add_argument("--profile", default="owner")
+    rl_verify.add_argument("--objective", choices=["god", "endurance"], default="god")
+    rl_verify.add_argument("--episodes", type=int, default=5)
+    rl_verify.set_defaults(func=cmd_rl_verify)
 
     return parser
 
