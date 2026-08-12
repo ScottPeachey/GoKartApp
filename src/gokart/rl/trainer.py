@@ -27,7 +27,9 @@ class TrainingConfig:
     target_laps: int = 3
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
-    preview_log_every_n: int = 2
+    preview_log_every_n: int = 1
+    preview_max_steps: int = 6_000
+    preview_laps: int = 1
     rollout_stream_every: int = 8
     progress_every: int = 50
     eval_freq: int = 10_000
@@ -68,8 +70,8 @@ def run_preview_episode(
         drive_mode=config.drive_mode,
         driver_profile=config.driver_profile,
         objective=config.objective,
-        target_laps=config.target_laps,
-        max_steps=max_steps or 12_000,
+        target_laps=config.preview_laps,
+        max_steps=max_steps or config.preview_max_steps,
     )
     obs, _ = env.reset()
     done = False
@@ -179,12 +181,19 @@ def train_policy(
     last_episode_reward: float | None = None
     last_eval_lap: float | None = None
 
-    def _emit_progress(*, timesteps: int, preview_running: bool = False) -> None:
+    def _emit_progress(
+        *,
+        timesteps: int,
+        preview_running: bool = False,
+        preview_pending: bool = False,
+        preview_session_id: str = "",
+        status: str = "training",
+    ) -> None:
         callbacks.on_progress(
             TrainingProgress(
                 timesteps=timesteps,
                 total_timesteps=config.total_timesteps,
-                status="training",
+                status=status,
                 policy_key=identity.policy_key,
                 best_lap_s=best_lap,
                 clean_lap_rate=(sum(clean_rates) / len(clean_rates)) if clean_rates else 0.0,
@@ -192,6 +201,8 @@ def train_policy(
                 last_episode_reward=last_episode_reward,
                 last_eval_lap_s=last_eval_lap,
                 preview_running=preview_running,
+                preview_pending=preview_pending,
+                preview_session_id=preview_session_id,
                 previews_completed=previews_completed,
             )
         )
@@ -230,7 +241,21 @@ def train_policy(
             )
 
             if run_preview:
-                _emit_progress(timesteps=self.num_timesteps, preview_running=True)
+                _emit_progress(
+                    timesteps=self.num_timesteps,
+                    preview_pending=True,
+                    status="preview_ready",
+                )
+                if not callbacks.wait_to_play_preview() or should_stop() or callbacks.should_stop():
+                    stop_training_flag = True
+                    return False
+                preview_session_id = callbacks.start_preview_recording(timestep=self.num_timesteps)
+                _emit_progress(
+                    timesteps=self.num_timesteps,
+                    preview_running=True,
+                    preview_session_id=preview_session_id,
+                    status="preview_playing",
+                )
                 lap, clean, reward = run_preview_episode(
                     model,
                     config=config,
@@ -238,6 +263,7 @@ def train_policy(
                     hooks=callbacks,
                     timestep=self.num_timesteps,
                 )
+                callbacks.finish_preview_recording()
                 previews_completed += 1
                 last_episode_reward = reward
                 last_eval_lap = lap
@@ -249,9 +275,15 @@ def train_policy(
                     best_lap = lap
                 if _plateau_reached(eval_history, config.plateau_evals, config.min_improvement_s):
                     stop_training_flag = True
-                    _emit_progress(timesteps=self.num_timesteps, preview_running=False)
+                    _emit_progress(
+                        timesteps=self.num_timesteps,
+                        preview_session_id=preview_session_id,
+                    )
                     return False
-                _emit_progress(timesteps=self.num_timesteps, preview_running=False)
+                _emit_progress(
+                    timesteps=self.num_timesteps,
+                    preview_session_id=preview_session_id,
+                )
             elif run_silent_eval:
                 lap, clean_rate = evaluate_policy(
                     model,
@@ -318,11 +350,19 @@ def train_policy(
         model_path=out_path,
         best_lap_s=best_lap,
         clean_lap_rate=manifest.clean_lap_rate,
-        plateau_reached=_plateau_reached(eval_history, config.plateau_evals, config.min_improvement_s),
+        plateau_reached=_plateau_reached(
+            eval_history, config.plateau_evals, config.min_improvement_s
+        ),
     )
 
 
-def evaluate_policy(model, *, config: TrainingConfig, track, episodes: int) -> tuple[float | None, float]:
+def evaluate_policy(
+    model,
+    *,
+    config: TrainingConfig,
+    track,
+    episodes: int,
+) -> tuple[float | None, float]:
     from gokart.rl.env import make_env
 
     best_laps: list[float] = []

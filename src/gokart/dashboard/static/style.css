@@ -1131,6 +1131,8 @@ th, td {
 
 .rl-train-actions {
   gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .rl-train-metrics {

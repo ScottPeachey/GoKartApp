@@ -121,7 +121,7 @@ def create_app(
     telemetry_bus = bus or TelemetryBus()
     telemetry_store = store or TelemetryStore()
     sim_controller = SimController(bus=telemetry_bus, store_path=telemetry_store.db_path)
-    training_controller = TrainingController(bus=telemetry_bus)
+    training_controller = TrainingController(bus=telemetry_bus, store=telemetry_store)
 
     app = FastAPI(title="Go-Kart Dashboard", version="0.1.0")
     app.state.bus = telemetry_bus
@@ -451,6 +451,14 @@ def create_app(
         except RuntimeError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         return {"status": "started", "training": training_controller.snapshot()}
+
+    @app.post("/api/rl/train/preview")
+    def api_rl_train_preview() -> dict[str, str]:
+        try:
+            training_controller.play_preview()
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"status": "playing"}
 
     @app.post("/api/rl/train/stop")
     def api_rl_train_stop() -> dict[str, str]:

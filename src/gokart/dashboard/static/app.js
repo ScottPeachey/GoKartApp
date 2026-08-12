@@ -150,6 +150,8 @@ const TRAIN_STATUS_LABELS = {
   starting: "Starting…",
   loading_libraries: "Loading PyTorch (first run can take a minute)…",
   building_model: "Building policy network…",
+  preview_ready: "Preview ready — click Play preview",
+  preview_playing: "Playing preview on track",
   training: "Training",
   stopping: "Stopping…",
   stopped: "Stopped",
@@ -1086,7 +1088,12 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 window.refreshVehicleLists = refreshVehicleLists;
 
 function sessionOptionLabel(session) {
-  return `${session.started_at} — ${session.vehicle_name} (${session.sample_count} samples)`;
+  const when = session.started_at;
+  const vehicle = `${session.vehicle_name} (${session.sample_count} samples)`;
+  if (session.scenario_name && String(session.scenario_name).startsWith("rl_preview")) {
+    return `${when} — RL preview — ${vehicle}`;
+  }
+  return `${when} — ${vehicle}`;
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {
@@ -1583,7 +1590,9 @@ async function refreshHistoryView(forceSessionList = false) {
     const select = document.getElementById("session-select");
     const previousSessionId = select.value;
     state.historyPollCount += 1;
-    const refreshList = forceSessionList || state.historyPollCount % 30 === 0;
+    const refreshList = forceSessionList
+      || state.historyPollCount % 30 === 0
+      || Boolean(state.trainingRunning && state.trainingMetrics?.preview_running);
 
     let sessions = [];
     if (refreshList) {
@@ -1602,7 +1611,11 @@ async function refreshHistoryView(forceSessionList = false) {
       } catch (_error) {
         /* keep current selection */
       }
-    } else {
+    } else if (state.trainingRunning && state.liveSessionId) {
+      if ([...select.options].some((o) => o.value === state.liveSessionId)) {
+        select.value = state.liveSessionId;
+      }
+    } else if (!state.trainingRunning) {
       state.liveSessionId = null;
     }
 
@@ -1616,7 +1629,8 @@ async function refreshHistoryView(forceSessionList = false) {
 }
 
 function historyPollIntervalMs() {
-  return state.simRunning ? 400 : 250;
+  if (state.simRunning || state.trainingMetrics?.preview_running) return 400;
+  return 250;
 }
 
 function startHistoryPolling() {
@@ -2174,13 +2188,40 @@ function updateSimModeUi() {
 
 function applyTrainingMetrics(metrics) {
   const wasRunning = state.trainingRunning;
+  const previousPreviewSession = state.trainingMetrics?.preview_session_id;
   state.trainingMetrics = metrics;
   state.trainingRunning = Boolean(metrics.running);
   renderTrainingMetricsPanel(metrics);
   syncTrainingControlsState();
   ensureTrainingStatusPoll();
+  const previewSessionId = metrics.preview_session_id;
+  if (
+    metrics.preview_running
+    && previewSessionId
+    && previewSessionId !== previousPreviewSession
+  ) {
+    resetLivePathLayer();
+    void followTrainingPreviewSession(previewSessionId);
+  }
   if (wasRunning && !state.trainingRunning) {
     void updateAutoPolicyStatus();
+  }
+}
+
+async function followTrainingPreviewSession(sessionId) {
+  state.liveSessionId = sessionId;
+  const select = document.getElementById("session-select");
+  if (!select) return;
+  try {
+    const sessions = await api("/api/sessions");
+    updateSessionSelect(sessions, select, sessionId);
+    if ([...select.options].some((option) => option.value === sessionId)) {
+      select.value = sessionId;
+    }
+    resetLiveHistoryState();
+    await drawSessionChart(sessionId);
+  } catch (_err) {
+    /* preview session appears on the next history poll */
   }
 }
 
@@ -2206,7 +2247,7 @@ function renderTrainingMetricsPanel(metrics) {
   const panel = document.getElementById("rl-train-metrics");
   if (!panel) return;
   const show = state.trainingRunning
-    || ["failed", "ceiling_reached", "stopped", "starting", "loading_libraries", "building_model"].includes(metrics.status);
+    || ["failed", "ceiling_reached", "stopped", "starting", "loading_libraries", "building_model", "preview_ready", "preview_playing"].includes(metrics.status);
   panel.classList.toggle("hidden", !show);
 
   const pct = Number(metrics.progress_pct || 0);
@@ -2219,10 +2260,9 @@ function renderTrainingMetricsPanel(metrics) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   };
-  const previewNote = metrics.preview_running ? " (scored preview lap…)" : "";
   const statusKey = metrics.status || "—";
   const statusLabel = TRAIN_STATUS_LABELS[statusKey] || statusKey;
-  setText("train-status", `${statusLabel}${previewNote}`);
+  setText("train-status", statusLabel);
   setText(
     "train-timesteps",
     `${Number(metrics.timesteps || 0).toLocaleString()} / ${Number(metrics.total_timesteps || 0).toLocaleString()}`,
@@ -2257,9 +2297,13 @@ function renderTrainingMetricsPanel(metrics) {
 function syncTrainingControlsState() {
   const startBtn = document.getElementById("btn-train-start");
   const stopBtn = document.getElementById("btn-train-stop");
+  const playBtn = document.getElementById("btn-train-preview");
   const simStartBtn = document.getElementById("btn-start");
+  const metrics = state.trainingMetrics || {};
+  const previewReady = Boolean(metrics.preview_pending) && !metrics.preview_running;
   if (startBtn) startBtn.disabled = state.trainingRunning || state.simRunning;
   if (stopBtn) stopBtn.disabled = !state.trainingRunning;
+  if (playBtn) playBtn.disabled = !previewReady;
   if (simStartBtn && state.trainingRunning) {
     simStartBtn.disabled = true;
   } else if (simStartBtn && !state.simRunning) {
@@ -2303,6 +2347,11 @@ async function startRlTraining() {
       preview_freq: previewFreq,
     }),
   });
+  await refreshTrainingStatus();
+}
+
+async function playRlPreview() {
+  await api("/api/rl/train/preview", { method: "POST" });
   await refreshTrainingStatus();
 }
 
@@ -2734,6 +2783,9 @@ function setupControls() {
 
   document.getElementById("btn-train-start")?.addEventListener("click", () => {
     void startRlTraining();
+  });
+  document.getElementById("btn-train-preview")?.addEventListener("click", () => {
+    void playRlPreview();
   });
   document.getElementById("btn-train-stop")?.addEventListener("click", () => {
     void stopRlTraining();
