@@ -31,12 +31,19 @@ Read in this order:
 You can configure and test the full software loop **before the kart exists**:
 
 ```bash
-uv sync
+./scripts/setup.sh
+# or manually:
+uv python install 3.12
+uv sync --python 3.12
+uv sync --group rl --python 3.12
+
 gokart config validate data/vehicles/Scott_Kart_V1/V1.0.json
 gokart sim run "Scott Kart V1" V1.0 standing_start_30s --out run.csv
 gokart dashboard
 gokart sweep run data/sweeps/sprocket_0_30.json
 ```
+
+**Python version:** use **3.12** for this repo. PyTorch (RL training) does not ship wheels for 3.14 yet; `uv` reads `.python-version` automatically.
 
 In the dashboard, open the **Configuration** tab to swap components or change
 sprocket sizes. Saving creates a new vehicle version automatically (no JSON or
@@ -52,8 +59,8 @@ gokart track import /path/to/circuit.geojson
 gokart track list
 gokart dashboard   # Simulation → Auto drive (rule-based or learned)
 
-# Train a per-config policy (requires Python 3.12 + uv sync --group rl)
-uv sync --group rl
+# Train a per-config policy (Python 3.12 + ./scripts/setup.sh or uv sync --group rl)
+uv sync --group rl --python 3.12
 gokart rl train --track test-hairpin --vehicle "Scott Kart V1" --version V1.0 \
   --mode default --profile owner --objective god --timesteps 50000
 gokart rl list
