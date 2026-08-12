@@ -151,6 +151,15 @@ def axle_grip_multiplier(state: AxleTyreState, params: TyreThermalParams) -> flo
     return temp_factor * wear_factor
 
 
+def thermal_slip_usage(slip_usage: float, speed_mps: float) -> float:
+    """Slip that generates heat — zero when parked (static braking is not tyre sliding)."""
+    if speed_mps < 0.5:
+        return 0.0
+    slip = max(0.0, min(1.5, slip_usage))
+    speed_factor = min(1.0, (speed_mps - 0.35) / 1.0)
+    return slip * speed_factor
+
+
 def step_wheel_tyre(
     state: WheelTyreState,
     params: TyreThermalParams,
@@ -160,10 +169,10 @@ def step_wheel_tyre(
     speed_mps: float,
     dt: float,
 ) -> WheelTyreState:
-    slip = max(0.0, min(1.5, slip_usage))
+    slip = thermal_slip_usage(slip_usage, speed_mps)
     normal = max(normal_load_n, 0.0)
     speed = max(speed_mps, 0.0)
-    slip_power = slip * slip * normal * speed if speed > 0.2 else 0.0
+    slip_power = slip * slip * normal * speed
     heat_in = slip_power * params.heating_rate
     airflow = 1.0 + min(speed, 25.0) / 12.0
     temp_delta = state.temperature_c - params.ambient_temp_c
@@ -171,7 +180,7 @@ def step_wheel_tyre(
     cool_boost = 1.0 + overtemp * 0.03
     cool = temp_delta * params.cooling_rate * airflow * cool_boost
     temperature_c = state.temperature_c + (heat_in - cool) * dt
-    wear_delta = slip * params.wear_rate * normal * speed * dt if speed > 0.2 else 0.0
+    wear_delta = slip * params.wear_rate * normal * speed * dt
     wear = min(params.max_wear, state.wear + wear_delta)
     return WheelTyreState(temperature_c=temperature_c, wear=wear)
 

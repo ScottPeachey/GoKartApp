@@ -115,6 +115,26 @@ def test_slip_heats_tyres() -> None:
     assert new_state.rr.wear > 0.0
 
 
+def test_standstill_brake_does_not_heat_tyres() -> None:
+    vehicle = load_validated_vehicle_model("Scott_Kart_V2", "V2.0")
+    state = vehicle.initial_state()
+    for _ in range(500):
+        state, outputs = vehicle.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=0.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=1.0,
+                environment=Environment(),
+                steering=0.0,
+            ),
+            dt=0.01,
+        )
+    assert outputs.speed_mps == 0.0
+    assert outputs.tyre_temp_rr_c == pytest.approx(25.0, abs=0.01)
+    assert outputs.tyre_wear_rr == 0.0
+
+
 def test_vehicle_step_reports_tyre_telemetry() -> None:
     vehicle = load_validated_vehicle_model("Scott_Kart_V2", "V2.0")
     state = vehicle.initial_state()

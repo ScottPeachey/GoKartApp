@@ -275,6 +275,9 @@ function updateWheelCard(wheelId, sample) {
   const normal = Number(sample[`normal_${wheelId}_n`] || 0);
   const gripCoeff = Number(sample[`grip_${wheelId}_effective`] || DISPLAY_GRIP_COEFF);
   const isRear = wheelId === "rl" || wheelId === "rr";
+  const speed = Number(sample.speed_mps || 0);
+  const driving = sample.safety_state === "DRIVING";
+  const brake = Number(sample.brake || 0);
   const usedForce = isRear
     ? Math.abs(Number(sample[`longitudinal_${wheelId}_n`] || 0))
     : Math.abs(Number(sample[`lateral_${wheelId}_n`] || 0));
@@ -284,13 +287,19 @@ function updateWheelCard(wheelId, sample) {
   const wear = sample[`tyre_wear_${wheelId}`];
 
   document.getElementById(`wheel-${wheelId}-load`).textContent = normal > 1 ? `${Math.round(normal)} N` : "—";
-  setGripMeterBar(`wheel-${wheelId}-grip-bar`, gripPct);
-  document.getElementById(`wheel-${wheelId}-grip-label`).textContent = isRear
-    ? `Drive ${Math.min(999, gripPct).toFixed(0)}%`
-    : `Lateral ${Math.min(999, gripPct).toFixed(0)}%`;
+  if (!driving || speed < 0.2) {
+    setGripMeterBar(`wheel-${wheelId}-grip-bar`, 0);
+    const parkedLabel = brake > 0.1 ? "Brake hold" : "Parked";
+    document.getElementById(`wheel-${wheelId}-grip-label`).textContent = parkedLabel;
+  } else {
+    setGripMeterBar(`wheel-${wheelId}-grip-bar`, gripPct);
+    document.getElementById(`wheel-${wheelId}-grip-label`).textContent = isRear
+      ? `Drive ${Math.min(999, gripPct).toFixed(0)}%`
+      : `Lateral ${Math.min(999, gripPct).toFixed(0)}%`;
+  }
   document.getElementById(`wheel-${wheelId}-tyre-meta`).textContent =
     `${temp.toFixed(1)}°C · wear ${formatTyreWear(wear)}`;
-  return { normal, gripPct, isRear, usedForce };
+  return { normal, gripPct, isRear, usedForce, speed, driving };
 }
 
 function updateAxlePhysicsPanel(sample) {
@@ -319,10 +328,15 @@ function updateAxlePhysicsPanel(sample) {
   const rearTrac = Math.abs(Number(sample.rear_traction_n || sample.traction_force_n || 0));
   const speed = Number(sample.speed_mps || 0);
   const brake = Number(sample.brake || 0);
+  const driving = sample.safety_state === "DRIVING";
   const loadAccel = effectiveLoadTransferAccel(sample);
   const hint = document.getElementById("load-transfer-hint");
   const outsideLoaded = sample.normal_fr_n > sample.normal_fl_n + 5;
-  if (speed <= 0.05 && brake > 0.1) {
+  if (!driving) {
+    hint.textContent = brake > 0.1
+      ? "Brake hold — tyres stay cold until you drive"
+      : "Tyres at ambient until driving";
+  } else if (speed <= 0.05 && brake > 0.1) {
     hint.textContent = "Brakes held";
   } else if (loadAccel > 0.8) {
     hint.textContent = "Load → rear";
