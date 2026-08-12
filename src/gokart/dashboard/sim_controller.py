@@ -96,6 +96,20 @@ class SimController:
         self.controls.power_cycle_request = True
         self.controls.power_on_request = True
 
+    def sync_controls_after_tick(self, sample: dict[str, object]) -> None:
+        """Clear one-shot runtime requests once the sim has consumed them."""
+        self.status.last_sample = sample
+        safety = str(sample.get("safety_state", "OFF"))
+        if safety != "READY":
+            self.controls.arm_request = False
+        if safety != "OFF":
+            self.controls.power_on_request = False
+        if safety != "DRIVING":
+            self.controls.disarm_request = False
+        if safety not in {"FAULT", "SAFE_SHUTDOWN"}:
+            self.controls.fault_ack_request = False
+            self.controls.power_cycle_request = False
+
     def reset(self) -> None:
         """Stop any running simulation and clear dashboard session state."""
         self.controls.stop_requested = True
@@ -176,16 +190,7 @@ class SimController:
             self.status.session_id = self._recorder.session_id
 
             def on_tick(tick) -> None:
-                self.status.last_sample = tick.to_row()
-                safety = str(tick.values.get("safety_state", "OFF"))
-                if safety != "READY":
-                    self.controls.arm_request = False
-                if safety != "OFF":
-                    self.controls.power_on_request = False
-                if safety != "DRIVING":
-                    self.controls.disarm_request = False
-                self.controls.fault_ack_request = False
-                self.controls.power_cycle_request = False
+                self.sync_controls_after_tick(tick.to_row())
 
             result = run_simulation(
                 vehicle_name,

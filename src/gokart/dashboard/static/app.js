@@ -14,6 +14,7 @@ const state = {
   liveUiScheduled: false,
   channelRowsBuilt: false,
   channelStableValues: {},
+  faultAckPending: false,
   hiddenChannels: new Set(),
   channelCustomiseOpen: false,
   historySessionListKey: "",
@@ -1763,6 +1764,7 @@ function updateFreeDriveGuide(safetyState) {
       setStep("boot");
       break;
     case "READY":
+      state.faultAckPending = false;
       hint.innerHTML = "Safety is <strong>READY</strong>. Click <strong>Arm with brake</strong> — brake is applied automatically.";
       armBtn.disabled = false;
       driving.classList.add("locked");
@@ -1794,7 +1796,10 @@ function updateFreeDriveGuide(safetyState) {
       const isCritical = String(faults).includes("PACK_") || String(faults).includes("CELL_")
         || String(faults).includes("BATTERY_OVERTEMP") || String(faults).includes("CONTACTOR")
         || String(faults).includes("PRECHARGE");
-      hint.innerHTML = safetyState === "SAFE_SHUTDOWN"
+      const waitingToRecover = state.faultAckPending;
+      hint.innerHTML = waitingToRecover
+        ? "<strong>Recovering…</strong> Clear fault was acknowledged — release throttle/brake and wait for speed or voltage to settle."
+        : safetyState === "SAFE_SHUTDOWN"
         ? isCritical
           ? "<strong>Critical fault</strong> — release brake if you were regen-braking, wait for voltage to settle, then click <strong>Clear fault</strong>."
           : "<strong>System shut down</strong> — click <strong>Clear fault</strong> to recover, or use <strong>New session</strong>."
@@ -2188,6 +2193,7 @@ function setupControls() {
     setBrakeHold(false);
     updateSliderReadouts();
     await sendInputs();
+    state.faultAckPending = true;
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-brake-hold").addEventListener("click", () => setBrakeHold(!state.brakeHold));
@@ -2197,6 +2203,7 @@ function setupControls() {
     document.getElementById("brake").value = "0";
     updateSliderReadouts();
     await sendInputs();
+    state.faultAckPending = true;
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-refresh-sessions").addEventListener("click", () => {
