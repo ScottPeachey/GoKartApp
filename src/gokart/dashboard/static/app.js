@@ -1535,9 +1535,12 @@ function redrawPathLayer() {
   pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
   drawTrackUnderlay(pathCtx, state.track.data, toPx);
   const replay = layer.replayMarker;
-  const xs = replay?.xs?.length ? replay.xs : layer.marker.xs;
-  const ys = replay?.ys?.length ? replay.ys : layer.marker.ys;
-  const speeds = replay?.speeds?.length ? replay.speeds : layer.speeds;
+  const useProgressivePath = isReplayCockpitActive()
+    && state.historyReplayPlaying
+    && replay?.xs?.length;
+  const xs = useProgressivePath ? replay.xs : layer.marker.xs;
+  const ys = useProgressivePath ? replay.ys : layer.marker.ys;
+  const speeds = useProgressivePath ? replay.speeds : layer.speeds;
   const pathSeries = decimatePathSeries(xs, ys, speeds);
   drawSpeedColoredPath(
     pathCtx,
@@ -1647,84 +1650,47 @@ function drawReplayPathSegment(pathCtx, samples, speedsKmh, fromIndex, toIndex, 
   }
 }
 
-function drawReplayPathBaseLayer() {
-  const layer = state.historyPathLayer;
-  const base = state.historyPathBaseTransform;
-  if (!layer || !base) return null;
-
-  const pathCanvas = document.getElementById("history-path");
-  if (!pathCanvas) return null;
-
-  const pathCtx = pathCanvas.getContext("2d");
-  const view = state.pathView;
-  const toPx = (x, y) => worldToScreen(x, y, base, view);
-  state.historyPathTransform = { base, view };
-
-  pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
-  drawTrackUnderlay(pathCtx, state.track.data, toPx);
-  drawStartFinishLine(pathCtx, state.track.data, toPx);
-  pathCtx.fillStyle = "#8aa0b8";
-  pathCtx.font = "12px sans-serif";
-  const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
-  const zoomLabel = view.zoom === 1 ? "" : ` · ${view.zoom.toFixed(1)}×`;
-  const replayLabel = isHistoryReplayPinned() ? " · replay" : "";
-  pathCtx.fillText(
-    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${replayLabel}`,
-    10,
-    16,
-  );
-  return { pathCtx, toPx, layer };
-}
-
-function replayMarkerFromSample(samples, index) {
-  const sample = samples[index] || {};
-  return {
-    x: Number(sample.position_x_m || 0),
-    y: Number(sample.position_y_m || 0),
-    heading: Number(sample.heading_deg || 0),
-  };
-}
-
 function syncReplayPathLayer(index, { full = false } = {}) {
   const samples = state.historyReplaySamples;
   const layer = state.historyPathLayer;
   if (!samples.length || !layer) return;
 
+  const replayPath = buildReplayPathSeries(samples, index, layer.speeds);
+  layer.replayMarker = replayPath;
+  state.historyMarkerFingerprint = historyMarkerFingerprint({
+    x: replayPath.x,
+    y: replayPath.y,
+    heading: replayPath.heading,
+  });
+
   const needsFullRedraw = full || state.historyReplayPathDrawnIndex < 0 || index < state.historyReplayPathDrawnIndex;
   if (needsFullRedraw) {
-    const replayPath = buildReplayPathSeries(samples, index, layer.speeds);
-    layer.replayMarker = replayPath;
-    state.historyMarkerFingerprint = historyMarkerFingerprint({
-      x: replayPath.x,
-      y: replayPath.y,
-      heading: replayPath.heading,
-    });
     state.historyReplayPathDrawnIndex = index;
     schedulePathRedraw();
     return;
   }
 
-  const marker = replayMarkerFromSample(samples, index);
-  layer.replayMarker = { ...layer.replayMarker, ...marker };
-  state.historyMarkerFingerprint = historyMarkerFingerprint(marker);
-
   if (index > state.historyReplayPathDrawnIndex) {
-    const baseLayer = drawReplayPathBaseLayer();
-    if (baseLayer) {
+    const pathCanvas = document.getElementById("history-path");
+    const base = state.historyPathBaseTransform;
+    if (pathCanvas && base) {
+      const pathCtx = pathCanvas.getContext("2d");
+      const view = state.pathView;
+      const toPx = (x, y) => worldToScreen(x, y, base, view);
       drawReplayPathSegment(
-        baseLayer.pathCtx,
+        pathCtx,
         samples,
         layer.speeds,
         state.historyReplayPathDrawnIndex + 1,
         index,
         layer.pathColorMaxKmh,
-        baseLayer.toPx,
+        toPx,
       );
     }
     state.historyReplayPathDrawnIndex = index;
   }
 
-  drawPathMarkerOverlay(marker.x, marker.y, marker.heading, state.historyVehicleDims);
+  drawPathMarkerOverlay(replayPath.x, replayPath.y, replayPath.heading, state.historyVehicleDims);
 }
 
 function getOrderedSessionIds() {
