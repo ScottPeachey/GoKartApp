@@ -17,13 +17,14 @@ def test_training_progress_to_dict() -> None:
         best_lap_s=42.5,
         clean_lap_rate=0.5,
         preview_running=True,
+        preview_sessions=[{"timestep": 5000, "session_id": "sess-1"}],
         previews_completed=1,
     )
     payload = progress.to_dict()
     assert payload["timesteps"] == 5000
     assert payload["progress_pct"] == 10.0
     assert payload["preview_running"] is True
-    assert payload["preview_pending"] is False
+    assert payload["preview_sessions"] == [{"timestep": 5000, "session_id": "sess-1"}]
     assert payload["preview_session_id"] == ""
 
 
@@ -33,8 +34,7 @@ def test_training_status_labels_cover_init_phases() -> None:
         "loading_libraries",
         "building_model",
         "training",
-        "preview_ready",
-        "preview_playing",
+        "preview_recording",
     ):
         payload = TrainingProgress(status=status, total_timesteps=1000).to_dict()
         assert payload["status"] == status
@@ -47,12 +47,6 @@ def test_rl_train_status_endpoint() -> None:
     data = response.json()
     assert data["running"] is False
     assert data["status"] == "idle"
-
-
-def test_rl_train_preview_requires_pending_checkpoint() -> None:
-    client = TestClient(create_app())
-    response = client.post("/api/rl/train/preview")
-    assert response.status_code == 409
 
 
 def test_rl_train_start_requires_track() -> None:

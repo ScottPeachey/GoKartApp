@@ -18,8 +18,8 @@ class TrainingProgress:
     last_episode_reward: float | None = None
     last_eval_lap_s: float | None = None
     preview_running: bool = False
-    preview_pending: bool = False
     preview_session_id: str = ""
+    preview_sessions: list[dict[str, Any]] = field(default_factory=list)
     previews_completed: int = 0
     error: str | None = None
 
@@ -40,8 +40,8 @@ class TrainingProgress:
             "last_episode_reward": self.last_episode_reward,
             "last_eval_lap_s": self.last_eval_lap_s,
             "preview_running": self.preview_running,
-            "preview_pending": self.preview_pending,
             "preview_session_id": self.preview_session_id,
+            "preview_sessions": list(self.preview_sessions),
             "previews_completed": self.previews_completed,
             "error": self.error,
         }
@@ -53,8 +53,6 @@ class TrainingHooks(Protocol):
     def on_preview_tick(self, row: dict[str, Any]) -> None: ...
 
     def should_stop(self) -> bool: ...
-
-    def wait_to_play_preview(self) -> bool: ...
 
     def start_preview_recording(self, *, timestep: int) -> str: ...
 
@@ -72,9 +70,6 @@ class NullTrainingHooks:
 
     def should_stop(self) -> bool:
         return False
-
-    def wait_to_play_preview(self) -> bool:
-        return True
 
     def start_preview_recording(self, *, timestep: int) -> str:
         return ""

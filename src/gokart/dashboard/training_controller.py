@@ -43,10 +43,10 @@ class TrainingController:
         self.store = store or TelemetryStore()
         self._lock = threading.Lock()
         self._stop_requested = False
-        self._preview_gate = threading.Event()
         self._thread: threading.Thread | None = None
         self._request: TrainingRunRequest | None = None
         self._preview_recorder: SessionRecorder | None = None
+        self._preview_timestep = 0
         self.status = TrainingControllerStatus()
 
     def snapshot(self) -> dict[str, Any]:
@@ -70,7 +70,6 @@ class TrainingController:
             if self.status.running:
                 raise RuntimeError("Training already running")
             self._stop_requested = False
-            self._preview_gate.clear()
             self._request = request
             self.status = TrainingControllerStatus(
                 running=True,
@@ -89,17 +88,9 @@ class TrainingController:
 
     def stop(self) -> None:
         self._stop_requested = True
-        self._preview_gate.set()
         with self._lock:
             if self.status.running:
                 self.status.progress.status = "stopping"
-
-    def play_preview(self) -> None:
-        if not self.status.running:
-            raise RuntimeError("Training is not running")
-        if not self.status.progress.preview_pending:
-            raise RuntimeError("No preview is waiting")
-        self._preview_gate.set()
 
     def reset(self) -> None:
         self.stop()
@@ -109,8 +100,8 @@ class TrainingController:
             self.status = TrainingControllerStatus()
             self._thread = None
             self._stop_requested = False
-            self._preview_gate.clear()
             self._preview_recorder = None
+            self._preview_timestep = 0
 
     def _publish_progress(self, progress: TrainingProgress) -> None:
         with self._lock:
@@ -154,6 +145,8 @@ class TrainingController:
                     best_lap_s=result.best_lap_s,
                     clean_lap_rate=result.clean_lap_rate,
                     preview_running=False,
+                    preview_sessions=list(hooks.preview_sessions),
+                    previews_completed=len(hooks.preview_sessions),
                 )
             )
         except Exception as exc:  # noqa: BLE001 - surface to dashboard
@@ -161,6 +154,8 @@ class TrainingController:
                 status="failed",
                 total_timesteps=config.total_timesteps,
                 error=str(exc),
+                preview_sessions=list(hooks.preview_sessions),
+                previews_completed=len(hooks.preview_sessions),
             )
             with self._lock:
                 if self.status.progress.policy_key:
@@ -171,7 +166,6 @@ class TrainingController:
             with self._lock:
                 self.status.running = False
             self._stop_requested = False
-            self._preview_gate.clear()
 
     def _should_stop(self) -> bool:
         return self._stop_requested
@@ -186,9 +180,26 @@ class TrainingController:
 class _DashboardTrainingHooks:
     def __init__(self, controller: TrainingController) -> None:
         self._controller = controller
+        self.preview_sessions: list[dict[str, Any]] = []
 
     def on_progress(self, progress: TrainingProgress) -> None:
-        self._controller._publish_progress(progress)
+        merged = TrainingProgress(
+            timesteps=progress.timesteps,
+            total_timesteps=progress.total_timesteps,
+            status=progress.status,
+            policy_key=progress.policy_key or self._controller.status.progress.policy_key,
+            best_lap_s=progress.best_lap_s,
+            clean_lap_rate=progress.clean_lap_rate,
+            eval_history=list(progress.eval_history),
+            last_episode_reward=progress.last_episode_reward,
+            last_eval_lap_s=progress.last_eval_lap_s,
+            preview_running=progress.preview_running,
+            preview_session_id=progress.preview_session_id,
+            preview_sessions=list(self.preview_sessions),
+            previews_completed=len(self.preview_sessions),
+            error=progress.error,
+        )
+        self._controller._publish_progress(merged)
 
     def on_preview_tick(self, row: dict[str, Any]) -> None:
         recorder = self._controller._preview_recorder
@@ -200,17 +211,11 @@ class _DashboardTrainingHooks:
     def should_stop(self) -> bool:
         return self._controller._should_stop()
 
-    def wait_to_play_preview(self) -> bool:
-        self._controller._preview_gate.clear()
-        while not self._controller._should_stop():
-            if self._controller._preview_gate.wait(timeout=0.15):
-                return not self._controller._should_stop()
-        return False
-
     def start_preview_recording(self, *, timestep: int) -> str:
         request = self._controller._request
         if request is None:
             return ""
+        self._controller._preview_timestep = timestep
         vehicle = load_vehicle(request.vehicle_name, request.vehicle_version, root=data_root())
         recorder = SessionRecorder(
             SessionMetadata(
@@ -221,7 +226,7 @@ class _DashboardTrainingHooks:
                 drive_mode=request.drive_mode,
                 scenario_name=f"rl_preview_{timestep}",
                 track_id=request.track_id,
-                notes=f"RL preview at {timestep} steps",
+                notes=f"RL preview at {timestep:,} training steps",
             ),
             store=self._controller.store,
             bus=self._controller.bus,
@@ -231,7 +236,14 @@ class _DashboardTrainingHooks:
         return recorder.session_id
 
     def finish_preview_recording(self) -> None:
+        recorder = self._controller._preview_recorder
+        session_id = recorder.session_id if recorder is not None else ""
+        timestep = self._controller._preview_timestep
         self._controller._close_preview_recorder()
+        if session_id:
+            self.preview_sessions.append(
+                {"timestep": timestep, "session_id": session_id},
+            )
 
 
 def _policy_key_for(config: TrainingConfig) -> str:

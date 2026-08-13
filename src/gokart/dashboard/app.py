@@ -452,14 +452,6 @@ def create_app(
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         return {"status": "started", "training": training_controller.snapshot()}
 
-    @app.post("/api/rl/train/preview")
-    def api_rl_train_preview() -> dict[str, str]:
-        try:
-            training_controller.play_preview()
-        except RuntimeError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-        return {"status": "playing"}
-
     @app.post("/api/rl/train/stop")
     def api_rl_train_stop() -> dict[str, str]:
         training_controller.stop()

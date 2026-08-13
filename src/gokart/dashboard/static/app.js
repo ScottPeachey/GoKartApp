@@ -150,8 +150,7 @@ const TRAIN_STATUS_LABELS = {
   starting: "Starting…",
   loading_libraries: "Loading PyTorch (first run can take a minute)…",
   building_model: "Building policy network…",
-  preview_ready: "Preview ready — click Play preview",
-  preview_playing: "Playing preview on track",
+  preview_recording: "Recording preview lap…",
   training: "Training",
   stopping: "Stopping…",
   stopped: "Stopped",
@@ -1087,13 +1086,34 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 
 window.refreshVehicleLists = refreshVehicleLists;
 
+function rlPreviewTimestep(session) {
+  const match = String(session.scenario_name || "").match(/^rl_preview_(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
 function sessionOptionLabel(session) {
   const when = session.started_at;
   const vehicle = `${session.vehicle_name} (${session.sample_count} samples)`;
-  if (session.scenario_name && String(session.scenario_name).startsWith("rl_preview")) {
-    return `${when} — RL preview — ${vehicle}`;
+  const previewStep = rlPreviewTimestep(session);
+  if (previewStep != null) {
+    return `${when} — RL preview @ ${previewStep.toLocaleString()} steps — ${vehicle}`;
   }
   return `${when} — ${vehicle}`;
+}
+
+function sortSessionsForDisplay(sessions) {
+  const previews = [];
+  const other = [];
+  for (const session of sessions) {
+    if (rlPreviewTimestep(session) != null) {
+      previews.push(session);
+    } else {
+      other.push(session);
+    }
+  }
+  previews.sort((a, b) => rlPreviewTimestep(a) - rlPreviewTimestep(b));
+  other.sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
+  return [...previews, ...other];
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {
@@ -1112,7 +1132,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
 
   state.historySessionListKey = listKey;
   select.innerHTML = "";
-  for (const session of sessions) {
+  for (const session of sortSessionsForDisplay(sessions)) {
     const option = document.createElement("option");
     option.value = session.session_id;
     option.textContent = sessionOptionLabel(session);
@@ -1592,7 +1612,7 @@ async function refreshHistoryView(forceSessionList = false) {
     state.historyPollCount += 1;
     const refreshList = forceSessionList
       || state.historyPollCount % 30 === 0
-      || Boolean(state.trainingRunning && state.trainingMetrics?.preview_running);
+      || Boolean(state.trainingRunning);
 
     let sessions = [];
     if (refreshList) {
@@ -2188,40 +2208,18 @@ function updateSimModeUi() {
 
 function applyTrainingMetrics(metrics) {
   const wasRunning = state.trainingRunning;
-  const previousPreviewSession = state.trainingMetrics?.preview_session_id;
+  const previousPreviews = Number(state.trainingMetrics?.previews_completed || 0);
   state.trainingMetrics = metrics;
   state.trainingRunning = Boolean(metrics.running);
   renderTrainingMetricsPanel(metrics);
   syncTrainingControlsState();
   ensureTrainingStatusPoll();
-  const previewSessionId = metrics.preview_session_id;
-  if (
-    metrics.preview_running
-    && previewSessionId
-    && previewSessionId !== previousPreviewSession
-  ) {
-    resetLivePathLayer();
-    void followTrainingPreviewSession(previewSessionId);
+  if (Number(metrics.previews_completed || 0) > previousPreviews) {
+    void refreshHistoryView(true);
   }
   if (wasRunning && !state.trainingRunning) {
+    void refreshHistoryView(true);
     void updateAutoPolicyStatus();
-  }
-}
-
-async function followTrainingPreviewSession(sessionId) {
-  state.liveSessionId = sessionId;
-  const select = document.getElementById("session-select");
-  if (!select) return;
-  try {
-    const sessions = await api("/api/sessions");
-    updateSessionSelect(sessions, select, sessionId);
-    if ([...select.options].some((option) => option.value === sessionId)) {
-      select.value = sessionId;
-    }
-    resetLiveHistoryState();
-    await drawSessionChart(sessionId);
-  } catch (_err) {
-    /* preview session appears on the next history poll */
   }
 }
 
@@ -2247,7 +2245,7 @@ function renderTrainingMetricsPanel(metrics) {
   const panel = document.getElementById("rl-train-metrics");
   if (!panel) return;
   const show = state.trainingRunning
-    || ["failed", "ceiling_reached", "stopped", "starting", "loading_libraries", "building_model", "preview_ready", "preview_playing"].includes(metrics.status);
+    || ["failed", "ceiling_reached", "stopped", "starting", "loading_libraries", "building_model", "preview_recording"].includes(metrics.status);
   panel.classList.toggle("hidden", !show);
 
   const pct = Number(metrics.progress_pct || 0);
@@ -2297,13 +2295,9 @@ function renderTrainingMetricsPanel(metrics) {
 function syncTrainingControlsState() {
   const startBtn = document.getElementById("btn-train-start");
   const stopBtn = document.getElementById("btn-train-stop");
-  const playBtn = document.getElementById("btn-train-preview");
   const simStartBtn = document.getElementById("btn-start");
-  const metrics = state.trainingMetrics || {};
-  const previewReady = Boolean(metrics.preview_pending) && !metrics.preview_running;
   if (startBtn) startBtn.disabled = state.trainingRunning || state.simRunning;
   if (stopBtn) stopBtn.disabled = !state.trainingRunning;
-  if (playBtn) playBtn.disabled = !previewReady;
   if (simStartBtn && state.trainingRunning) {
     simStartBtn.disabled = true;
   } else if (simStartBtn && !state.simRunning) {
@@ -2347,11 +2341,6 @@ async function startRlTraining() {
       preview_freq: previewFreq,
     }),
   });
-  await refreshTrainingStatus();
-}
-
-async function playRlPreview() {
-  await api("/api/rl/train/preview", { method: "POST" });
   await refreshTrainingStatus();
 }
 
@@ -2783,9 +2772,6 @@ function setupControls() {
 
   document.getElementById("btn-train-start")?.addEventListener("click", () => {
     void startRlTraining();
-  });
-  document.getElementById("btn-train-preview")?.addEventListener("click", () => {
-    void playRlPreview();
   });
   document.getElementById("btn-train-stop")?.addEventListener("click", () => {
     void stopRlTraining();

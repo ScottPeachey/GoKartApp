@@ -185,7 +185,6 @@ def train_policy(
         *,
         timesteps: int,
         preview_running: bool = False,
-        preview_pending: bool = False,
         preview_session_id: str = "",
         status: str = "training",
     ) -> None:
@@ -201,7 +200,6 @@ def train_policy(
                 last_episode_reward=last_episode_reward,
                 last_eval_lap_s=last_eval_lap,
                 preview_running=preview_running,
-                preview_pending=preview_pending,
                 preview_session_id=preview_session_id,
                 previews_completed=previews_completed,
             )
@@ -241,12 +239,7 @@ def train_policy(
             )
 
             if run_preview:
-                _emit_progress(
-                    timesteps=self.num_timesteps,
-                    preview_pending=True,
-                    status="preview_ready",
-                )
-                if not callbacks.wait_to_play_preview() or should_stop() or callbacks.should_stop():
+                if should_stop() or callbacks.should_stop():
                     stop_training_flag = True
                     return False
                 preview_session_id = callbacks.start_preview_recording(timestep=self.num_timesteps)
@@ -254,7 +247,7 @@ def train_policy(
                     timesteps=self.num_timesteps,
                     preview_running=True,
                     preview_session_id=preview_session_id,
-                    status="preview_playing",
+                    status="preview_recording",
                 )
                 lap, clean, reward = run_preview_episode(
                     model,
