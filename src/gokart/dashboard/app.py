@@ -330,8 +330,9 @@ def create_app(
     def api_sessions(
         config_hash: str | None = None,
         vehicle_name: str | None = None,
-        limit: int = Field(default=2000, ge=1, le=10_000),
+        limit: int = 2000,
     ) -> list[dict[str, Any]]:
+        limit = min(max(limit, 1), 10_000)
         sessions = telemetry_store.list_sessions(
             config_hash=config_hash,
             vehicle_name=vehicle_name,
