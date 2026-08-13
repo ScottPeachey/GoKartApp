@@ -11,18 +11,19 @@ from gokart.safety.types import FaultSeverity
 
 @dataclass(frozen=True)
 class RewardWeights:
-    progress: float = 0.35
+    progress: float = 0.5
     centerline: float = 0.12
     heading: float = 0.06
-    speed: float = 0.04
-    standstill: float = 0.35
-    throttle_go: float = 0.08
-    low_speed_steer: float = 0.04
+    speed: float = 0.06
+    standstill: float = 0.5
+    throttle_go: float = 0.15
+    low_speed_steer: float = 0.08
     lap_bonus: float = 25.0
     fault_block: float = 80.0
     fault_derate: float = 12.0
     off_track_rate: float = 2.5
-    off_track_terminal: float = 15.0
+    off_track_terminal: float = 12.0
+    stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
     motor_margin: float = 0.05
     soc_margin: float = 0.1
@@ -133,6 +134,11 @@ def compute_reward(
             terminal_penalty = -weights.off_track_terminal
             reward += terminal_penalty
             components["off_track_terminal"] = terminal_penalty
+
+    if bool(step_info.get("truncated_stagnant")):
+        stagnant_penalty = -weights.stagnant_terminal
+        reward += stagnant_penalty
+        components["stagnant_terminal"] = stagnant_penalty
 
     # proximity shaping
     battery_temp = float(tick_values.get("battery_temp_c", 25.0))

@@ -77,6 +77,18 @@ class TrackRacingEnv(gym.Env):
             action_config=self.setup.action,
         )
         step_result = self.session.step(action=action_tuple)
+        env_cfg = self._env_cfg
+        speed = float(step_result.tick.values.get("speed_mps", 0.0))
+        delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
+        driving = step_result.safety_state.value == "DRIVING"
+        stagnant_now = (
+            driving
+            and env_cfg.max_stagnant_steps > 0
+            and speed < env_cfg.stagnant_speed_mps
+            and delta_s < env_cfg.stagnant_delta_s
+        )
+        if stagnant_now and self._stagnant_steps + 1 >= env_cfg.max_stagnant_steps:
+            step_result.info["truncated_stagnant"] = True
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
             step_info=step_result.info,
@@ -87,16 +99,7 @@ class TrackRacingEnv(gym.Env):
         )
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
-        env_cfg = self._env_cfg
-        speed = float(step_result.tick.values.get("speed_mps", 0.0))
-        delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
-        driving = step_result.safety_state.value == "DRIVING"
-        if (
-            driving
-            and env_cfg.max_stagnant_steps > 0
-            and speed < env_cfg.stagnant_speed_mps
-            and delta_s < env_cfg.stagnant_delta_s
-        ):
+        if stagnant_now:
             self._stagnant_steps += 1
         else:
             self._stagnant_steps = 0

@@ -10,7 +10,7 @@ from gokart.rl.rewards import ENDURANCE_WEIGHTS, GOD_WEIGHTS, RewardWeights
 
 @dataclass(frozen=True)
 class ActionConfig:
-    throttle_breakaway: float = 0.25
+    throttle_breakaway: float = 0.0
     standing_start_speed_mps: float = 0.15
     brake_cutoff: float = 0.85
 
@@ -103,6 +103,7 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "rewards.fault_derate": {"step": 1, "min": 0, "max": 500},
     "rewards.off_track_rate": {"step": 0.1, "min": 0, "max": 50},
     "rewards.off_track_terminal": {"step": 1, "min": 0, "max": 500},
+    "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 500},
     "rewards.battery_margin": {"step": 0.01, "min": 0, "max": 5},
     "rewards.motor_margin": {"step": 0.01, "min": 0, "max": 5},
     "rewards.soc_margin": {"step": 0.01, "min": 0, "max": 5},
@@ -198,6 +199,7 @@ def training_setup_schema() -> dict[str, Any]:
                     "lap_bonus": "Bonus for a clean completed lap.",
                     "off_track_rate": "Per-second penalty while off track.",
                     "off_track_terminal": "One-shot penalty when episode ends off track.",
+                    "stagnant_terminal": "One-shot penalty when episode ends from standing still too long.",
                     "time_penalty": "Per-second living cost.",
                     "jerk": "Penalty for abrupt control changes.",
                     "throttle_brake_overlap": "Penalty for overlapping throttle and brake.",

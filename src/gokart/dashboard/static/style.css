@@ -593,6 +593,11 @@ button.btn-path-follow {
   border-color: rgba(255, 138, 128, 0.45);
 }
 
+.session-list-count {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .session-laps {
   margin: 0.75rem 0;
 }

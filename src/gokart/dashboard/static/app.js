@@ -77,6 +77,12 @@ const state = {
   historyVehicleDims: { wheelbase_m: 1.04, track_m: 0.9 },
 };
 
+const SESSION_LIST_LIMIT = 5000;
+
+async function fetchSessions() {
+  return api(`/api/sessions?limit=${SESSION_LIST_LIMIT}`);
+}
+
 const CHANNEL_DISPLAY = {
   time_s: { decimals: 2, deadband: 0.02 },
   speed_mps: { decimals: 2, deadband: 0.05 },
@@ -248,6 +254,20 @@ async function api(path, options = {}) {
     throw new Error(detail || response.statusText);
   }
   return response.json();
+}
+
+function apiErrorMessage(error) {
+  const raw = error?.message || String(error);
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.detail === "string") return parsed.detail;
+    if (Array.isArray(parsed.detail)) {
+      return parsed.detail.map((item) => item.msg || String(item)).join("; ");
+    }
+  } catch (_parseError) {
+    /* use raw message */
+  }
+  return raw;
 }
 
 function isFaultSafetyState(safetyState) {
@@ -602,7 +622,7 @@ async function beginLiveSession() {
     ensureTrackMapVisible(false);
   }
 
-  const sessions = await api("/api/sessions");
+  const sessions = await fetchSessions();
   const sessionSelect = document.getElementById("session-select");
   updateSessionSelect(sessions, sessionSelect, sessionId);
   sessionSelect.value = sessionId;
@@ -1393,6 +1413,20 @@ function updateSessionSelect(sessions, select, previousSessionId) {
   }
   syncSessionListActiveRow();
   syncSessionDeleteControls();
+  syncSessionListCount(sessions.length);
+}
+
+function syncSessionListCount(visibleCount) {
+  const el = document.getElementById("session-list-count");
+  if (!el) return;
+  if (!visibleCount) {
+    el.textContent = "No recordings";
+    return;
+  }
+  const capped = visibleCount >= SESSION_LIST_LIMIT;
+  el.textContent = capped
+    ? `Showing latest ${visibleCount} recordings`
+    : `${visibleCount} recording${visibleCount === 1 ? "" : "s"}`;
 }
 
 function syncSessionListActiveRow() {
@@ -2194,7 +2228,7 @@ async function refreshHistoryView(forceSessionList = false) {
 
     let sessions = [];
     if (refreshList) {
-      sessions = await api("/api/sessions");
+      sessions = await fetchSessions();
       updateSessionSelect(sessions, select, previousSessionId);
       if (!sessions.length) return;
     }
@@ -3296,7 +3330,10 @@ function readRlTrainingSetupFromForm() {
     if (input.dataset.type === "bool") {
       setup[section][key] = input.checked;
     } else {
-      setup[section][key] = Number(input.value);
+      const value = Number(input.value);
+      if (Number.isFinite(value)) {
+        setup[section][key] = value;
+      }
     }
   });
   return setup;

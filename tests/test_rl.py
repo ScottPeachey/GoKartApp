@@ -46,6 +46,41 @@ def test_training_setup_from_dict_round_trip() -> None:
     assert custom.rewards.standstill == pytest.approx(0.5)
 
 
+def test_reward_penalizes_stagnant_terminal() -> None:
+    state = RewardState()
+    reward, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "speed_mps": 0.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "truncated_stagnant": True,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "stagnant_terminal" in components
+    assert components["stagnant_terminal"] < 0.0
+    assert reward < 0.0
+
+
 def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
     throttle, brake, steering = decode_rl_action(np.array([0.0, 0.0, 0.5], dtype=np.float32))
     assert throttle == 0.0
@@ -56,7 +91,7 @@ def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
         np.array([0.2, 0.0, 0.0], dtype=np.float32),
         speed_mps=0.0,
     )
-    assert assist_throttle == pytest.approx(0.4)
+    assert assist_throttle == pytest.approx(0.2)
 
     moving_throttle, _, _ = decode_rl_action(
         np.array([0.2, 0.0, 0.0], dtype=np.float32),
