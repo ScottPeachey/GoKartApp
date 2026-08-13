@@ -10,6 +10,7 @@ from typing import Any
 
 from gokart import __version__
 from gokart.rl.env import make_env
+from gokart.rl.episode_recording import EpisodeRecordingEnv, session_tick_row
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
 from gokart.rl.registry import PolicyManifest, model_path, save_manifest
@@ -27,10 +28,10 @@ class TrainingConfig:
     target_laps: int = 3
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
-    preview_log_every_n: int = 1
+    record_training_episodes: bool = True
     preview_max_steps: int = 6_000
     preview_laps: int = 1
-    rollout_stream_every: int = 8
+    rollout_stream_every: int = 0
     progress_every: int = 50
     eval_freq: int = 10_000
     n_eval_episodes: int = 2
@@ -61,7 +62,7 @@ def run_preview_episode(
     hooks: TrainingHooks | None = None,
     timestep: int = 0,
     max_steps: int | None = None,
-) -> tuple[float | None, float, float]:
+) -> tuple[float | None, float, float, str]:
     """Run one deterministic rollout, optionally streaming ticks to hooks."""
     env = make_env(
         vehicle_name=config.vehicle_name,
@@ -78,7 +79,10 @@ def run_preview_episode(
     episode_reward = 0.0
     lap_best: float | None = None
     had_fault = False
-    tick_index = 0
+    ticks: list[dict[str, Any]] = []
+    if row := session_tick_row(env):
+        ticks.append(row)
+    preview_session_id = ""
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
@@ -89,13 +93,16 @@ def run_preview_episode(
         best = float(info.get("best_lap_time_s", 0.0) or 0.0)
         if best > 0:
             lap_best = best if lap_best is None else min(lap_best, best)
-        if hooks is not None and tick_index % config.preview_log_every_n == 0:
-            last_tick = env.session.state.last_tick
-            if last_tick is not None:
-                hooks.on_preview_tick(last_tick.to_row())
-        tick_index += 1
+        if row := session_tick_row(env):
+            ticks.append(row)
+    if hooks is not None and ticks:
+        preview_session_id = hooks.record_episode(
+            ticks=ticks,
+            timestep=timestep,
+            kind="preview",
+        )
     clean = 1.0 if lap_best is not None and not had_fault else 0.0
-    return lap_best, clean, episode_reward
+    return lap_best, clean, episode_reward, preview_session_id
 
 
 def train_policy(
@@ -149,6 +156,8 @@ def train_policy(
     )
     save_manifest(manifest, root=root)
 
+    training_state = {"timesteps": 0}
+
     def _make():
         env = make_env(
             vehicle_name=config.vehicle_name,
@@ -159,6 +168,21 @@ def train_policy(
             objective=config.objective,
             target_laps=config.target_laps,
         )
+        if config.record_training_episodes:
+
+            def _on_episode_complete(ticks: list[dict[str, Any]], episode_index: int) -> None:
+                callbacks.record_episode(
+                    ticks=ticks,
+                    timestep=training_state["timesteps"],
+                    kind="episode",
+                    episode_index=episode_index,
+                )
+
+            env = EpisodeRecordingEnv(
+                env,
+                timestep_provider=lambda: training_state["timesteps"],
+                on_episode_complete=_on_episode_complete,
+            )
         return Monitor(env)
 
     _status("building_model")
@@ -209,6 +233,7 @@ def train_policy(
         def _on_step(self) -> bool:
             nonlocal best_lap, stop_training_flag, previews_completed
             nonlocal last_episode_reward, last_eval_lap
+            training_state["timesteps"] = self.num_timesteps
             if stop_training_flag or should_stop() or callbacks.should_stop():
                 stop_training_flag = True
                 return False
@@ -242,21 +267,18 @@ def train_policy(
                 if should_stop() or callbacks.should_stop():
                     stop_training_flag = True
                     return False
-                preview_session_id = callbacks.start_preview_recording(timestep=self.num_timesteps)
                 _emit_progress(
                     timesteps=self.num_timesteps,
                     preview_running=True,
-                    preview_session_id=preview_session_id,
                     status="preview_recording",
                 )
-                lap, clean, reward = run_preview_episode(
+                lap, clean, reward, preview_session_id = run_preview_episode(
                     model,
                     config=config,
                     track=track,
                     hooks=callbacks,
                     timestep=self.num_timesteps,
                 )
-                callbacks.finish_preview_recording()
                 previews_completed += 1
                 last_episode_reward = reward
                 last_eval_lap = lap
@@ -276,6 +298,7 @@ def train_policy(
                 _emit_progress(
                     timesteps=self.num_timesteps,
                     preview_session_id=preview_session_id,
+                    preview_running=False,
                 )
             elif run_silent_eval:
                 lap, clean_rate = evaluate_policy(

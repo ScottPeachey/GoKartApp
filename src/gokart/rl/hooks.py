@@ -58,6 +58,15 @@ class TrainingHooks(Protocol):
 
     def finish_preview_recording(self) -> None: ...
 
+    def record_episode(
+        self,
+        *,
+        ticks: list[dict[str, Any]],
+        timestep: int,
+        kind: str = "episode",
+        episode_index: int = 0,
+    ) -> str: ...
+
 
 class NullTrainingHooks:
     """No-op hooks for CLI training."""
@@ -76,3 +85,13 @@ class NullTrainingHooks:
 
     def finish_preview_recording(self) -> None:
         return
+
+    def record_episode(
+        self,
+        *,
+        ticks: list[dict[str, Any]],
+        timestep: int,
+        kind: str = "episode",
+        episode_index: int = 0,
+    ) -> str:
+        return ""

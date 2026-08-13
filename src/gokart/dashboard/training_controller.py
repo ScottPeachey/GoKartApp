@@ -122,7 +122,7 @@ class TrainingController:
             total_timesteps=request.total_timesteps,
             preview_freq=request.preview_freq,
             eval_freq=request.preview_freq,
-            preview_log_every_n=1,
+            record_training_episodes=True,
             n_steps=256,
             batch_size=64,
             seed=request.seed,
@@ -236,14 +236,57 @@ class _DashboardTrainingHooks:
         return recorder.session_id
 
     def finish_preview_recording(self) -> None:
-        recorder = self._controller._preview_recorder
-        session_id = recorder.session_id if recorder is not None else ""
-        timestep = self._controller._preview_timestep
         self._controller._close_preview_recorder()
-        if session_id:
-            self.preview_sessions.append(
-                {"timestep": timestep, "session_id": session_id},
+
+    def record_episode(
+        self,
+        *,
+        ticks: list[dict[str, Any]],
+        timestep: int,
+        kind: str = "episode",
+        episode_index: int = 0,
+    ) -> str:
+        request = self._controller._request
+        if request is None or not ticks:
+            return ""
+
+        if kind == "preview":
+            scenario_name = f"rl_preview_{timestep}"
+            notes = f"RL preview at {timestep:,} training steps"
+        else:
+            scenario_name = f"rl_episode_{timestep}_{episode_index}"
+            notes = (
+                f"RL training episode {episode_index} at {timestep:,} training steps"
             )
+
+        vehicle = load_vehicle(request.vehicle_name, request.vehicle_version, root=data_root())
+        recorder = SessionRecorder(
+            SessionMetadata(
+                vehicle_name=request.vehicle_name,
+                vehicle_version=request.vehicle_version,
+                config_hash=content_hash(vehicle.model_dump(mode="json")),
+                driver_profile=request.driver_profile,
+                drive_mode=request.drive_mode,
+                scenario_name=scenario_name,
+                track_id=request.track_id,
+                notes=notes,
+            ),
+            store=self._controller.store,
+            bus=self._controller.bus,
+            log_every_n=1,
+        )
+        for row in ticks:
+            recorder.record_tick(row)
+        recorder.close(end_soc=None)
+
+        entry: dict[str, Any] = {
+            "timestep": timestep,
+            "session_id": recorder.session_id,
+        }
+        if kind == "episode":
+            entry["episode"] = episode_index
+        self.preview_sessions.append(entry)
+        return recorder.session_id
 
 
 def _policy_key_for(config: TrainingConfig) -> str:

@@ -1130,34 +1130,55 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 
 window.refreshVehicleLists = refreshVehicleLists;
 
-function rlPreviewTimestep(session) {
-  const match = String(session.scenario_name || "").match(/^rl_preview_(\d+)$/);
-  return match ? Number(match[1]) : null;
+function rlTrainingSessionMeta(session) {
+  const preview = String(session.scenario_name || "").match(/^rl_preview_(\d+)$/);
+  if (preview) {
+    return { kind: "preview", step: Number(preview[1]), episode: null };
+  }
+  const episode = String(session.scenario_name || "").match(/^rl_episode_(\d+)_(\d+)$/);
+  if (episode) {
+    return {
+      kind: "episode",
+      step: Number(episode[1]),
+      episode: Number(episode[2]),
+    };
+  }
+  return null;
 }
 
 function sessionOptionLabel(session) {
   const when = session.started_at;
   const vehicle = `${session.vehicle_name} (${session.sample_count} samples)`;
-  const previewStep = rlPreviewTimestep(session);
-  if (previewStep != null) {
-    return `${when} — RL preview @ ${previewStep.toLocaleString()} steps — ${vehicle}`;
+  const rlMeta = rlTrainingSessionMeta(session);
+  if (rlMeta?.kind === "preview") {
+    return `${when} — RL preview @ ${rlMeta.step.toLocaleString()} steps — ${vehicle}`;
+  }
+  if (rlMeta?.kind === "episode") {
+    return `${when} — RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) — ${vehicle}`;
   }
   return `${when} — ${vehicle}`;
 }
 
 function sortSessionsForDisplay(sessions) {
-  const previews = [];
+  const rlSessions = [];
   const other = [];
   for (const session of sessions) {
-    if (rlPreviewTimestep(session) != null) {
-      previews.push(session);
+    if (rlTrainingSessionMeta(session) != null) {
+      rlSessions.push(session);
     } else {
       other.push(session);
     }
   }
-  previews.sort((a, b) => rlPreviewTimestep(a) - rlPreviewTimestep(b));
+  rlSessions.sort((a, b) => {
+    const metaA = rlTrainingSessionMeta(a);
+    const metaB = rlTrainingSessionMeta(b);
+    if (metaA.step !== metaB.step) return metaA.step - metaB.step;
+    const episodeA = metaA.episode ?? 0;
+    const episodeB = metaB.episode ?? 0;
+    return episodeA - episodeB;
+  });
   other.sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
-  return [...previews, ...other];
+  return [...rlSessions, ...other];
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {

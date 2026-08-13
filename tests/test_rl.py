@@ -238,33 +238,42 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
     assert loaded.identity.policy_key == identity.policy_key
 
 
-def test_run_preview_episode_with_stub_model(hairpin_track) -> None:
+def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
     from gokart.rl.trainer import TrainingConfig, run_preview_episode
 
     class _StubModel:
         def predict(self, obs, deterministic=True):
             return np.array([0.25, 0.0, 0.05], dtype=np.float32), None
 
-    ticks: list[dict] = []
+    recorded: list[dict] = []
 
     class _TickHooks:
         def on_progress(self, progress) -> None:
             return
 
         def on_preview_tick(self, row: dict) -> None:
-            ticks.append(row)
+            return
 
         def should_stop(self) -> bool:
             return False
+
+        def start_preview_recording(self, *, timestep: int) -> str:
+            return ""
+
+        def finish_preview_recording(self) -> None:
+            return
+
+        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0) -> str:
+            recorded.extend(ticks)
+            return "preview-session"
 
     config = TrainingConfig(
         vehicle_name="Scott Kart V1",
         vehicle_version="V1.0",
         track_id=hairpin_track.id,
-        preview_log_every_n=5,
         target_laps=1,
     )
-    lap, clean, reward = run_preview_episode(
+    lap, clean, reward, session_id = run_preview_episode(
         _StubModel(),
         config=config,
         track=hairpin_track,
@@ -274,8 +283,44 @@ def test_run_preview_episode_with_stub_model(hairpin_track) -> None:
     )
     assert np.isfinite(reward)
     assert clean in {0.0, 1.0}
-    assert len(ticks) > 0
-    assert "speed_mps" in ticks[0]
+    assert session_id == "preview-session"
+    assert len(recorded) > 50
+    assert "speed_mps" in recorded[0]
+
+
+def test_episode_recording_env_flushes_on_done(hairpin_track) -> None:
+    from stable_baselines3.common.monitor import Monitor
+
+    from gokart.rl.env import make_env
+    from gokart.rl.episode_recording import EpisodeRecordingEnv
+
+    episodes: list[list[dict]] = []
+
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=120,
+    )
+    env = EpisodeRecordingEnv(
+        env,
+        timestep_provider=lambda: 42,
+        on_episode_complete=lambda ticks, episode_index: episodes.append(ticks),
+    )
+    env = Monitor(env)
+    obs, _ = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()
+        obs, _reward, terminated, truncated, _info = env.step(action)
+        done = terminated or truncated
+    assert episodes
+    assert len(episodes[0]) > 10
+    assert "speed_mps" in episodes[0][0]
 
 
 def test_stream_training_tick_unwraps_monitor() -> None:
@@ -294,6 +339,15 @@ def test_stream_training_tick_unwraps_monitor() -> None:
 
         def should_stop(self) -> bool:
             return False
+
+        def start_preview_recording(self, *, timestep: int) -> str:
+            return ""
+
+        def finish_preview_recording(self) -> None:
+            return
+
+        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0) -> str:
+            return ""
 
     inner = SimpleNamespace(
         session=SimpleNamespace(
