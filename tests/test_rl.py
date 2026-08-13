@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from gokart.rl.actions import decode_rl_action
 from gokart.rl.env import make_env
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import build_policy_identity
@@ -21,6 +22,42 @@ HAIRPIN = FIXTURES / "test-hairpin.geojson"
 @pytest.fixture
 def hairpin_track():
     return import_geojson_track(HAIRPIN, track_id="test-hairpin", fetch_elevation=False)
+
+
+def test_decode_rl_action_maps_low_throttle_to_breakaway() -> None:
+    throttle, brake, steering = decode_rl_action(np.array([0.0, 0.0, 0.5], dtype=np.float32))
+    assert throttle == pytest.approx(0.25)
+    assert brake == 0.0
+    assert steering == 0.5
+
+    coast_throttle, coast_brake, _ = decode_rl_action(np.array([0.2, 0.8, 0.0], dtype=np.float32))
+    assert coast_throttle == 0.0
+    assert coast_brake == pytest.approx(0.8)
+
+
+def test_untrained_policy_can_move_from_standstill(hairpin_track) -> None:
+    from stable_baselines3 import PPO
+
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=1,
+        max_steps=900,
+    )
+    model = PPO("MlpPolicy", env, verbose=0, seed=0, n_steps=256, batch_size=64)
+    obs, _ = env.reset()
+    max_speed = 0.0
+    for _ in range(900):
+        action, _ = model.predict(obs, deterministic=True)
+        obs, *_ = env.step(action)
+        tick = env.session.state.last_tick
+        if tick is not None:
+            max_speed = max(max_speed, float(tick.values.get("speed_mps", 0.0)))
+    assert max_speed > 0.25
 
 
 def test_policy_key_stable(hairpin_track) -> None:

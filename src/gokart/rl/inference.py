@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
+from gokart.rl.actions import decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import PolicyIdentity
 from gokart.rl.registry import load_manifest, model_path
@@ -52,11 +53,7 @@ class PolicyRunner:
         deterministic: bool = True,
     ) -> tuple[float, float, float]:
         action, _ = self._model.predict(observation.reshape(1, -1), deterministic=deterministic)
-        action = np.asarray(action).reshape(-1)
-        throttle = float(np.clip(action[0], 0.0, 1.0))
-        brake = float(np.clip(action[1], 0.0, 1.0))
-        steering = float(np.clip(action[2], -1.0, 1.0))
-        return throttle, brake, steering
+        return decode_rl_action(action)
 
     def predict_from_tick(
         self,

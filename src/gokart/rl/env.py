@@ -8,6 +8,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
+from gokart.rl.actions import decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.rewards import RewardState, compute_reward, reward_preset
 from gokart.sim.session import ControlSource, SessionConfig, SimulationSession
@@ -61,11 +62,7 @@ class TrackRacingEnv(gym.Env):
         return obs, {"safety_state": step_result.safety_state.value}
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        action_tuple = (
-            float(np.clip(action[0], 0.0, 1.0)),
-            float(np.clip(action[1], 0.0, 1.0)),
-            float(np.clip(action[2], -1.0, 1.0)),
-        )
+        action_tuple = decode_rl_action(action)
         step_result = self.session.step(action=action_tuple)
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
