@@ -699,14 +699,6 @@ button.btn-path-follow {
   border-color: rgba(255, 138, 128, 0.45);
 }
 
-body.replay-playback-active #history-path-stack {
-  cursor: default;
-}
-
-body.replay-playback-active #history-path-stack.is-panning {
-  cursor: default;
-}
-
 .btn-replay-transport {
   min-width: 2.25rem;
   padding: 0.25rem 0.55rem;

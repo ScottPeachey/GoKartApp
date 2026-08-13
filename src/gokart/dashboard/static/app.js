@@ -26,7 +26,7 @@ const state = {
   historyChartStaticCanvas: null,
   historyChartStaticKey: "",
   historyReplayPathDrawnIndex: -1,
-  historyReplayPathViewSnapshot: null,
+  historyReplayAdvancing: false,
   historyReplayUiLastMs: 0,
   pendingLiveSample: null,
   liveUiScheduled: false,
@@ -749,7 +749,6 @@ function syncHistoryReplayTransport() {
   if (prevBtn) prevBtn.disabled = !getAdjacentSessionId(-1);
   if (nextBtn) nextBtn.disabled = !getAdjacentSessionId(1);
   if (deleteBtn) deleteBtn.disabled = !document.getElementById("session-select")?.value;
-  document.body.classList.toggle("replay-playback-active", state.historyReplayPlaying);
 }
 
 function pauseHistoryReplayPlayback() {
@@ -1493,7 +1492,6 @@ function ensureTrackMapVisible(resetView = false) {
 }
 
 function zoomPathViewAt(canvasX, canvasY, factor) {
-  if (state.historyReplayPlaying) return;
   const base = state.historyPathBaseTransform;
   if (!base) return;
   const view = state.pathView;
@@ -1521,7 +1519,6 @@ function redrawPathLayer() {
   const base = state.historyPathBaseTransform;
   if (!layer || !base) return;
 
-  enforceReplayPathView();
   if (!isReplayCockpitActive()) {
     applyPathFollowIfEnabled();
   }
@@ -1568,22 +1565,6 @@ function redrawPathLayer() {
   const markerY = replay?.y ?? layer.marker.y;
   const markerHeading = replay?.heading ?? layer.marker.heading;
   drawPathMarkerOverlay(markerX, markerY, markerHeading, state.historyVehicleDims);
-}
-
-function snapshotPathViewForReplay() {
-  state.historyReplayPathViewSnapshot = {
-    zoom: state.pathView.zoom,
-    panX: state.pathView.panX,
-    panY: state.pathView.panY,
-  };
-}
-
-function enforceReplayPathView() {
-  const snapshot = state.historyReplayPathViewSnapshot;
-  if (!snapshot || !isReplayCockpitActive()) return;
-  state.pathView.zoom = snapshot.zoom;
-  state.pathView.panX = snapshot.panX;
-  state.pathView.panY = snapshot.panY;
 }
 
 function invalidateHistoryChartStaticCache() {
@@ -1671,7 +1652,6 @@ function drawReplayPathBaseLayer() {
   const base = state.historyPathBaseTransform;
   if (!layer || !base) return null;
 
-  enforceReplayPathView();
   const pathCanvas = document.getElementById("history-path");
   if (!pathCanvas) return null;
 
@@ -1776,9 +1756,9 @@ async function selectReplaySession(sessionId, { autoPlay = false } = {}) {
   }
   select.value = sessionId;
   state.historyReplayScrubbing = false;
-  invalidateHistoryDrawCache();
+  prepareHistorySessionSwitch();
   await drawSessionChart(sessionId);
-  if (autoPlay) {
+  if (autoPlay && isHistoryReplayMode()) {
     startHistoryReplayPlayback({ restart: true });
   }
 }
@@ -1798,7 +1778,6 @@ async function deleteCurrentReplaySession() {
   await api(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
   stopHistoryReplayPlayback();
   clearHistoryPin();
-  state.historyReplayPathViewSnapshot = null;
   await refreshHistoryView(true);
   if (adjacentId) {
     await selectReplaySession(adjacentId, { autoPlay: false });
@@ -1806,11 +1785,18 @@ async function deleteCurrentReplaySession() {
 }
 
 function handleReplayPlaybackFinished() {
-  pauseHistoryReplayPlayback();
+  if (state.historyReplayAdvancing) return;
   const nextSessionId = getAdjacentSessionId(1);
-  if (nextSessionId) {
-    void selectReplaySession(nextSessionId, { autoPlay: true });
+  if (!nextSessionId) {
+    pauseHistoryReplayPlayback();
+    return;
   }
+
+  state.historyReplayAdvancing = true;
+  pauseHistoryReplayPlayback();
+  void selectReplaySession(nextSessionId, { autoPlay: true }).finally(() => {
+    state.historyReplayAdvancing = false;
+  });
 }
 
 function buildPathTransform(boundsXs, boundsYs, canvas) {
@@ -2004,24 +1990,31 @@ function drawKartMarker(markerCtx, x, y, headingDeg, dims, toPx, canvas, transfo
   markerCtx.restore();
 }
 
-function invalidateHistoryDrawCache() {
+function prepareHistorySessionSwitch() {
   stopHistoryReplayPlayback();
   state.historyViewSessionId = "";
   state.historySamplesFingerprint = "";
   state.historyMarkerFingerprint = "";
+  state.historyReplaySessionId = "";
+  state.historyReplayIndex = 0;
+  state.historyReplayScrubbing = false;
+  state.historyReplayPathDrawnIndex = -1;
+  invalidateHistoryChartStaticCache();
+  syncReplayCockpitChrome();
+}
+
+function invalidateHistoryDrawCache({ resetPathView: shouldResetPathView = true } = {}) {
+  prepareHistorySessionSwitch();
   state.historyChartLastDrawMs = 0;
   state.historyPathTransform = null;
   state.historyPathBaseTransform = null;
   state.historyPathLayer = null;
   state.historyReplaySamples = [];
-  state.historyReplaySessionId = "";
-  state.historyReplayIndex = 0;
   state.historyReplayChartMeta = null;
-  state.historyReplayPathDrawnIndex = -1;
-  state.historyReplayPathViewSnapshot = null;
-  invalidateHistoryChartStaticCache();
   syncReplayCockpitChrome();
-  resetPathView();
+  if (shouldResetPathView) {
+    resetPathView();
+  }
 }
 
 async function refreshSessions() {
@@ -2630,11 +2623,8 @@ async function drawSessionChart(sessionId) {
     const bounds = collectPathBounds({ xs, ys, useLiveMarker: false });
     state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
   }
-  if (sessionChanged && !state.pathFollowKart) {
+  if (sessionChanged && !state.pathFollowKart && !isReplayCockpitActive()) {
     resetPathView();
-  }
-  if (replaySessionChanged && (isHistoryReplayPinned() || !isLiveTelemetryDrivingHistory())) {
-    snapshotPathViewForReplay();
   }
 
   state.historyPathColorMaxKmh = pathColorMaxKmh;
@@ -3368,7 +3358,6 @@ function setupPathMapInteractions() {
   stack.addEventListener(
     "wheel",
     (event) => {
-      if (state.historyReplayPlaying) return;
       if (!state.historyPathBaseTransform) return;
       event.preventDefault();
       const coords = canvasCoordsFromEvent(pathCanvas, event);
@@ -3379,7 +3368,6 @@ function setupPathMapInteractions() {
   );
 
   stack.addEventListener("pointerdown", (event) => {
-    if (state.historyReplayPlaying) return;
     if (!state.historyPathBaseTransform) return;
     if (state.track.editStartFinish && event.button === 0) return;
     if (event.button !== 0 && event.button !== 2) return;
@@ -3423,7 +3411,6 @@ function setupPathMapInteractions() {
   });
 
   stack.addEventListener("dblclick", () => {
-    if (state.historyReplayPlaying || isReplayCockpitActive()) return;
     if (!state.historyPathBaseTransform) return;
     setPathFollowKart(false);
     resetPathView();
@@ -3598,7 +3585,7 @@ function setupControls() {
       clearHistoryPin();
     }
     state.historyReplayScrubbing = false;
-    invalidateHistoryDrawCache();
+    prepareHistorySessionSwitch();
     void drawSessionChart(sessionId);
   });
   const historyReplayScrubber = document.getElementById("history-replay-scrubber");
