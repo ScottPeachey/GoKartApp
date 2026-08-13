@@ -684,6 +684,57 @@ button.btn-path-follow {
   padding: 0.35rem 0.25rem;
 }
 
+.history-replay-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+}
+
+.btn-replay-transport {
+  min-width: 2.25rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.cockpit-replay-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0d1520;
+  background: #3dd6c6;
+}
+
+.cockpit-replay-badge.hidden {
+  display: none;
+}
+
+body.replay-cockpit-active .cockpit-panel {
+  box-shadow: inset 0 0 0 2px rgba(61, 214, 198, 0.45);
+}
+
+body.replay-cockpit-active .cockpit-panel .driving-controls {
+  pointer-events: none;
+  opacity: 0.72;
+}
+
+body.replay-cockpit-active #tab-live .telemetry-panel-title::after {
+  content: " · replay";
+  color: #8aa0b8;
+  font-weight: 400;
+}
+
+#tab-history.replay-panel-active {
+  box-shadow: inset 0 0 0 2px rgba(61, 214, 198, 0.35);
+  border-radius: 8px;
+}
+
 .history-replay-controls.hidden {
   display: none;
 }

@@ -351,9 +351,13 @@ function updateDrivePanel(sample, speedKmh) {
   }
 
   setFaultBanner(sample);
-  syncFaultDrivingControls(safetyState);
-  syncSlidersFromSample(sample);
-  updateFreeDriveGuide(safetyState);
+  if (!isReplayCockpitActive()) {
+    syncFaultDrivingControls(safetyState);
+    syncSlidersFromSample(sample);
+    updateFreeDriveGuide(safetyState);
+  } else {
+    syncReplaySlidersFromSample(sample);
+  }
   updateAxlePhysicsPanel(sample);
 }
 
@@ -689,6 +693,79 @@ function syncSlidersFromSample(sample) {
   updateSliderReadouts();
 }
 
+function syncReplaySlidersFromSample(sample) {
+  const throttleEl = document.getElementById("throttle");
+  const brakeEl = document.getElementById("brake");
+  const steeringEl = document.getElementById("steering");
+  if (!throttleEl || !brakeEl || !steeringEl) return;
+
+  const throttlePct = Math.round(Math.max(0, Math.min(100, Number(sample.throttle || 0) * 100)));
+  const brakePct = Math.round(Math.max(0, Math.min(100, Number(sample.brake || 0) * 100)));
+  const steeringPct = Math.round(
+    Math.max(-100, Math.min(100, -Number(sample.steering || 0) * 100)),
+  );
+
+  if (Number(throttleEl.value) !== throttlePct) throttleEl.value = String(throttlePct);
+  if (Number(brakeEl.value) !== brakePct) brakeEl.value = String(brakePct);
+  if (Number(steeringEl.value) !== steeringPct) steeringEl.value = String(steeringPct);
+  updateSliderReadouts();
+}
+
+function isReplayCockpitActive() {
+  return isHistoryReplayMode() && state.historyReplaySamples.length > 0;
+}
+
+function applyReplaySampleToUi(sample) {
+  if (!sample) return;
+  const speedKmh = Number(sample.speed_mps || 0) * 3.6;
+  updateDrivePanel(sample, speedKmh);
+  updateChannelsGrid(sample);
+}
+
+function syncReplayCockpitChrome() {
+  const active = isReplayCockpitActive();
+  document.body.classList.toggle("replay-cockpit-active", active);
+  document.getElementById("tab-history")?.classList.toggle("replay-panel-active", active);
+  document.getElementById("cockpit-replay-badge")?.classList.toggle("hidden", !active);
+  syncHistoryReplayTransport();
+}
+
+function syncHistoryReplayTransport() {
+  const playBtn = document.getElementById("history-replay-play");
+  const pauseBtn = document.getElementById("history-replay-pause");
+  if (!playBtn || !pauseBtn) return;
+  const canPlay = isReplayCockpitActive() && state.historyReplaySamples.length > 1;
+  playBtn.disabled = !canPlay || state.historyReplayPlaying;
+  pauseBtn.disabled = !state.historyReplayPlaying;
+}
+
+function pauseHistoryReplayPlayback() {
+  state.historyReplayPlaying = false;
+  if (state.historyReplayRaf) {
+    cancelAnimationFrame(state.historyReplayRaf);
+    state.historyReplayRaf = null;
+  }
+  syncHistoryReplayTransport();
+}
+
+async function exitPinnedReplay() {
+  if (!isHistoryReplayPinned()) return;
+  clearHistoryPin();
+  pauseHistoryReplayPlayback();
+  state.historyReplayScrubbing = false;
+  syncReplayCockpitChrome();
+  if (state.lastSample && Object.keys(state.lastSample).length) {
+    const speedKmh = Number(state.lastSample.speed_mps || 0) * 3.6;
+    updateDrivePanel(state.lastSample, speedKmh);
+    updateChannelsGrid(state.lastSample);
+  }
+  const sessionId = document.getElementById("session-select")?.value;
+  if (sessionId) {
+    invalidateHistoryDrawCache();
+    await drawSessionChart(sessionId);
+  }
+}
+
 const CHANNEL_UI = {
   time_s: { icon: "⏱", label: "Time" },
   position_m: { icon: "📍", label: "Distance" },
@@ -958,6 +1035,10 @@ function flushLiveUi() {
   const sample = state.pendingLiveSample;
   if (!sample) return;
   state.lastSample = sample;
+  if (isReplayCockpitActive()) {
+    state.pendingLiveSample = null;
+    return;
+  }
   updateDrivePanel(sample, sample._speedKmh);
   updateChannelsGrid(sample);
   updateHistoryMarkerFromLive();
@@ -1676,6 +1757,7 @@ function invalidateHistoryDrawCache() {
   state.historyReplaySessionId = "";
   state.historyReplayIndex = 0;
   state.historyReplayChartMeta = null;
+  syncReplayCockpitChrome();
   resetPathView();
 }
 
@@ -1935,6 +2017,7 @@ function syncHistoryReplayScrubber(samples, index, { suppressInput = false } = {
   const last = samples[samples.length - 1];
   timeEl.textContent = formatReplayTime(current?.time_s ?? 0);
   durationEl.textContent = formatReplayTime(last?.time_s ?? 0);
+  syncHistoryReplayTransport();
 }
 
 function scrollHistoryChartToPlayhead(index, sampleCount) {
@@ -2022,6 +2105,9 @@ function renderHistoryReplayFrame({ scrollToPlayhead = false } = {}) {
   if (scrollToPlayhead) {
     scrollHistoryChartToPlayhead(index, samples.length);
   }
+
+  applyReplaySampleToUi(samples[index]);
+  syncReplayCockpitChrome();
 }
 
 function isHistoryReplayMode() {
@@ -2029,12 +2115,14 @@ function isHistoryReplayMode() {
 }
 
 function stopHistoryReplayPlayback() {
-  state.historyReplayPlaying = false;
+  pauseHistoryReplayPlayback();
   state.historyReplayPlayAnchor = null;
-  if (state.historyReplayRaf) {
-    cancelAnimationFrame(state.historyReplayRaf);
-    state.historyReplayRaf = null;
-  }
+}
+
+function restartHistoryReplayPlayback() {
+  if (!isReplayCockpitActive()) return;
+  state.historyReplayScrubbing = false;
+  startHistoryReplayPlayback({ restart: true });
 }
 
 function startHistoryReplayPlayback({ restart = false } = {}) {
@@ -2088,7 +2176,7 @@ function startHistoryReplayPlayback({ restart = false } = {}) {
     }
 
     if (index >= currentSamples.length - 1) {
-      stopHistoryReplayPlayback();
+      pauseHistoryReplayPlayback();
       return;
     }
 
@@ -2785,6 +2873,9 @@ function stopManualInputPolling() {
 function setupTabs() {
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.tab === "live") {
+        void exitPinnedReplay();
+      }
       document.querySelectorAll(".tab").forEach((el) => el.classList.remove("active"));
       button.classList.add("active");
       syncTelemetryPanels(button.dataset.tab);
@@ -3232,6 +3323,25 @@ function setupControls() {
     if (state.historyReplaySuppressScrub) return;
     state.historyReplayScrubbing = true;
     setHistoryReplayIndex(Number(event.target.value), { scrollToPlayhead: true });
+  });
+  historyReplayScrubber?.addEventListener("pointerup", () => {
+    state.historyReplayScrubbing = false;
+  });
+  document.getElementById("history-replay-play")?.addEventListener("click", () => {
+    state.historyReplayScrubbing = false;
+    startHistoryReplayPlayback();
+  });
+  document.getElementById("history-replay-pause")?.addEventListener("click", () => {
+    pauseHistoryReplayPlayback();
+  });
+  document.getElementById("history-replay-restart")?.addEventListener("click", () => {
+    restartHistoryReplayPlayback();
+  });
+  document.getElementById("sim-controls-panel")?.addEventListener("click", () => {
+    void exitPinnedReplay();
+  });
+  document.getElementById("tab-live")?.addEventListener("click", () => {
+    void exitPinnedReplay();
   });
   document.getElementById("track-select").addEventListener("change", (event) => {
     setStartFinishEditMode(false);

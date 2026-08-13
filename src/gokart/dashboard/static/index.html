@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=24" />
+  <link rel="stylesheet" href="/static/style.css?v=25" />
 </head>
 <body>
   <header>
@@ -20,6 +20,7 @@
             <span id="speed-value">0</span>
             <span class="unit">km/h</span>
           </div>
+          <span id="cockpit-replay-badge" class="cockpit-replay-badge hidden" aria-live="polite">Replay</span>
         </div>
         <div class="cockpit-metrics">
           <div class="metric-pill">
@@ -170,7 +171,7 @@
   </div>
 
   <main class="page-body">
-    <section class="controls">
+    <section class="controls" id="sim-controls-panel">
       <h2>Simulation</h2>
       <div class="row">
         <label>Vehicle <select id="vehicle-select"></select></label>
@@ -374,6 +375,11 @@
           <canvas id="history-chart" width="900" height="220"></canvas>
         </div>
         <div class="history-replay-controls hidden" id="history-replay-controls">
+          <div class="history-replay-transport" role="group" aria-label="Replay transport">
+            <button id="history-replay-restart" type="button" class="btn-secondary btn-replay-transport" title="Restart from beginning" aria-label="Restart replay">⟲</button>
+            <button id="history-replay-play" type="button" class="btn-secondary btn-replay-transport" title="Play" aria-label="Play replay">▶</button>
+            <button id="history-replay-pause" type="button" class="btn-secondary btn-replay-transport" title="Pause" aria-label="Pause replay" disabled>⏸</button>
+          </div>
           <span id="history-replay-time" class="history-replay-time">0.00 s</span>
           <input
             id="history-replay-scrubber"
@@ -493,7 +499,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=63"></script>
+  <script src="/static/app.js?v=64"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
