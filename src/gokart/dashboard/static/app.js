@@ -3061,6 +3061,157 @@ function syncTrainingControlsState() {
   }
 }
 
+const RL_SETUP_STORAGE_KEY = "gokart.rlTrainingSetup";
+let rlTrainingSchema = null;
+
+function rlFieldId(section, key) {
+  return `train-${section}-${key}`;
+}
+
+function renderRlTrainingSections(setup) {
+  const container = document.getElementById("rl-train-config-sections");
+  if (!container || !rlTrainingSchema) return;
+  container.innerHTML = "";
+  for (const [sectionKey, section] of Object.entries(rlTrainingSchema.sections)) {
+    const details = document.createElement("details");
+    details.className = "rl-config-details";
+    details.open = sectionKey === "ppo" || sectionKey === "rewards";
+    const summary = document.createElement("summary");
+    summary.textContent = section.title;
+    details.appendChild(summary);
+
+    const grid = document.createElement("div");
+    grid.className = "rl-config-grid";
+    for (const field of section.fields) {
+      const wrap = document.createElement("div");
+      wrap.className = "rl-config-field";
+      const label = document.createElement("label");
+      const value = setup?.[sectionKey]?.[field.key] ?? field.default;
+      if (field.type === "bool") {
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = rlFieldId(sectionKey, field.key);
+        input.checked = Boolean(value);
+        input.dataset.section = sectionKey;
+        input.dataset.key = field.key;
+        input.dataset.type = "bool";
+        label.appendChild(document.createTextNode(field.key.replaceAll("_", " ")));
+        label.appendChild(input);
+      } else {
+        label.setAttribute("for", rlFieldId(sectionKey, field.key));
+        label.appendChild(document.createTextNode(field.key.replaceAll("_", " ")));
+        const input = document.createElement("input");
+        input.type = "number";
+        input.id = rlFieldId(sectionKey, field.key);
+        input.value = String(value);
+        input.step = field.key.includes("rate") || field.key.includes("coef") ? "0.001" : "1";
+        if (field.key === "learning_rate") input.step = "0.0001";
+        input.dataset.section = sectionKey;
+        input.dataset.key = field.key;
+        input.dataset.type = "number";
+        label.appendChild(input);
+      }
+      if (field.description) {
+        const hint = document.createElement("span");
+        hint.className = "rl-config-hint";
+        hint.textContent = field.description;
+        label.appendChild(hint);
+      }
+      wrap.appendChild(label);
+      grid.appendChild(wrap);
+    }
+    details.appendChild(grid);
+    container.appendChild(details);
+  }
+}
+
+function readRlTrainingSetupFromForm() {
+  const objective = document.getElementById("train-objective")?.value || "god";
+  const setup = { objective, action: {}, env: {}, ppo: {}, rewards: {} };
+  document.querySelectorAll("#rl-train-config-sections [data-section]").forEach((input) => {
+    const section = input.dataset.section;
+    const key = input.dataset.key;
+    if (!section || !key || !setup[section]) return;
+    if (input.dataset.type === "bool") {
+      setup[section][key] = input.checked;
+    } else {
+      setup[section][key] = Number(input.value);
+    }
+  });
+  return setup;
+}
+
+function applyRlTrainingSetupToForm(setup) {
+  const objectiveEl = document.getElementById("train-objective");
+  if (objectiveEl && setup.objective) objectiveEl.value = setup.objective;
+  for (const [sectionKey, values] of Object.entries(setup)) {
+    if (typeof values !== "object" || values === null) continue;
+    for (const [key, value] of Object.entries(values)) {
+      const input = document.getElementById(rlFieldId(sectionKey, key));
+      if (!input) continue;
+      if (input.type === "checkbox") input.checked = Boolean(value);
+      else input.value = String(value);
+    }
+  }
+  persistRlTrainingSetup();
+}
+
+function persistRlTrainingSetup() {
+  try {
+    localStorage.setItem(RL_SETUP_STORAGE_KEY, JSON.stringify(readRlTrainingSetupFromForm()));
+  } catch (_error) {
+    /* storage may be unavailable */
+  }
+}
+
+function applyRewardPresetToForm(presetId) {
+  if (!rlTrainingSchema?.reward_presets?.[presetId]) return;
+  const rewards = rlTrainingSchema.reward_presets[presetId];
+  for (const [key, value] of Object.entries(rewards)) {
+    const input = document.getElementById(rlFieldId("rewards", key));
+    if (input && input.type !== "checkbox") input.value = String(value);
+  }
+  persistRlTrainingSetup();
+}
+
+async function initRlTrainingConfig() {
+  try {
+    rlTrainingSchema = await api("/api/rl/train/defaults");
+  } catch (_error) {
+    return;
+  }
+  let setup = rlTrainingSchema.defaults;
+  try {
+    const saved = localStorage.getItem(RL_SETUP_STORAGE_KEY);
+    if (saved) setup = { ...setup, ...JSON.parse(saved) };
+  } catch (_error) {
+    /* ignore bad saved config */
+  }
+  renderRlTrainingSections(setup);
+  applyRlTrainingSetupToForm(setup);
+
+  document.getElementById("train-objective")?.addEventListener("change", (event) => {
+    const preset = event.target.value;
+    if (preset === "god" || preset === "endurance") {
+      applyRewardPresetToForm(preset);
+    }
+    persistRlTrainingSetup();
+  });
+  document.getElementById("rl-train-config-sections")?.addEventListener("input", () => {
+    const objectiveEl = document.getElementById("train-objective");
+    if (objectiveEl && objectiveEl.value !== "custom") {
+      objectiveEl.value = "custom";
+    }
+    persistRlTrainingSetup();
+  });
+  document.getElementById("btn-train-reset-config")?.addEventListener("click", () => {
+    if (!rlTrainingSchema) return;
+    applyRlTrainingSetupToForm(rlTrainingSchema.defaults);
+    renderRlTrainingSections(rlTrainingSchema.defaults);
+    applyRlTrainingSetupToForm(rlTrainingSchema.defaults);
+  });
+}
+
 async function refreshTrainingStatus() {
   try {
     const metrics = await api("/api/rl/train/status");
@@ -3078,9 +3229,13 @@ async function startRlTraining() {
     return;
   }
   const driveSettings = selectedDriveSettings();
-  const objective = document.getElementById("auto-objective")?.value || "god";
+  const objective = document.getElementById("train-objective")?.value || "god";
   const totalSteps = Number(document.getElementById("train-total-steps")?.value || 50000);
   const previewFreq = Number(document.getElementById("train-preview-freq")?.value || 10000);
+  const seed = Number(document.getElementById("train-seed")?.value || 0);
+  const setup = readRlTrainingSetupFromForm();
+  setup.objective = objective;
+  persistRlTrainingSetup();
   syncTrackSelectValue(trackId);
   await loadSelectedTrack(true);
   clearHistoryPin();
@@ -3096,6 +3251,8 @@ async function startRlTraining() {
       target_laps: Number(document.getElementById("auto-laps")?.value || 3),
       total_timesteps: totalSteps,
       preview_freq: previewFreq,
+      seed,
+      setup,
     }),
   });
   await refreshTrainingStatus();
@@ -3686,6 +3843,7 @@ async function init() {
     await loadSelectedTrack(true);
   }
   connectWebSocket();
+  await initRlTrainingConfig();
   await refreshTrainingStatus();
   syncTrainingControlsState();
   syncTelemetryPanels(activeTabName());

@@ -13,6 +13,7 @@ from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import build_policy_identity
 from gokart.rl.registry import PolicyManifest, save_manifest
 from gokart.rl.rewards import RewardState, compute_reward, reward_preset
+from gokart.rl.training_setup import training_setup_from_dict, training_setup_schema
 from gokart.track.importer import import_geojson_track
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -22,6 +23,23 @@ HAIRPIN = FIXTURES / "test-hairpin.geojson"
 @pytest.fixture
 def hairpin_track():
     return import_geojson_track(HAIRPIN, track_id="test-hairpin", fetch_elevation=False)
+
+
+def test_training_setup_from_dict_round_trip() -> None:
+    schema = training_setup_schema()
+    setup = training_setup_from_dict(schema["defaults"])
+    assert setup.objective == "god"
+    assert setup.ppo.ent_coef == pytest.approx(0.05)
+    custom = training_setup_from_dict(
+        {
+            "objective": "custom",
+            "ppo": {"ent_coef": 0.1},
+            "rewards": {"standstill": 0.5},
+        }
+    )
+    assert custom.objective == "custom"
+    assert custom.ppo.ent_coef == pytest.approx(0.1)
+    assert custom.rewards.standstill == pytest.approx(0.5)
 
 
 def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:

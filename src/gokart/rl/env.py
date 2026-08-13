@@ -10,7 +10,8 @@ from gymnasium import spaces
 
 from gokart.rl.actions import decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
-from gokart.rl.rewards import RewardState, compute_reward, reward_preset
+from gokart.rl.rewards import RewardState, compute_reward
+from gokart.rl.training_setup import EnvRuntimeConfig, RlTrainingSetup, default_training_setup
 from gokart.sim.session import ControlSource, SessionConfig, SimulationSession
 from gokart.track.model import Track
 
@@ -19,23 +20,21 @@ class TrackRacingEnv(gym.Env):
     """Gym environment stepping the real kart simulation."""
 
     metadata = {"render_modes": []}
-    STAGNANT_SPEED_MPS = 0.15
-    STAGNANT_DELTA_S = 0.0005
-    MAX_STAGNANT_STEPS = 500
 
     def __init__(
         self,
         *,
         session_config: SessionConfig,
-        objective: str = "god",
+        setup: RlTrainingSetup | None = None,
         render_mode: str | None = None,
     ) -> None:
         super().__init__()
         self.session_config = session_config
-        self.objective = objective
+        self.setup = setup or default_training_setup()
+        self.objective = self.setup.objective
         self.render_mode = render_mode
         self.session = SimulationSession(session_config)
-        self.weights = reward_preset(objective)
+        self.weights = self.setup.resolved_rewards()
         self._reward_state = RewardState()
         self._last_obs = np.zeros(OBS_DIM, dtype=np.float32)
         self._stagnant_steps = 0
@@ -51,6 +50,10 @@ class TrackRacingEnv(gym.Env):
             shape=(OBS_DIM,),
             dtype=np.float32,
         )
+
+    @property
+    def _env_cfg(self) -> EnvRuntimeConfig:
+        return self.setup.env
 
     def reset(
         self,
@@ -68,7 +71,11 @@ class TrackRacingEnv(gym.Env):
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         speed_mps = float(self.session.state.vehicle_state.speed_mps) if self.session.state.vehicle_state else 0.0
-        action_tuple = decode_rl_action(action, speed_mps=speed_mps)
+        action_tuple = decode_rl_action(
+            action,
+            speed_mps=speed_mps,
+            action_config=self.setup.action,
+        )
         step_result = self.session.step(action=action_tuple)
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
@@ -80,14 +87,22 @@ class TrackRacingEnv(gym.Env):
         )
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
+        env_cfg = self._env_cfg
         speed = float(step_result.tick.values.get("speed_mps", 0.0))
         delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
         driving = step_result.safety_state.value == "DRIVING"
-        if driving and speed < self.STAGNANT_SPEED_MPS and delta_s < self.STAGNANT_DELTA_S:
+        if (
+            driving
+            and env_cfg.max_stagnant_steps > 0
+            and speed < env_cfg.stagnant_speed_mps
+            and delta_s < env_cfg.stagnant_delta_s
+        ):
             self._stagnant_steps += 1
         else:
             self._stagnant_steps = 0
-        truncated = step_result.truncated or self._stagnant_steps >= self.MAX_STAGNANT_STEPS
+        truncated = step_result.truncated
+        if env_cfg.max_stagnant_steps > 0:
+            truncated = truncated or self._stagnant_steps >= env_cfg.max_stagnant_steps
         info = {
             **step_result.info,
             "reward_components": components,
@@ -120,10 +135,21 @@ def make_env(
     track: Track,
     drive_mode: str,
     driver_profile: str,
-    objective: str,
+    objective: str = "god",
     target_laps: int = 3,
-    max_steps: int = 12_000,
+    max_steps: int | None = None,
+    setup: RlTrainingSetup | None = None,
 ) -> TrackRacingEnv:
+    resolved_setup = setup or default_training_setup()
+    if objective and resolved_setup.objective != objective:
+        resolved_setup = RlTrainingSetup(
+            objective=objective,
+            action=resolved_setup.action,
+            env=resolved_setup.env,
+            ppo=resolved_setup.ppo,
+            rewards=resolved_setup.rewards,
+        )
+    env_cfg = resolved_setup.env
     config = SessionConfig(
         vehicle_name=vehicle_name,
         vehicle_version=vehicle_version,
@@ -133,7 +159,7 @@ def make_env(
         control_source=ControlSource.RL,
         target_laps=target_laps,
         auto_boot=True,
-        max_steps=max_steps,
-        terminate_on_off_track=True,
+        max_steps=max_steps if max_steps is not None else env_cfg.max_steps,
+        terminate_on_off_track=env_cfg.terminate_on_off_track,
     )
-    return TrackRacingEnv(session_config=config, objective=objective)
+    return TrackRacingEnv(session_config=config, setup=resolved_setup)

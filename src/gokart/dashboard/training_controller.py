@@ -10,6 +10,7 @@ from gokart.config.hashing import content_hash
 from gokart.config.store import data_root, load_vehicle
 from gokart.rl.hooks import TrainingProgress
 from gokart.rl.trainer import TrainingConfig, train_policy
+from gokart.rl.training_setup import RlTrainingSetup, training_setup_from_dict
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import validate_sample_row
 from gokart.telemetry.recorder import SessionMetadata, SessionRecorder
@@ -28,6 +29,7 @@ class TrainingRunRequest:
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
     seed: int = 0
+    setup: dict[str, Any] | None = None
 
 
 @dataclass
@@ -111,21 +113,30 @@ class TrainingController:
     def _run(self, *, request: TrainingRunRequest) -> None:
         hooks = _DashboardTrainingHooks(self)
 
+        setup = training_setup_from_dict(request.setup)
+        if request.objective:
+            setup = RlTrainingSetup(
+                objective=request.objective,
+                action=setup.action,
+                env=setup.env,
+                ppo=setup.ppo,
+                rewards=setup.rewards,
+            )
+
         config = TrainingConfig(
             vehicle_name=request.vehicle_name,
             vehicle_version=request.vehicle_version,
             track_id=request.track_id,
             drive_mode=request.drive_mode,
             driver_profile=request.driver_profile,
-            objective=request.objective,
+            objective=setup.objective,
             target_laps=request.target_laps,
             total_timesteps=request.total_timesteps,
             preview_freq=request.preview_freq,
             eval_freq=request.preview_freq,
             record_training_episodes=True,
-            n_steps=256,
-            batch_size=64,
             seed=request.seed,
+            setup=setup,
         )
         try:
             hooks.on_progress(

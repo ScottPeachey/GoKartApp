@@ -4,30 +4,30 @@ from __future__ import annotations
 
 import numpy as np
 
-# Standing-start assist only applies when the policy requests throttle while
-# nearly stopped. Zero throttle must remain zero so the agent can coast.
-THROTTLE_BREAKAWAY = 0.25
-STANDING_START_SPEED_MPS = 0.15
-BRAKE_CUTOFF = 0.85
+from gokart.rl.training_setup import ActionConfig
+
+DEFAULT_ACTION_CONFIG = ActionConfig()
 
 
 def decode_rl_action(
     action: np.ndarray | tuple[float, float, float],
     *,
     speed_mps: float = 0.0,
+    action_config: ActionConfig | None = None,
 ) -> tuple[float, float, float]:
     """Convert policy actions into throttle, brake, and steering commands."""
+    cfg = action_config or DEFAULT_ACTION_CONFIG
     values = np.asarray(action, dtype=np.float32).reshape(-1)
     raw_throttle = float(np.clip(values[0], 0.0, 1.0))
     brake = float(np.clip(values[1], 0.0, 1.0))
     steering = float(np.clip(values[2], -1.0, 1.0))
 
-    if brake > BRAKE_CUTOFF:
+    if brake > cfg.brake_cutoff:
         throttle = 0.0
     elif raw_throttle <= 0.0:
         throttle = 0.0
-    elif speed_mps < STANDING_START_SPEED_MPS:
-        throttle = THROTTLE_BREAKAWAY + (1.0 - THROTTLE_BREAKAWAY) * raw_throttle
+    elif speed_mps < cfg.standing_start_speed_mps:
+        throttle = cfg.throttle_breakaway + (1.0 - cfg.throttle_breakaway) * raw_throttle
     else:
         throttle = raw_throttle
 

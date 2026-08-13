@@ -108,6 +108,7 @@ class RlTrainStartRequest(BaseModel):
     total_timesteps: int = Field(default=50_000, ge=1_000, le=5_000_000)
     preview_freq: int = Field(default=10_000, ge=500, le=500_000)
     seed: int = 0
+    setup: dict[str, Any] | None = None
 
 
 PHYSICS_REVISION = "tyre-v1"
@@ -436,6 +437,12 @@ def create_app(
     def api_rl_train_status() -> dict[str, Any]:
         return training_controller.snapshot()
 
+    @app.get("/api/rl/train/defaults")
+    def api_rl_train_defaults() -> dict[str, Any]:
+        from gokart.rl.training_setup import training_setup_schema
+
+        return training_setup_schema()
+
     @app.post("/api/rl/train/start")
     def api_rl_train_start(request: RlTrainStartRequest) -> dict[str, Any]:
         if sim_controller.status.running:
@@ -456,6 +463,7 @@ def create_app(
                     total_timesteps=request.total_timesteps,
                     preview_freq=request.preview_freq,
                     seed=request.seed,
+                    setup=request.setup,
                 )
             )
         except RuntimeError as exc:

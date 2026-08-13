@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=28" />
+  <link rel="stylesheet" href="/static/style.css?v=29" />
 </head>
 <body>
   <header>
@@ -224,11 +224,21 @@
         <div id="rl-train-panel" class="rl-train-panel">
           <h4>Train learned driver</h4>
           <p class="config-hint">
-            Preview laps are recorded automatically during training and appear in session
-            history (oldest checkpoint first). Watch them any time while training runs or
-            after it finishes. The first start can sit on <em>Loading PyTorch</em> for up to
-            a minute.
+            Tune every training parameter below — settings are saved in your browser.
+            Preview laps appear in session history while training runs.
           </p>
+          <div class="row">
+            <label>Reward preset
+              <select id="train-objective">
+                <option value="god">God mode (balanced)</option>
+                <option value="endurance">Endurance (SOC focus)</option>
+                <option value="custom">Custom weights</option>
+              </select>
+            </label>
+            <label>Seed
+              <input id="train-seed" type="number" step="1" value="0" />
+            </label>
+          </div>
           <div class="row">
             <label>Total steps
               <input id="train-total-steps" type="number" min="1000" step="1000" value="50000" />
@@ -238,7 +248,9 @@
               steps
             </label>
           </div>
+          <div id="rl-train-config-sections" class="rl-train-config-sections"></div>
           <div class="row rl-train-actions">
+            <button id="btn-train-reset-config" type="button" class="btn-secondary">Reset to defaults</button>
             <button id="btn-train-start" type="button" class="btn-secondary">Start training</button>
             <button id="btn-train-stop" type="button" class="btn-secondary" disabled>Stop training</button>
           </div>
@@ -517,7 +529,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=70"></script>
+  <script src="/static/app.js?v=71"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ from gokart.rl.episode_recording import EpisodeRecordingEnv, session_tick_row
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
 from gokart.rl.registry import PolicyManifest, model_path, save_manifest
+from gokart.rl.training_setup import RlTrainingSetup, default_training_setup
 from gokart.track.store import load_track
 
 
@@ -42,6 +43,7 @@ class TrainingConfig:
     plateau_evals: int = 3
     min_improvement_s: float = 0.05
     clean_lap_fault_free: bool = True
+    setup: RlTrainingSetup | None = None
 
 
 @dataclass
@@ -73,6 +75,7 @@ def run_preview_episode(
         objective=config.objective,
         target_laps=config.preview_laps,
         max_steps=max_steps or config.preview_max_steps,
+        setup=config.setup,
     )
     obs, _ = env.reset()
     done = False
@@ -158,6 +161,9 @@ def train_policy(
 
     training_state = {"timesteps": 0}
 
+    setup = config.setup or default_training_setup()
+    ppo = setup.ppo
+
     def _make():
         env = make_env(
             vehicle_name=config.vehicle_name,
@@ -167,6 +173,7 @@ def train_policy(
             driver_profile=config.driver_profile,
             objective=config.objective,
             target_laps=config.target_laps,
+            setup=setup,
         )
         if config.record_training_episodes:
 
@@ -192,10 +199,10 @@ def train_policy(
         env,
         verbose=0,
         seed=config.seed,
-        learning_rate=config.learning_rate,
-        n_steps=config.n_steps,
-        batch_size=config.batch_size,
-        ent_coef=0.05,
+        learning_rate=ppo.learning_rate,
+        n_steps=ppo.n_steps,
+        batch_size=ppo.batch_size,
+        ent_coef=ppo.ent_coef,
     )
 
     eval_history: list[float | None] = []
@@ -393,6 +400,7 @@ def evaluate_policy(
             driver_profile=config.driver_profile,
             objective=config.objective,
             target_laps=config.target_laps,
+            setup=config.setup,
         )
         obs, _ = env.reset()
         done = False
