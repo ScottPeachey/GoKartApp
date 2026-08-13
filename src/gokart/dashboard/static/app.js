@@ -13,6 +13,7 @@ const state = {
   historyRefreshInFlight: false,
   historyPollCount: 0,
   liveSessionId: null,
+  historyPinnedSessionId: null,
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
@@ -509,6 +510,34 @@ function resetLiveHistoryState() {
   state.historyMarkerFingerprint = "";
 }
 
+function pinHistorySession(sessionId) {
+  state.historyPinnedSessionId = sessionId || null;
+}
+
+function clearHistoryPin() {
+  state.historyPinnedSessionId = null;
+}
+
+function isHistoryReplayPinned() {
+  const select = document.getElementById("session-select");
+  return Boolean(
+    state.historyPinnedSessionId
+    && select?.value === state.historyPinnedSessionId
+    && (state.trainingRunning || state.simRunning),
+  );
+}
+
+function isLiveTelemetryDrivingHistory() {
+  const select = document.getElementById("session-select");
+  if (state.simRunning && state.liveSessionId && select?.value === state.liveSessionId) {
+    return true;
+  }
+  if (state.trainingRunning && !isHistoryReplayPinned()) {
+    return true;
+  }
+  return false;
+}
+
 function resetLivePathLayer() {
   const pathColorMaxKmh = state.historyPathLayer?.pathColorMaxKmh ?? 45;
   state.historyPathLayer = {
@@ -534,6 +563,7 @@ async function beginLiveSession() {
   if (!sessionId) return;
 
   state.liveSessionId = sessionId;
+  clearHistoryPin();
   resetLiveHistoryState();
   resetLivePathLayer();
 
@@ -1154,7 +1184,8 @@ function resolvePathMarker(sessionId, samples) {
   const liveHeading = Number(live.heading_deg);
   const last = samples[samples.length - 1];
   const lastHeading = Number(last?.heading_deg || 0);
-  const useLiveMarker = state.simRunning
+  const useLiveMarker = !isHistoryReplayPinned()
+    && state.simRunning
     && state.liveSessionId === sessionId
     && Number.isFinite(liveX)
     && Number.isFinite(liveY);
@@ -1268,6 +1299,7 @@ function setPathFollowKart(active) {
     btn.setAttribute("aria-pressed", active ? "true" : "false");
   }
   if (active) {
+    clearHistoryPin();
     applyPathFollowIfEnabled();
     schedulePathRedraw();
   }
@@ -1387,9 +1419,10 @@ function redrawPathLayer() {
   const trackLabel = state.track.data ? ` | ${state.track.data.name}` : "";
   const zoomLabel = view.zoom === 1 ? "" : ` · ${view.zoom.toFixed(1)}×`;
   const followLabel = state.pathFollowKart ? " · follow on" : "";
+  const replayLabel = isHistoryReplayPinned() ? " · replay" : "";
   const trainLabel = state.trainingMetrics.preview_running ? " · RL preview" : "";
   pathCtx.fillText(
-    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}${trainLabel}`,
+    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}${replayLabel}${trainLabel}`,
     10,
     16,
   );
@@ -1612,7 +1645,7 @@ async function refreshHistoryView(forceSessionList = false) {
     state.historyPollCount += 1;
     const refreshList = forceSessionList
       || state.historyPollCount % 30 === 0
-      || Boolean(state.trainingRunning);
+      || (Boolean(state.trainingRunning) && !isHistoryReplayPinned());
 
     let sessions = [];
     if (refreshList) {
@@ -1625,15 +1658,12 @@ async function refreshHistoryView(forceSessionList = false) {
       try {
         const status = await api("/api/sim/status");
         state.liveSessionId = status.session_id || null;
-        if (status.session_id && [...select.options].some((o) => o.value === status.session_id)) {
+        if (!isHistoryReplayPinned() && status.session_id
+          && [...select.options].some((o) => o.value === status.session_id)) {
           select.value = status.session_id;
         }
       } catch (_error) {
         /* keep current selection */
-      }
-    } else if (state.trainingRunning && state.liveSessionId) {
-      if ([...select.options].some((o) => o.value === state.liveSessionId)) {
-        select.value = state.liveSessionId;
       }
     } else if (!state.trainingRunning) {
       state.liveSessionId = null;
@@ -1642,6 +1672,10 @@ async function refreshHistoryView(forceSessionList = false) {
     const sessionId = select.value;
     if (!sessionId) return;
 
+    if (isHistoryReplayPinned()) {
+      return;
+    }
+
     await drawSessionChart(sessionId);
   } finally {
     state.historyRefreshInFlight = false;
@@ -1649,7 +1683,9 @@ async function refreshHistoryView(forceSessionList = false) {
 }
 
 function historyPollIntervalMs() {
+  if (isHistoryReplayPinned()) return 2000;
   if (state.simRunning || state.trainingMetrics?.preview_running) return 400;
+  if (state.trainingRunning) return 800;
   return 250;
 }
 
@@ -1771,12 +1807,18 @@ function prepareHistoryChartCanvas(canvas, sampleCount) {
 function scrollHistoryChartToEnd(force = false) {
   const scrollEl = document.getElementById("history-chart-scroll");
   if (!scrollEl) return;
-  const followingLive = state.simRunning || state.trainingRunning;
+  const followingLive = isLiveTelemetryDrivingHistory();
   if (!force && !followingLive) return;
   const nearEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 48;
   if (force || nearEnd) {
     scrollEl.scrollLeft = scrollEl.scrollWidth;
   }
+}
+
+function scrollHistoryChartToStart() {
+  const scrollEl = document.getElementById("history-chart-scroll");
+  if (!scrollEl) return;
+  scrollEl.scrollLeft = 0;
 }
 
 function speedToPathColor(speedKmh, maxSpeedKmh) {
@@ -1888,6 +1930,7 @@ async function drawSessionChart(sessionId) {
 
     const now = performance.now();
     const shouldDrawCharts = sessionChanged
+      || isHistoryReplayPinned()
       || !state.simRunning
       || now - state.historyChartLastDrawMs > 750;
     if (shouldDrawCharts) {
@@ -1903,7 +1946,10 @@ async function drawSessionChart(sessionId) {
       ctx.font = "12px sans-serif";
       ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
       ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
-      scrollHistoryChartToEnd(sessionChanged);
+      scrollHistoryChartToEnd(sessionChanged && isLiveTelemetryDrivingHistory());
+      if (sessionChanged && isHistoryReplayPinned()) {
+        scrollHistoryChartToStart();
+      }
       state.historyChartLastDrawMs = now;
     }
 
@@ -1923,13 +1969,13 @@ async function drawSessionChart(sessionId) {
 
 function updateHistoryMarkerFromLive() {
   if (!isHistoryTabActive() || !state.historyPathBaseTransform) return;
-  const liveTraining = state.trainingRunning;
-  if ((!state.simRunning || !state.liveSessionId) && !liveTraining) return;
+  if (!isLiveTelemetryDrivingHistory()) return;
 
   const sessionSelect = document.getElementById("session-select");
-  if (!liveTraining && sessionSelect.value !== state.liveSessionId) {
+  if (state.simRunning && sessionSelect.value !== state.liveSessionId) {
     if ([...sessionSelect.options].some((option) => option.value === state.liveSessionId)) {
       sessionSelect.value = state.liveSessionId;
+      clearHistoryPin();
       resetLiveHistoryState();
     } else {
       return;
@@ -2327,6 +2373,7 @@ async function startRlTraining() {
   const previewFreq = Number(document.getElementById("train-preview-freq")?.value || 10000);
   syncTrackSelectValue(trackId);
   await loadSelectedTrack(true);
+  clearHistoryPin();
   state.pathFollowKart = true;
   ensureTrackMapVisible(true);
   await api("/api/rl/train/start", {
@@ -2807,11 +2854,25 @@ function setupControls() {
     await api("/api/sim/ack", { method: "POST" });
   });
   document.getElementById("btn-refresh-sessions").addEventListener("click", () => {
+    const sessionId = document.getElementById("session-select")?.value;
+    if (sessionId) {
+      invalidateHistoryDrawCache();
+      void drawSessionChart(sessionId);
+      return;
+    }
     void refreshHistoryView(true);
   });
   document.getElementById("session-select").addEventListener("change", (event) => {
+    const sessionId = event.target.value;
+    if (state.trainingRunning || state.simRunning) {
+      pinHistorySession(sessionId);
+      setPathFollowKart(false);
+      resetPathView();
+    } else {
+      clearHistoryPin();
+    }
     invalidateHistoryDrawCache();
-    void drawSessionChart(event.target.value);
+    void drawSessionChart(sessionId);
   });
   document.getElementById("track-select").addEventListener("change", (event) => {
     setStartFinishEditMode(false);
