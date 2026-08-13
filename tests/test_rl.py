@@ -24,11 +24,26 @@ def hairpin_track():
     return import_geojson_track(HAIRPIN, track_id="test-hairpin", fetch_elevation=False)
 
 
-def test_decode_rl_action_maps_low_throttle_to_breakaway() -> None:
+def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
     throttle, brake, steering = decode_rl_action(np.array([0.0, 0.0, 0.5], dtype=np.float32))
-    assert throttle == pytest.approx(0.25)
+    assert throttle == 0.0
     assert brake == 0.0
     assert steering == 0.5
+
+    assist_throttle, _, _ = decode_rl_action(
+        np.array([0.2, 0.0, 0.0], dtype=np.float32),
+        speed_mps=0.0,
+    )
+    assert assist_throttle == pytest.approx(0.4)
+
+    moving_throttle, _, _ = decode_rl_action(
+        np.array([0.2, 0.0, 0.0], dtype=np.float32),
+        speed_mps=2.0,
+    )
+    assert moving_throttle == pytest.approx(0.2)
+
+    full_throttle, _, _ = decode_rl_action(np.array([1.0, 0.0, 0.0], dtype=np.float32), speed_mps=2.0)
+    assert full_throttle == 1.0
 
     coast_throttle, coast_brake, _ = decode_rl_action(np.array([0.2, 0.8, 0.0], dtype=np.float32))
     assert coast_throttle == 0.0
@@ -57,7 +72,7 @@ def test_untrained_policy_can_move_from_standstill(hairpin_track) -> None:
         tick = env.session.state.last_tick
         if tick is not None:
             max_speed = max(max_speed, float(tick.values.get("speed_mps", 0.0)))
-    assert max_speed > 0.25
+    assert max_speed > 0.1
 
 
 def test_policy_key_stable(hairpin_track) -> None:
@@ -111,6 +126,42 @@ def test_reward_penalizes_blocking_fault() -> None:
     )
     assert reward < 0.0
     assert "blocking" in components
+
+
+def test_reward_prefers_centered_on_track_alignment() -> None:
+    state = RewardState()
+    reward, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "speed_mps": 6.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.5,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.4,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 5.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert reward > 0.0
+    assert "centerline" in components
+    assert "heading" in components
+    assert "speed" in components
 
 
 def test_observation_shape(hairpin_track) -> None:

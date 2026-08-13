@@ -62,7 +62,8 @@ class TrackRacingEnv(gym.Env):
         return obs, {"safety_state": step_result.safety_state.value}
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        action_tuple = decode_rl_action(action)
+        speed_mps = float(self.session.state.vehicle_state.speed_mps) if self.session.state.vehicle_state else 0.0
+        action_tuple = decode_rl_action(action, speed_mps=speed_mps)
         step_result = self.session.step(action=action_tuple)
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,

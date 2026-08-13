@@ -50,10 +50,11 @@ class PolicyRunner:
         self,
         observation: np.ndarray,
         *,
+        speed_mps: float = 0.0,
         deterministic: bool = True,
     ) -> tuple[float, float, float]:
         action, _ = self._model.predict(observation.reshape(1, -1), deterministic=deterministic)
-        return decode_rl_action(action)
+        return decode_rl_action(action, speed_mps=speed_mps)
 
     def predict_from_tick(
         self,
@@ -74,7 +75,7 @@ class PolicyRunner:
             max_steps=max_steps,
             step_index=step_index,
         )
-        return self.predict(obs, deterministic=deterministic)
+        return self.predict(obs, speed_mps=float(tick_values.get("speed_mps", 0.0)), deterministic=deterministic)
 
 
 def observation_dim() -> int:

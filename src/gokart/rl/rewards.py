@@ -12,13 +12,16 @@ from gokart.safety.types import FaultSeverity
 @dataclass(frozen=True)
 class RewardWeights:
     progress: float = 0.35
+    centerline: float = 0.12
+    heading: float = 0.06
+    speed: float = 0.04
     lap_bonus: float = 25.0
     fault_block: float = 80.0
     fault_derate: float = 12.0
     off_track_rate: float = 2.5
+    off_track_terminal: float = 15.0
     battery_margin: float = 0.08
     motor_margin: float = 0.05
-    speed_margin: float = 0.06
     soc_margin: float = 0.1
     jerk: float = 0.02
     throttle_brake_overlap: float = 1.5
@@ -28,6 +31,9 @@ class RewardWeights:
 GOD_WEIGHTS = RewardWeights()
 ENDURANCE_WEIGHTS = RewardWeights(
     progress=0.22,
+    centerline=0.1,
+    heading=0.05,
+    speed=0.03,
     lap_bonus=35.0,
     soc_margin=0.25,
     time_penalty=0.015,
@@ -69,6 +75,8 @@ def compute_reward(
     lateral = abs(float(step_info.get("lateral_offset_m", 0.0)))
     track_width = max(float(step_info.get("track_width_m", 10.0)), 1.0)
     off_track = lateral > track_width * 0.5
+    speed = float(tick_values.get("speed_mps", 0.0))
+    max_speed = max(float(tick_values.get("max_speed_mps", 12.5)), 0.1)
     if off_track:
         state.off_track_time_s += dt_s
 
@@ -81,10 +89,30 @@ def compute_reward(
     reward -= weights.time_penalty * dt_s
     components["time"] = -weights.time_penalty * dt_s
 
+    normalized_lateral = min(lateral / (track_width * 0.5), 1.0)
+    if not off_track and not blocking:
+        centerline_reward = weights.centerline * (1.0 - normalized_lateral) * dt_s
+        reward += centerline_reward
+        components["centerline"] = centerline_reward
+
+        heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
+        heading_reward = weights.heading * max(0.0, 1.0 - heading_error_deg / 90.0) * dt_s
+        reward += heading_reward
+        components["heading"] = heading_reward
+
+        if speed > 0.2:
+            speed_reward = weights.speed * (speed / max_speed) * dt_s
+            reward += speed_reward
+            components["speed"] = speed_reward
+
     if off_track:
         off_penalty = -weights.off_track_rate * dt_s
         reward += off_penalty
         components["off_track"] = off_penalty
+        if bool(step_info.get("terminated_off_track")):
+            terminal_penalty = -weights.off_track_terminal
+            reward += terminal_penalty
+            components["off_track_terminal"] = terminal_penalty
 
     # proximity shaping
     battery_temp = float(tick_values.get("battery_temp_c", 25.0))
@@ -92,8 +120,6 @@ def compute_reward(
     battery_fault = float(step_info.get("battery_temp_fault_c", 60.0))
     motor_temp = float(tick_values.get("motor_temp_c", 25.0))
     motor_derate = battery_derate  # reuse BMS band for motor margin proxy
-    speed = float(tick_values.get("speed_mps", 0.0))
-    max_speed = float(tick_values.get("max_speed_mps", 12.5))
     soc = float(tick_values.get("soc", 1.0))
 
     batt_margin = max(0.0, battery_derate - battery_temp)
@@ -106,12 +132,6 @@ def compute_reward(
     motor_penalty = -weights.motor_margin * (1.0 - motor_margin / batt_span)
     reward += motor_penalty
     components["motor_margin"] = motor_penalty
-
-    if max_speed > 0.0:
-        speed_margin = max(0.0, max_speed - speed)
-        speed_penalty = -weights.speed_margin * (1.0 - speed_margin / max_speed)
-        reward += speed_penalty
-        components["speed_margin"] = speed_penalty
 
     if objective == "endurance" and soc < endurance_soc_floor:
         soc_penalty = -weights.soc_margin * (endurance_soc_floor - soc)

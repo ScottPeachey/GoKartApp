@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import numpy as np
 
-# Standing-start tests on the kart model need roughly this much throttle before
-# the rear tyres break static friction and the vehicle begins to roll.
+# Standing-start assist only applies when the policy requests throttle while
+# nearly stopped. Zero throttle must remain zero so the agent can coast.
 THROTTLE_BREAKAWAY = 0.25
+STANDING_START_SPEED_MPS = 0.15
 
 
-def decode_rl_action(action: np.ndarray | tuple[float, float, float]) -> tuple[float, float, float]:
+def decode_rl_action(
+    action: np.ndarray | tuple[float, float, float],
+    *,
+    speed_mps: float = 0.0,
+) -> tuple[float, float, float]:
     """Convert policy actions into throttle, brake, and steering commands."""
     values = np.asarray(action, dtype=np.float32).reshape(-1)
     raw_throttle = float(np.clip(values[0], 0.0, 1.0))
@@ -18,7 +23,11 @@ def decode_rl_action(action: np.ndarray | tuple[float, float, float]) -> tuple[f
 
     if brake > 0.5:
         throttle = 0.0
-    else:
+    elif raw_throttle <= 0.0:
+        throttle = 0.0
+    elif speed_mps < STANDING_START_SPEED_MPS:
         throttle = THROTTLE_BREAKAWAY + (1.0 - THROTTLE_BREAKAWAY) * raw_throttle
+    else:
+        throttle = raw_throttle
 
     return throttle, brake, steering

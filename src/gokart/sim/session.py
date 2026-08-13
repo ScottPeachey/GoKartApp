@@ -494,15 +494,22 @@ class SimulationSession:
 
         terminated = False
         truncated = False
-        lateral_offset_m = abs(float(track_values.get("track_lateral_m", 0.0)))
+        terminated_off_track = False
+        lateral_offset_m = float(track_values.get("track_lateral_m", 0.0))
         half_width = self.config.track.width_m * 0.5
-        off_track = lateral_offset_m > half_width
+        off_track = abs(lateral_offset_m) > half_width
+        heading_error_deg = self._heading_error_deg(
+            physics_out.heading_deg,
+            physics_out.position_x_m,
+            physics_out.position_y_m,
+        )
         if safety_state == SafetyState.SAFE_SHUTDOWN:
             terminated = True
         elif safety_state == SafetyState.FAULT and self._has_blocking_fault(safety_outputs):
             terminated = True
         elif self.config.terminate_on_off_track and off_track:
             terminated = True
+            terminated_off_track = True
         elif (
             self.config.target_laps > 0
             and len(self.track_context.completed_laps) >= self.config.target_laps
@@ -514,8 +521,10 @@ class SimulationSession:
         info = {
             "delta_track_s_m": delta_s,
             "track_s_m": track_s,
-            "lateral_offset_m": float(track_values.get("track_lateral_m", 0.0)),
+            "lateral_offset_m": lateral_offset_m,
+            "heading_error_deg": heading_error_deg,
             "off_track": float(off_track),
+            "terminated_off_track": terminated_off_track,
             "track_width_m": self.config.track.width_m,
             "lap_number": float(track_values.get("lap_number", 0.0)),
             "lap_time_s": float(track_values.get("lap_time_s", 0.0)),
@@ -615,6 +624,17 @@ class SimulationSession:
 
         throttle, brake = self.scenario.driver_inputs_at(self.state.time_s)
         return throttle, brake, 0.0
+
+    def _heading_error_deg(self, heading_deg: float, x: float, y: float) -> float:
+        from gokart.track.lap import project_xy_to_track
+
+        projection = project_xy_to_track(self.config.track.centerline, x, y)
+        error_deg = heading_deg - math.degrees(projection.heading_rad)
+        while error_deg > 180.0:
+            error_deg -= 360.0
+        while error_deg < -180.0:
+            error_deg += 360.0
+        return error_deg
 
     @staticmethod
     def _has_blocking_fault(outputs: SafetyOutputs) -> bool:
