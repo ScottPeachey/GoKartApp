@@ -397,6 +397,12 @@ def create_app(
             for lap in laps
         ]
 
+    @app.delete("/api/sessions/{session_id}")
+    def api_delete_session(session_id: str) -> dict[str, Any]:
+        if not telemetry_store.delete_session(session_id):
+            raise HTTPException(status_code=404, detail="Session not found")
+        return {"deleted": True, "session_id": session_id}
+
     @app.get("/api/rl/policy")
     def api_rl_policy(
         vehicle_name: str,

@@ -118,6 +118,26 @@ def test_load_samples_from_start_returns_earliest_rows(temp_store: TelemetryStor
     assert earliest[1]["speed_mps"] == pytest.approx(1.0)
 
 
+def test_delete_session_removes_samples_and_metadata(temp_store: TelemetryStore) -> None:
+    recorder = SessionRecorder(
+        SessionMetadata(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            config_hash="delete-test",
+            driver_profile="Owner",
+            drive_mode="Default",
+        ),
+        store=temp_store,
+        log_every_n=1,
+    )
+    recorder.record_tick({"time_s": 0.0, "speed_mps": 1.0})
+    recorder.close(end_soc=1.0)
+
+    assert temp_store.delete_session(recorder.session_id) is True
+    assert temp_store.get_session(recorder.session_id) is None
+    assert temp_store.load_samples(recorder.session_id) == []
+
+
 def test_bus_overflow_does_not_block_producer() -> None:
     bus = TelemetryBus()
     sub_id = bus.subscribe(name="slow", maxsize=2)

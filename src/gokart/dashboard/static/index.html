@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=25" />
+  <link rel="stylesheet" href="/static/style.css?v=26" />
 </head>
 <body>
   <header>
@@ -375,6 +375,11 @@
           <canvas id="history-chart" width="900" height="220"></canvas>
         </div>
         <div class="history-replay-controls hidden" id="history-replay-controls">
+          <div class="history-replay-session-nav" role="group" aria-label="Recording navigation">
+            <button id="history-replay-prev-session" type="button" class="btn-secondary btn-replay-transport" title="Previous recording" aria-label="Previous recording">⏮</button>
+            <button id="history-replay-next-session" type="button" class="btn-secondary btn-replay-transport" title="Next recording" aria-label="Next recording">⏭</button>
+            <button id="history-replay-delete" type="button" class="btn-secondary btn-replay-transport btn-replay-delete" title="Delete recording" aria-label="Delete recording">✕</button>
+          </div>
           <div class="history-replay-transport" role="group" aria-label="Replay transport">
             <button id="history-replay-restart" type="button" class="btn-secondary btn-replay-transport" title="Restart from beginning" aria-label="Restart replay">⟲</button>
             <button id="history-replay-play" type="button" class="btn-secondary btn-replay-transport" title="Play" aria-label="Play replay">▶</button>
@@ -499,7 +504,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=64"></script>
+  <script src="/static/app.js?v=67"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

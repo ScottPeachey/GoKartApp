@@ -684,11 +684,27 @@ button.btn-path-follow {
   padding: 0.35rem 0.25rem;
 }
 
-.history-replay-transport {
+.history-replay-session-nav {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   flex: 0 0 auto;
+  padding-right: 0.35rem;
+  border-right: 1px solid rgba(138, 160, 184, 0.25);
+  margin-right: 0.15rem;
+}
+
+.btn-replay-delete:hover {
+  color: #ff8a80;
+  border-color: rgba(255, 138, 128, 0.45);
+}
+
+body.replay-playback-active #history-path-stack {
+  cursor: default;
+}
+
+body.replay-playback-active #history-path-stack.is-panning {
+  cursor: default;
 }
 
 .btn-replay-transport {

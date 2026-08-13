@@ -341,6 +341,14 @@ class TelemetryStore:
             for sample in samples:
                 writer.writerow({name: sample.get(name, "") for name in CHANNEL_NAMES})
 
+    def delete_session(self, session_id: str) -> bool:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM samples WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM laps WHERE session_id = ?", (session_id,))
+            result = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            conn.commit()
+            return result.rowcount > 0
+
     @staticmethod
     def _row_to_info(row: sqlite3.Row) -> SessionInfo:
         return SessionInfo(
