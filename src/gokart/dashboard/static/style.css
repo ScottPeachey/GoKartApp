@@ -706,6 +706,44 @@ button.btn-path-follow {
   line-height: 1;
 }
 
+.history-replay-transport {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  padding-right: 0.35rem;
+  border-right: 1px solid rgba(138, 160, 184, 0.25);
+  margin-right: 0.15rem;
+}
+
+.history-replay-speed {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: #8aa0b8;
+}
+
+.history-replay-speed-label {
+  white-space: nowrap;
+}
+
+#history-replay-speed {
+  min-width: 4.5rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid rgba(138, 160, 184, 0.35);
+  background: #121a26;
+  color: #e6edf3;
+  font-size: 0.82rem;
+}
+
+#history-replay-speed:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .cockpit-replay-badge {
   display: inline-block;
   margin-top: 0.35rem;

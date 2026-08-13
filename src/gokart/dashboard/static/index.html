@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=27" />
+  <link rel="stylesheet" href="/static/style.css?v=28" />
 </head>
 <body>
   <header>
@@ -385,6 +385,19 @@
             <button id="history-replay-play" type="button" class="btn-secondary btn-replay-transport" title="Play" aria-label="Play replay">▶</button>
             <button id="history-replay-pause" type="button" class="btn-secondary btn-replay-transport" title="Pause" aria-label="Pause replay" disabled>⏸</button>
           </div>
+          <label class="history-replay-speed" title="Playback speed multiplier">
+            <span class="history-replay-speed-label">Speed</span>
+            <select id="history-replay-speed" aria-label="Replay playback speed">
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+              <option value="3">3×</option>
+              <option value="4">4×</option>
+              <option value="8">8×</option>
+            </select>
+          </label>
           <span id="history-replay-time" class="history-replay-time">0.00 s</span>
           <input
             id="history-replay-scrubber"
@@ -504,7 +517,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=69"></script>
+  <script src="/static/app.js?v=70"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

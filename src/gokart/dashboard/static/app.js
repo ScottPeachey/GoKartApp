@@ -21,6 +21,7 @@ const state = {
   historyReplaySuppressScrub: false,
   historyReplayChartMeta: null,
   historyReplayPlaying: false,
+  historyReplaySpeed: 1,
   historyReplayRaf: null,
   historyReplayPlayAnchor: null,
   historyChartStaticCanvas: null,
@@ -163,7 +164,6 @@ const HISTORY_CHART_PX_PER_SAMPLE = 1.5;
 const HISTORY_CHART_TOP_PAD = 24;
 const HISTORY_CHART_PANEL_GAP = 16;
 const HISTORY_CHART_BOTTOM_PAD = 8;
-const HISTORY_REPLAY_PLAYBACK_RATE = 1.0;
 const HISTORY_REPLAY_UI_INTERVAL_MS = 80;
 const TRAIN_STATUS_LABELS = {
   idle: "Idle",
@@ -742,6 +742,7 @@ function syncHistoryReplayTransport() {
   const prevBtn = document.getElementById("history-replay-prev-session");
   const nextBtn = document.getElementById("history-replay-next-session");
   const deleteBtn = document.getElementById("history-replay-delete");
+  const speedSelect = document.getElementById("history-replay-speed");
   if (!playBtn || !pauseBtn) return;
   const canPlay = isReplayCockpitActive() && state.historyReplaySamples.length > 1;
   playBtn.disabled = !canPlay || state.historyReplayPlaying;
@@ -749,6 +750,39 @@ function syncHistoryReplayTransport() {
   if (prevBtn) prevBtn.disabled = !getAdjacentSessionId(-1);
   if (nextBtn) nextBtn.disabled = !getAdjacentSessionId(1);
   if (deleteBtn) deleteBtn.disabled = !document.getElementById("session-select")?.value;
+  if (speedSelect) {
+    speedSelect.disabled = !canPlay;
+    speedSelect.value = String(state.historyReplaySpeed);
+  }
+}
+
+function clampHistoryReplaySpeed(rate) {
+  return Math.max(0.25, Math.min(8, Number(rate) || 1));
+}
+
+function formatHistoryReplaySpeed(rate) {
+  const rounded = Math.round(rate * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+function reanchorHistoryReplayPlayback() {
+  if (!state.historyReplayPlaying) return;
+  const samples = state.historyReplaySamples;
+  state.historyReplayPlayAnchor = {
+    wallMs: performance.now(),
+    timeS: Number(samples[state.historyReplayIndex]?.time_s ?? 0),
+  };
+}
+
+function setHistoryReplaySpeed(rate) {
+  const nextRate = clampHistoryReplaySpeed(rate);
+  if (nextRate === state.historyReplaySpeed) return;
+  state.historyReplaySpeed = nextRate;
+  const speedSelect = document.getElementById("history-replay-speed");
+  if (speedSelect && speedSelect.value !== formatHistoryReplaySpeed(nextRate)) {
+    speedSelect.value = formatHistoryReplaySpeed(nextRate);
+  }
+  reanchorHistoryReplayPlayback();
 }
 
 function pauseHistoryReplayPlayback() {
@@ -2398,7 +2432,7 @@ function startHistoryReplayPlayback({ restart = false } = {}) {
       return;
     }
 
-    const elapsedS = ((performance.now() - anchor.wallMs) / 1000) * HISTORY_REPLAY_PLAYBACK_RATE;
+    const elapsedS = ((performance.now() - anchor.wallMs) / 1000) * state.historyReplaySpeed;
     const targetTimeS = anchor.timeS + elapsedS;
     let index = state.historyReplayIndex;
     while (
@@ -3585,6 +3619,9 @@ function setupControls() {
   });
   document.getElementById("history-replay-delete")?.addEventListener("click", () => {
     void deleteCurrentReplaySession();
+  });
+  document.getElementById("history-replay-speed")?.addEventListener("change", (event) => {
+    setHistoryReplaySpeed(event.target.value);
   });
   document.getElementById("sim-controls-panel")?.addEventListener("click", () => {
     void exitPinnedReplay();
