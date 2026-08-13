@@ -2025,12 +2025,10 @@ function scrollHistoryChartToPlayhead(index, sampleCount) {
   const canvas = document.getElementById("history-chart");
   if (!scrollEl || !canvas || sampleCount <= 1) return;
   const x = historyChartX(index, sampleCount, canvas.width);
-  const margin = 48;
-  if (x < scrollEl.scrollLeft + margin) {
-    scrollEl.scrollLeft = Math.max(0, x - margin);
-  } else if (x > scrollEl.scrollLeft + scrollEl.clientWidth - margin) {
-    scrollEl.scrollLeft = x - scrollEl.clientWidth + margin;
-  }
+  const viewportWidth = scrollEl.clientWidth;
+  const idealScroll = x - viewportWidth / 2;
+  const maxScroll = Math.max(0, scrollEl.scrollWidth - viewportWidth);
+  scrollEl.scrollLeft = Math.max(0, Math.min(idealScroll, maxScroll));
 }
 
 function buildReplayPathSeries(samples, index, speedsKmh) {
