@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=23" />
+  <link rel="stylesheet" href="/static/style.css?v=24" />
 </head>
 <body>
   <header>
@@ -373,6 +373,19 @@
         <div class="history-chart-scroll" id="history-chart-scroll">
           <canvas id="history-chart" width="900" height="220"></canvas>
         </div>
+        <div class="history-replay-controls hidden" id="history-replay-controls">
+          <span id="history-replay-time" class="history-replay-time">0.00 s</span>
+          <input
+            id="history-replay-scrubber"
+            type="range"
+            min="0"
+            max="0"
+            value="0"
+            step="1"
+            aria-label="Scrub session replay"
+          />
+          <span id="history-replay-duration" class="history-replay-time">0.00 s</span>
+        </div>
         <div class="history-path-stack" id="history-path-stack">
           <canvas id="history-path" width="900" height="480"></canvas>
           <canvas id="history-marker" width="900" height="480" class="history-marker-overlay"></canvas>
@@ -480,7 +493,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=59"></script>
+  <script src="/static/app.js?v=61"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

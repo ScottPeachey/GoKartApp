@@ -14,6 +14,12 @@ const state = {
   historyPollCount: 0,
   liveSessionId: null,
   historyPinnedSessionId: null,
+  historyReplaySamples: [],
+  historyReplaySessionId: "",
+  historyReplayIndex: 0,
+  historyReplayScrubbing: false,
+  historyReplaySuppressScrub: false,
+  historyReplayChartMeta: null,
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
@@ -146,6 +152,9 @@ const OVERSPEED_FAULT_MARGIN_KMH = 1.8;
 const HISTORY_CHART_VIEWPORT_WIDTH = 900;
 const HISTORY_CHART_HEIGHT = 220;
 const HISTORY_CHART_PX_PER_SAMPLE = 1.5;
+const HISTORY_CHART_TOP_PAD = 24;
+const HISTORY_CHART_PANEL_GAP = 16;
+const HISTORY_CHART_BOTTOM_PAD = 8;
 const TRAIN_STATUS_LABELS = {
   idle: "Idle",
   starting: "Starting…",
@@ -516,6 +525,7 @@ function pinHistorySession(sessionId) {
 
 function clearHistoryPin() {
   state.historyPinnedSessionId = null;
+  state.historyReplayScrubbing = false;
 }
 
 function isHistoryReplayPinned() {
@@ -1404,7 +1414,11 @@ function redrawPathLayer() {
 
   pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
   drawTrackUnderlay(pathCtx, state.track.data, toPx);
-  const pathSeries = decimatePathSeries(layer.marker.xs, layer.marker.ys, layer.speeds);
+  const replay = layer.replayMarker;
+  const xs = replay?.xs?.length ? replay.xs : layer.marker.xs;
+  const ys = replay?.ys?.length ? replay.ys : layer.marker.ys;
+  const speeds = replay?.speeds?.length ? replay.speeds : layer.speeds;
+  const pathSeries = decimatePathSeries(xs, ys, speeds);
   drawSpeedColoredPath(
     pathCtx,
     pathSeries.xs,
@@ -1427,7 +1441,10 @@ function redrawPathLayer() {
     16,
   );
 
-  drawPathMarkerOverlay(layer.marker.x, layer.marker.y, layer.marker.heading, state.historyVehicleDims);
+  const markerX = replay?.x ?? layer.marker.x;
+  const markerY = replay?.y ?? layer.marker.y;
+  const markerHeading = replay?.heading ?? layer.marker.heading;
+  drawPathMarkerOverlay(markerX, markerY, markerHeading, state.historyVehicleDims);
 }
 
 function buildPathTransform(boundsXs, boundsYs, canvas) {
@@ -1629,6 +1646,10 @@ function invalidateHistoryDrawCache() {
   state.historyPathTransform = null;
   state.historyPathBaseTransform = null;
   state.historyPathLayer = null;
+  state.historyReplaySamples = [];
+  state.historyReplaySessionId = "";
+  state.historyReplayIndex = 0;
+  state.historyReplayChartMeta = null;
   resetPathView();
 }
 
@@ -1774,18 +1795,214 @@ function syncTelemetryPanels(tab) {
   }
 }
 
+function historyChartPanelLayout() {
+  const panelHeight = (
+    HISTORY_CHART_HEIGHT - HISTORY_CHART_TOP_PAD - HISTORY_CHART_PANEL_GAP - HISTORY_CHART_BOTTOM_PAD
+  ) / 2;
+  return {
+    panelHeight,
+    speedTop: HISTORY_CHART_TOP_PAD,
+    steerTop: HISTORY_CHART_TOP_PAD + panelHeight + HISTORY_CHART_PANEL_GAP,
+  };
+}
+
+function historyChartX(index, sampleCount, width) {
+  if (sampleCount <= 1) return 0;
+  return (index / (sampleCount - 1)) * width;
+}
+
+function drawHistoryChartGrid(ctx, width, layout, sampleCount) {
+  const divisions = 4;
+  ctx.save();
+  ctx.strokeStyle = "rgba(138, 160, 184, 0.14)";
+  ctx.lineWidth = 1;
+  for (let panel = 0; panel < 2; panel += 1) {
+    const top = panel === 0 ? layout.speedTop : layout.steerTop;
+    for (let line = 0; line <= divisions; line += 1) {
+      const y = top + (layout.panelHeight * line) / divisions;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+  }
+  const verticalLines = Math.min(24, Math.max(8, Math.floor(width / 80)));
+  for (let line = 0; line <= verticalLines; line += 1) {
+    const sampleIndex = Math.round((line / verticalLines) * Math.max(sampleCount - 1, 0));
+    const x = historyChartX(sampleIndex, sampleCount, width);
+    ctx.beginPath();
+    ctx.moveTo(x, layout.speedTop);
+    ctx.lineTo(x, layout.steerTop + layout.panelHeight);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawHistoryChartPlayhead(ctx, index, sampleCount, layout) {
+  if (sampleCount <= 0) return;
+  const width = ctx.canvas.width;
+  const x = historyChartX(index, sampleCount, width);
+  ctx.save();
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(x, layout.speedTop);
+  ctx.lineTo(x, layout.steerTop + layout.panelHeight);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x, layout.speedTop, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x, layout.steerTop + layout.panelHeight, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
   const width = ctx.canvas.width;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
   values.forEach((value, index) => {
-    const x = (index / Math.max(samples.length - 1, 1)) * width;
+    const x = historyChartX(index, samples.length, width);
     const y = topPad + height - (value / maxValue) * height;
     if (index === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
   ctx.stroke();
+}
+
+function formatReplayTime(seconds) {
+  const value = Math.max(0, Number(seconds) || 0);
+  return `${value.toFixed(2)} s`;
+}
+
+function syncHistoryReplayScrubber(samples, index, { suppressInput = false } = {}) {
+  const controls = document.getElementById("history-replay-controls");
+  const scrubber = document.getElementById("history-replay-scrubber");
+  const timeEl = document.getElementById("history-replay-time");
+  const durationEl = document.getElementById("history-replay-duration");
+  if (!controls || !scrubber || !timeEl || !durationEl) return;
+
+  if (!samples.length) {
+    controls.classList.add("hidden");
+    return;
+  }
+
+  controls.classList.remove("hidden");
+  const maxIndex = Math.max(samples.length - 1, 0);
+  const clamped = Math.max(0, Math.min(index, maxIndex));
+  scrubber.min = "0";
+  scrubber.max = String(maxIndex);
+  if (suppressInput) {
+    state.historyReplaySuppressScrub = true;
+  }
+  scrubber.value = String(clamped);
+  if (suppressInput) {
+    state.historyReplaySuppressScrub = false;
+  }
+
+  const current = samples[clamped];
+  const last = samples[samples.length - 1];
+  timeEl.textContent = formatReplayTime(current?.time_s ?? 0);
+  durationEl.textContent = formatReplayTime(last?.time_s ?? 0);
+}
+
+function scrollHistoryChartToPlayhead(index, sampleCount) {
+  const scrollEl = document.getElementById("history-chart-scroll");
+  const canvas = document.getElementById("history-chart");
+  if (!scrollEl || !canvas || sampleCount <= 1) return;
+  const x = historyChartX(index, sampleCount, canvas.width);
+  const margin = 48;
+  if (x < scrollEl.scrollLeft + margin) {
+    scrollEl.scrollLeft = Math.max(0, x - margin);
+  } else if (x > scrollEl.scrollLeft + scrollEl.clientWidth - margin) {
+    scrollEl.scrollLeft = x - scrollEl.clientWidth + margin;
+  }
+}
+
+function buildReplayPathSeries(samples, index, speedsKmh) {
+  const clamped = Math.max(0, Math.min(index, samples.length - 1));
+  const xs = [];
+  const ys = [];
+  const speeds = [];
+  for (let i = 0; i <= clamped; i += 1) {
+    xs.push(Number(samples[i].position_x_m || 0));
+    ys.push(Number(samples[i].position_y_m || 0));
+    speeds.push(speedsKmh?.[i] ?? Number(samples[i].speed_mps || 0) * 3.6);
+  }
+  const sample = samples[clamped] || {};
+  return {
+    xs,
+    ys,
+    speeds,
+    x: xs[xs.length - 1] ?? 0,
+    y: ys[ys.length - 1] ?? 0,
+    heading: Number(sample.heading_deg || 0),
+  };
+}
+
+function renderHistoryReplayFrame({ scrollToPlayhead = false } = {}) {
+  const samples = state.historyReplaySamples;
+  const meta = state.historyReplayChartMeta;
+  const canvas = document.getElementById("history-chart");
+  if (!canvas || !samples.length || !meta) return;
+
+  const index = Math.max(0, Math.min(state.historyReplayIndex, samples.length - 1));
+  state.historyReplayIndex = index;
+  const layout = historyChartPanelLayout();
+
+  prepareHistoryChartCanvas(canvas, samples.length);
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawHistoryChartGrid(ctx, canvas.width, layout, samples.length);
+  plotSeries(ctx, samples, meta.speeds, "#3dd6c6", layout.speedTop, layout.panelHeight, meta.maxSpeed);
+  plotSeries(
+    ctx,
+    samples,
+    meta.steerNorm,
+    "#ffb020",
+    layout.steerTop,
+    layout.panelHeight,
+    1,
+  );
+  drawHistoryChartPlayhead(ctx, index, samples.length, layout);
+  ctx.fillStyle = "#8aa0b8";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(`Speed (max ${meta.maxSpeed.toFixed(1)} km/h)`, 10, 16);
+  ctx.fillText(`Steering (±${meta.maxSteer.toFixed(0)}°)`, 10, layout.steerTop - 4);
+
+  syncHistoryReplayScrubber(samples, index, { suppressInput: true });
+
+  const useReplayPath = isHistoryReplayPinned() || !isLiveTelemetryDrivingHistory();
+  if (state.historyPathLayer) {
+    if (useReplayPath) {
+      const replayPath = buildReplayPathSeries(samples, index, state.historyPathLayer.speeds);
+      state.historyPathLayer.replayMarker = replayPath;
+      state.historyMarkerFingerprint = historyMarkerFingerprint({
+        x: replayPath.x,
+        y: replayPath.y,
+        heading: replayPath.heading,
+      });
+    } else {
+      state.historyPathLayer.replayMarker = null;
+    }
+    schedulePathRedraw();
+  }
+
+  if (scrollToPlayhead) {
+    scrollHistoryChartToPlayhead(index, samples.length);
+  }
+}
+
+function setHistoryReplayIndex(index, { scrollToPlayhead = true } = {}) {
+  if (!state.historyReplaySamples.length) return;
+  const maxIndex = state.historyReplaySamples.length - 1;
+  state.historyReplayIndex = Math.max(0, Math.min(index, maxIndex));
+  renderHistoryReplayFrame({ scrollToPlayhead });
 }
 
 function historyChartWidthPx(sampleCount) {
@@ -1873,6 +2090,9 @@ async function drawSessionChart(sessionId) {
     state.historyViewSessionId = sessionId;
     state.historySamplesFingerprint = "";
     state.historyMarkerFingerprint = "";
+    state.historyReplaySessionId = "";
+    state.historyReplayIndex = 0;
+    state.historyReplayScrubbing = false;
   }
 
   await renderSessionLaps(sessionId);
@@ -1885,86 +2105,105 @@ async function drawSessionChart(sessionId) {
   const pathCanvas = document.getElementById("history-path");
   if (!samples.length) {
     ensureTrackMapVisible(sessionChanged);
+    state.historyReplaySamples = [];
+    state.historyReplayChartMeta = null;
+    syncHistoryReplayScrubber([], 0);
     return;
   }
 
-  const marker = resolvePathMarker(sessionId, samples);
   const samplesFingerprint = historySamplesFingerprint(sessionId, samples);
-  const markerFingerprint = historyMarkerFingerprint(marker);
   const samplesChanged = samplesFingerprint !== state.historySamplesFingerprint;
-  const markerChanged = markerFingerprint !== state.historyMarkerFingerprint;
+  const replaySessionChanged = sessionId !== state.historyReplaySessionId;
   const vehicleDims = await resolveVehicleDimensions(session.vehicle_name, session.vehicle_version);
   state.historyVehicleDims = vehicleDims;
 
-  if (!samplesChanged && !markerChanged) {
+  if (!samplesChanged && !replaySessionChanged) {
+    if (isLiveTelemetryDrivingHistory()) {
+      updateHistoryMarkerFromLive();
+    }
     return;
   }
 
-  const canvas = document.getElementById("history-chart");
-  const markerCanvas = document.getElementById("history-marker");
-  const ctx = canvas.getContext("2d");
+  const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
+  const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
+  const peakSpeed = Math.max(...speeds, 0);
+  const maxSpeed = Math.max(peakSpeed, 1);
+  const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
+  const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
+  const pathColorMaxKmh = await resolvePathColorMaxKmh(session, maxSpeed);
+  const xs = samples.map((s) => Number(s.position_x_m || 0));
+  const ys = samples.map((s) => Number(s.position_y_m || 0));
+  const last = samples[samples.length - 1];
+  const marker = resolvePathMarker(sessionId, samples);
 
-  if (samplesChanged) {
-    const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
-    const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
-    const peakSpeed = Math.max(...speeds, 0);
-    const maxSpeed = Math.max(peakSpeed, 1);
-    const pathColorMaxKmh = await resolvePathColorMaxKmh(session, maxSpeed);
+  state.historyReplaySamples = samples;
+  state.historyReplaySessionId = sessionId;
+  state.historyReplayChartMeta = { speeds, steerNorm, maxSpeed, maxSteer };
 
-    if (state.track.data && pathCanvas) {
-      state.historyPathBaseTransform = buildPathTransformFromTrack(state.track.data, pathCanvas);
-    } else if (pathCanvas) {
-      const bounds = collectPathBounds(marker);
-      state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
+  if (replaySessionChanged) {
+    if (isHistoryReplayPinned() || !isLiveTelemetryDrivingHistory()) {
+      state.historyReplayIndex = 0;
+      state.historyReplayScrubbing = false;
+    } else {
+      state.historyReplayIndex = samples.length - 1;
     }
-    if (sessionChanged && !state.pathFollowKart) {
-      resetPathView();
+  } else if (samplesChanged && isLiveTelemetryDrivingHistory() && !state.historyReplayScrubbing) {
+    state.historyReplayIndex = samples.length - 1;
+  }
+
+  if (state.track.data && pathCanvas) {
+    state.historyPathBaseTransform = buildPathTransformFromTrack(state.track.data, pathCanvas);
+  } else if (pathCanvas) {
+    const bounds = collectPathBounds({ xs, ys, useLiveMarker: false });
+    state.historyPathBaseTransform = buildPathTransform(bounds.xs, bounds.ys, pathCanvas);
+  }
+  if (sessionChanged && !state.pathFollowKart) {
+    resetPathView();
+  }
+
+  state.historyPathColorMaxKmh = pathColorMaxKmh;
+  state.historyPathLayer = {
+    marker,
+    speeds,
+    pathColorMaxKmh,
+    replayMarker: null,
+  };
+
+  const now = performance.now();
+  const shouldDrawCharts = sessionChanged
+    || isHistoryReplayPinned()
+    || !state.simRunning
+    || now - state.historyChartLastDrawMs > 750;
+  if (shouldDrawCharts) {
+    const replayMode = isHistoryReplayPinned() || !isLiveTelemetryDrivingHistory();
+    renderHistoryReplayFrame({
+      scrollToPlayhead: !replayMode && isLiveTelemetryDrivingHistory(),
+    });
+    if (sessionChanged && replayMode) {
+      scrollHistoryChartToStart();
+    } else if (!replayMode) {
+      scrollHistoryChartToEnd(sessionChanged);
     }
-
-    state.historyPathColorMaxKmh = pathColorMaxKmh;
-    state.historyPathLayer = {
-      marker,
-      speeds,
-      pathColorMaxKmh,
-    };
-
-    const now = performance.now();
-    const shouldDrawCharts = sessionChanged
-      || isHistoryReplayPinned()
-      || !state.simRunning
-      || now - state.historyChartLastDrawMs > 750;
-    if (shouldDrawCharts) {
-      const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
-      const steerNorm = steers.map((v) => (v + maxSteer) / (2 * maxSteer));
-      const panelHeight = (HISTORY_CHART_HEIGHT - 50) / 2;
-
-      prepareHistoryChartCanvas(canvas, samples.length);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      plotSeries(ctx, samples, speeds, "#3dd6c6", 24, panelHeight, maxSpeed);
-      plotSeries(ctx, samples, steerNorm, "#ffb020", 24 + panelHeight + 16, panelHeight, 1);
-      ctx.fillStyle = "#8aa0b8";
-      ctx.font = "12px sans-serif";
-      ctx.fillText(`Speed (max ${maxSpeed.toFixed(1)} km/h)`, 10, 16);
-      ctx.fillText(`Steering (±${maxSteer.toFixed(0)}°)`, 10, 24 + panelHeight + 12);
-      scrollHistoryChartToEnd(sessionChanged && isLiveTelemetryDrivingHistory());
-      if (sessionChanged && isHistoryReplayPinned()) {
-        scrollHistoryChartToStart();
-      }
-      state.historyChartLastDrawMs = now;
-    }
-
+    state.historyChartLastDrawMs = now;
+  } else {
     schedulePathRedraw();
   }
 
-  if (markerChanged && !samplesChanged) {
-    if (state.historyPathLayer) {
-      state.historyPathLayer.marker = marker;
-    }
-    drawPathMarkerOverlay(marker.x, marker.y, marker.heading, vehicleDims);
+  state.historySamplesFingerprint = samplesFingerprint;
+  if (!isLiveTelemetryDrivingHistory() || isHistoryReplayPinned()) {
+    const replayPath = buildReplayPathSeries(samples, state.historyReplayIndex, speeds);
+    state.historyMarkerFingerprint = historyMarkerFingerprint({
+      x: replayPath.x,
+      y: replayPath.y,
+      heading: replayPath.heading,
+    });
+  } else {
+    state.historyMarkerFingerprint = historyMarkerFingerprint(marker);
   }
 
-  state.historySamplesFingerprint = samplesFingerprint;
-  state.historyMarkerFingerprint = markerFingerprint;
+  if (isLiveTelemetryDrivingHistory() && !isHistoryReplayPinned()) {
+    updateHistoryMarkerFromLive();
+  }
 }
 
 function updateHistoryMarkerFromLive() {
@@ -2871,8 +3110,18 @@ function setupControls() {
     } else {
       clearHistoryPin();
     }
+    state.historyReplayScrubbing = false;
     invalidateHistoryDrawCache();
     void drawSessionChart(sessionId);
+  });
+  const historyReplayScrubber = document.getElementById("history-replay-scrubber");
+  historyReplayScrubber?.addEventListener("pointerdown", () => {
+    state.historyReplayScrubbing = true;
+  });
+  historyReplayScrubber?.addEventListener("input", (event) => {
+    if (state.historyReplaySuppressScrub) return;
+    state.historyReplayScrubbing = true;
+    setHistoryReplayIndex(Number(event.target.value), { scrollToPlayhead: true });
   });
   document.getElementById("track-select").addEventListener("change", (event) => {
     setStartFinishEditMode(false);
