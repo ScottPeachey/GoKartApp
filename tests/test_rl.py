@@ -30,6 +30,10 @@ def test_training_setup_from_dict_round_trip() -> None:
     setup = training_setup_from_dict(schema["defaults"])
     assert setup.objective == "god"
     assert setup.ppo.ent_coef == pytest.approx(0.05)
+    throttle_field = next(
+        field for field in schema["sections"]["action"]["fields"] if field["key"] == "throttle_breakaway"
+    )
+    assert throttle_field["step"] == pytest.approx(0.05)
     custom = training_setup_from_dict(
         {
             "objective": "custom",

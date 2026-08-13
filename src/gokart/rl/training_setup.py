@@ -79,22 +79,63 @@ def reward_preset_dict(objective: str) -> dict[str, float]:
     return asdict(GOD_WEIGHTS)
 
 
+_NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
+    "action.throttle_breakaway": {"step": 0.05, "min": 0, "max": 1},
+    "action.standing_start_speed_mps": {"step": 0.05, "min": 0, "max": 5},
+    "action.brake_cutoff": {"step": 0.05, "min": 0, "max": 1},
+    "env.max_steps": {"step": 500, "min": 100, "max": 100_000},
+    "env.stagnant_speed_mps": {"step": 0.01, "min": 0, "max": 2},
+    "env.stagnant_delta_s": {"step": 0.0001, "min": 0, "max": 1},
+    "env.max_stagnant_steps": {"step": 50, "min": 50, "max": 10_000},
+    "ppo.learning_rate": {"step": 0.00001, "min": 0.000001, "max": 0.01},
+    "ppo.n_steps": {"step": 256, "min": 256, "max": 16_384},
+    "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
+    "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
+    "rewards.progress": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.centerline": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.heading": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.speed": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.standstill": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.throttle_go": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.low_speed_steer": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.lap_bonus": {"step": 1, "min": 0, "max": 500},
+    "rewards.fault_block": {"step": 1, "min": 0, "max": 500},
+    "rewards.fault_derate": {"step": 1, "min": 0, "max": 500},
+    "rewards.off_track_rate": {"step": 0.1, "min": 0, "max": 50},
+    "rewards.off_track_terminal": {"step": 1, "min": 0, "max": 500},
+    "rewards.battery_margin": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.motor_margin": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.soc_margin": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.jerk": {"step": 0.01, "min": 0, "max": 5},
+    "rewards.throttle_brake_overlap": {"step": 0.1, "min": 0, "max": 50},
+    "rewards.time_penalty": {"step": 0.005, "min": 0, "max": 1},
+}
+
+
 def training_setup_schema() -> dict[str, Any]:
     """Field metadata for the dashboard UI."""
     defaults = training_setup_to_dict(default_training_setup())
 
-    def _section(cls: type, title: str, descriptions: dict[str, str]) -> dict[str, Any]:
+    def _section(
+        cls: type,
+        section_key: str,
+        title: str,
+        descriptions: dict[str, str],
+    ) -> dict[str, Any]:
+        field_defs: list[dict[str, Any]] = []
+        for field in fields(cls):
+            entry: dict[str, Any] = {
+                "key": field.name,
+                "type": "bool" if field.type is bool else "number",
+                "default": getattr(cls(), field.name),
+                "description": descriptions.get(field.name, ""),
+            }
+            if field.type is not bool:
+                entry.update(_NUMBER_FIELD_META.get(f"{section_key}.{field.name}", {"step": 0.01}))
+            field_defs.append(entry)
         return {
             "title": title,
-            "fields": [
-                {
-                    "key": field.name,
-                    "type": "bool" if field.type is bool else "number",
-                    "default": getattr(cls(), field.name),
-                    "description": descriptions.get(field.name, ""),
-                }
-                for field in fields(cls)
-            ],
+            "fields": field_defs,
         }
 
     return {
@@ -111,6 +152,7 @@ def training_setup_schema() -> dict[str, Any]:
         "sections": {
             "action": _section(
                 ActionConfig,
+                "action",
                 "Action mapping",
                 {
                     "throttle_breakaway": "Minimum throttle applied when the policy requests gas from a standstill.",
@@ -120,6 +162,7 @@ def training_setup_schema() -> dict[str, Any]:
             ),
             "env": _section(
                 EnvRuntimeConfig,
+                "env",
                 "Episode / environment",
                 {
                     "max_steps": "Maximum ticks per episode before truncation.",
@@ -131,6 +174,7 @@ def training_setup_schema() -> dict[str, Any]:
             ),
             "ppo": _section(
                 PpoConfig,
+                "ppo",
                 "PPO learner",
                 {
                     "learning_rate": "Adam learning rate.",
@@ -141,6 +185,7 @@ def training_setup_schema() -> dict[str, Any]:
             ),
             "rewards": _section(
                 RewardWeights,
+                "rewards",
                 "Reward weights",
                 {
                     "progress": "Reward per metre of forward track progress.",

@@ -97,6 +97,10 @@ class SaveTrackDirectionRequest(BaseModel):
     direction: Literal["clockwise", "counterclockwise"]
 
 
+class DeleteSessionsRequest(BaseModel):
+    session_ids: list[str] = Field(min_length=1)
+
+
 class RlTrainStartRequest(BaseModel):
     vehicle_name: str
     vehicle_version: str
@@ -403,6 +407,14 @@ def create_app(
         if not telemetry_store.delete_session(session_id):
             raise HTTPException(status_code=404, detail="Session not found")
         return {"deleted": True, "session_id": session_id}
+
+    @app.post("/api/sessions/delete")
+    def api_delete_sessions(request: DeleteSessionsRequest) -> dict[str, Any]:
+        deleted = telemetry_store.delete_sessions(request.session_ids)
+        not_found = [session_id for session_id in request.session_ids if session_id not in deleted]
+        if not deleted:
+            raise HTTPException(status_code=404, detail="No sessions found")
+        return {"deleted": deleted, "not_found": not_found}
 
     @app.get("/api/rl/policy")
     def api_rl_policy(

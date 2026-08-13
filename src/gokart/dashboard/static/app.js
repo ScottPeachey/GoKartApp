@@ -40,6 +40,7 @@ const state = {
   hiddenChannels: new Set(),
   channelCustomiseOpen: false,
   historySessionListKey: "",
+  historyDeleteSelection: new Set(),
   historyViewSessionId: "",
   historySamplesFingerprint: "",
   historyMarkerFingerprint: "",
@@ -1310,6 +1311,7 @@ function sortSessionsForDisplay(sessions) {
 
 function updateSessionSelect(sessions, select, previousSessionId) {
   const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}`).join("|");
+  const listEl = document.getElementById("session-list");
   if (listKey === state.historySessionListKey && select.options.length === sessions.length) {
     for (const session of sessions) {
       const option = select.querySelector(`option[value="${session.session_id}"]`);
@@ -1318,23 +1320,144 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       if (option.textContent !== label) {
         option.textContent = label;
       }
+      const labelBtn = listEl?.querySelector(
+        `.session-list-item[data-session-id="${session.session_id}"] .session-list-label`,
+      );
+      if (labelBtn && labelBtn.textContent !== label) {
+        labelBtn.textContent = label;
+      }
     }
     return;
   }
 
   state.historySessionListKey = listKey;
   select.innerHTML = "";
-  for (const session of sortSessionsForDisplay(sessions)) {
+  if (listEl) listEl.innerHTML = "";
+
+  const sorted = sortSessionsForDisplay(sessions);
+  const knownIds = new Set(sessions.map((session) => session.session_id));
+  for (const sessionId of [...state.historyDeleteSelection]) {
+    if (!knownIds.has(sessionId)) {
+      state.historyDeleteSelection.delete(sessionId);
+    }
+  }
+
+  for (const session of sorted) {
     const option = document.createElement("option");
     option.value = session.session_id;
     option.textContent = sessionOptionLabel(session);
     select.appendChild(option);
+
+    if (listEl) {
+      const row = document.createElement("div");
+      row.className = "session-list-item";
+      row.dataset.sessionId = session.session_id;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "session-list-check";
+      checkbox.checked = state.historyDeleteSelection.has(session.session_id);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          state.historyDeleteSelection.add(session.session_id);
+        } else {
+          state.historyDeleteSelection.delete(session.session_id);
+        }
+        syncSessionDeleteControls();
+      });
+
+      const labelBtn = document.createElement("button");
+      labelBtn.type = "button";
+      labelBtn.className = "session-list-label";
+      labelBtn.textContent = sessionOptionLabel(session);
+      labelBtn.addEventListener("click", () => {
+        void selectReplaySession(session.session_id, { autoPlay: state.historyReplayPlaying });
+      });
+
+      row.appendChild(checkbox);
+      row.appendChild(labelBtn);
+      listEl.appendChild(row);
+    }
   }
+
   if (previousSessionId && [...select.options].some((o) => o.value === previousSessionId)) {
     select.value = previousSessionId;
   } else if (sessions.length) {
     select.value = sessions[0].session_id;
   }
+  syncSessionListActiveRow();
+  syncSessionDeleteControls();
+}
+
+function syncSessionListActiveRow() {
+  const activeId = document.getElementById("session-select")?.value;
+  document.querySelectorAll(".session-list-item").forEach((row) => {
+    row.classList.toggle("active", row.dataset.sessionId === activeId);
+  });
+}
+
+function syncSessionDeleteControls() {
+  const count = state.historyDeleteSelection.size;
+  const deleteBtn = document.getElementById("btn-session-delete-selected");
+  if (deleteBtn) {
+    deleteBtn.disabled = count === 0;
+    deleteBtn.textContent = count ? `Delete selected (${count})` : "Delete selected";
+  }
+}
+
+function selectAllSessionsForDelete() {
+  document.querySelectorAll(".session-list-item").forEach((row) => {
+    const sessionId = row.dataset.sessionId;
+    if (!sessionId) return;
+    const checkbox = row.querySelector(".session-list-check");
+    if (checkbox) checkbox.checked = true;
+    state.historyDeleteSelection.add(sessionId);
+  });
+  syncSessionDeleteControls();
+}
+
+function clearSessionDeleteSelection() {
+  state.historyDeleteSelection.clear();
+  document.querySelectorAll(".session-list-check").forEach((checkbox) => {
+    checkbox.checked = false;
+  });
+  syncSessionDeleteControls();
+}
+
+async function deleteSessions(sessionIds) {
+  const uniqueIds = [...new Set(sessionIds.filter(Boolean))];
+  if (!uniqueIds.length) return;
+
+  const count = uniqueIds.length;
+  const message = count === 1
+    ? "Delete this recording? This cannot be undone."
+    : `Delete ${count} recordings? This cannot be undone.`;
+  if (!window.confirm(message)) return;
+
+  const select = document.getElementById("session-select");
+  const currentId = select?.value;
+  const willDeleteCurrent = currentId && uniqueIds.includes(currentId);
+  const adjacentId = willDeleteCurrent ? (getAdjacentSessionId(1) || getAdjacentSessionId(-1)) : null;
+
+  stopHistoryReplayPlayback();
+  if (willDeleteCurrent) clearHistoryPin();
+
+  await api("/api/sessions/delete", {
+    method: "POST",
+    body: JSON.stringify({ session_ids: uniqueIds }),
+  });
+
+  for (const sessionId of uniqueIds) {
+    state.historyDeleteSelection.delete(sessionId);
+  }
+
+  await refreshHistoryView(true);
+  if (willDeleteCurrent && adjacentId && !uniqueIds.includes(adjacentId)) {
+    await selectReplaySession(adjacentId, { autoPlay: false });
+  } else {
+    syncSessionListActiveRow();
+  }
+  syncSessionDeleteControls();
 }
 
 function resolvePathMarker(sessionId, samples) {
@@ -1755,6 +1878,7 @@ async function selectReplaySession(sessionId, { autoPlay = false } = {}) {
     clearHistoryPin();
   }
   select.value = sessionId;
+  syncSessionListActiveRow();
   state.historyReplayScrubbing = false;
   prepareHistorySessionSwitch();
   await drawSessionChart(sessionId);
@@ -1772,16 +1896,7 @@ async function navigateReplaySession(delta) {
 async function deleteCurrentReplaySession() {
   const sessionId = document.getElementById("session-select")?.value;
   if (!sessionId) return;
-  if (!window.confirm("Delete this recording? This cannot be undone.")) return;
-
-  const adjacentId = getAdjacentSessionId(1) || getAdjacentSessionId(-1);
-  await api(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
-  stopHistoryReplayPlayback();
-  clearHistoryPin();
-  await refreshHistoryView(true);
-  if (adjacentId) {
-    await selectReplaySession(adjacentId, { autoPlay: false });
-  }
+  await deleteSessions([sessionId]);
 }
 
 function handleReplayPlaybackFinished() {
@@ -3104,8 +3219,9 @@ function renderRlTrainingSections(setup) {
         input.type = "number";
         input.id = rlFieldId(sectionKey, field.key);
         input.value = String(value);
-        input.step = field.key.includes("rate") || field.key.includes("coef") ? "0.001" : "1";
-        if (field.key === "learning_rate") input.step = "0.0001";
+        input.step = String(field.step ?? 0.01);
+        if (field.min != null) input.min = String(field.min);
+        if (field.max != null) input.max = String(field.max);
         input.dataset.section = sectionKey;
         input.dataset.key = field.key;
         input.dataset.type = "number";
@@ -3732,8 +3848,18 @@ function setupControls() {
     }
     void refreshHistoryView(true);
   });
+  document.getElementById("btn-session-select-all")?.addEventListener("click", () => {
+    selectAllSessionsForDelete();
+  });
+  document.getElementById("btn-session-clear-selection")?.addEventListener("click", () => {
+    clearSessionDeleteSelection();
+  });
+  document.getElementById("btn-session-delete-selected")?.addEventListener("click", () => {
+    void deleteSessions([...state.historyDeleteSelection]);
+  });
   document.getElementById("session-select").addEventListener("change", (event) => {
     const sessionId = event.target.value;
+    syncSessionListActiveRow();
     if (state.trainingRunning || state.simRunning) {
       pinHistorySession(sessionId);
       setPathFollowKart(false);

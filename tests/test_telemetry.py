@@ -138,6 +138,31 @@ def test_delete_session_removes_samples_and_metadata(temp_store: TelemetryStore)
     assert temp_store.load_samples(recorder.session_id) == []
 
 
+def test_delete_sessions_removes_multiple(temp_store: TelemetryStore) -> None:
+    ids = []
+    for index in range(3):
+        recorder = SessionRecorder(
+            SessionMetadata(
+                vehicle_name="Scott Kart V1",
+                vehicle_version="V1.0",
+                config_hash=f"bulk-delete-{index}",
+                driver_profile="Owner",
+                drive_mode="Default",
+            ),
+            store=temp_store,
+            log_every_n=1,
+        )
+        recorder.record_tick({"time_s": float(index), "speed_mps": 1.0})
+        recorder.close(end_soc=1.0)
+        ids.append(recorder.session_id)
+
+    deleted = temp_store.delete_sessions(ids)
+    assert deleted == ids
+    for session_id in ids:
+        assert temp_store.get_session(session_id) is None
+        assert temp_store.load_samples(session_id) == []
+
+
 def test_bus_overflow_does_not_block_producer() -> None:
     bus = TelemetryBus()
     sub_id = bus.subscribe(name="slow", maxsize=2)

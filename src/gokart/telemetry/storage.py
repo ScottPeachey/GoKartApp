@@ -342,12 +342,19 @@ class TelemetryStore:
                 writer.writerow({name: sample.get(name, "") for name in CHANNEL_NAMES})
 
     def delete_session(self, session_id: str) -> bool:
+        return session_id in self.delete_sessions([session_id])
+
+    def delete_sessions(self, session_ids: list[str]) -> list[str]:
+        deleted: list[str] = []
         with self._connect() as conn:
-            conn.execute("DELETE FROM samples WHERE session_id = ?", (session_id,))
-            conn.execute("DELETE FROM laps WHERE session_id = ?", (session_id,))
-            result = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            for session_id in session_ids:
+                conn.execute("DELETE FROM samples WHERE session_id = ?", (session_id,))
+                conn.execute("DELETE FROM laps WHERE session_id = ?", (session_id,))
+                result = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+                if result.rowcount > 0:
+                    deleted.append(session_id)
             conn.commit()
-            return result.rowcount > 0
+        return deleted
 
     @staticmethod
     def _row_to_info(row: sqlite3.Row) -> SessionInfo:

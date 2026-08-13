@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=29" />
+  <link rel="stylesheet" href="/static/style.css?v=30" />
 </head>
 <body>
   <header>
@@ -236,15 +236,15 @@
               </select>
             </label>
             <label>Seed
-              <input id="train-seed" type="number" step="1" value="0" />
+              <input id="train-seed" type="number" step="1" value="0" class="rl-train-run-input" />
             </label>
           </div>
           <div class="row">
             <label>Total steps
-              <input id="train-total-steps" type="number" min="1000" step="1000" value="50000" />
+              <input id="train-total-steps" type="number" min="1000" step="1000" value="50000" class="rl-train-run-input" />
             </label>
             <label>Preview every
-              <input id="train-preview-freq" type="number" min="500" step="500" value="10000" />
+              <input id="train-preview-freq" type="number" min="500" step="500" value="10000" class="rl-train-run-input" />
               steps
             </label>
           </div>
@@ -339,10 +339,14 @@
 
       <section id="tab-history" class="tab-panel telemetry-panel hidden">
         <h3 class="telemetry-panel-title">Session History</h3>
-        <div class="row">
+        <div class="row session-toolbar">
           <button id="btn-refresh-sessions">Refresh</button>
-          <select id="session-select"></select>
+          <button id="btn-session-select-all" type="button" class="btn-secondary">Select all</button>
+          <button id="btn-session-clear-selection" type="button" class="btn-secondary">Clear</button>
+          <button id="btn-session-delete-selected" type="button" class="btn-secondary" disabled>Delete selected</button>
         </div>
+        <div id="session-list" class="session-list" role="listbox" aria-label="Session recordings"></div>
+        <select id="session-select" class="visually-hidden" aria-hidden="true" tabindex="-1"></select>
         <div id="session-laps-panel" class="session-laps hidden">
           <h4>Laps</h4>
           <table id="session-laps-table" class="session-laps-table">
@@ -529,7 +533,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=71"></script>
+  <script src="/static/app.js?v=72"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
