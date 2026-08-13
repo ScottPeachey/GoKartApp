@@ -373,10 +373,14 @@ def create_app(
         }
 
     @app.get("/api/sessions/{session_id}/samples")
-    def api_session_samples(session_id: str, limit: int = 5000) -> list[dict[str, Any]]:
+    def api_session_samples(
+        session_id: str,
+        limit: int = 5000,
+        from_start: bool = False,
+    ) -> list[dict[str, Any]]:
         if telemetry_store.get_session(session_id) is None:
             raise HTTPException(status_code=404, detail="Session not found")
-        samples = telemetry_store.load_samples(session_id, limit=limit)
+        samples = telemetry_store.load_samples(session_id, limit=limit, from_start=from_start)
         return samples
 
     @app.get("/api/sessions/{session_id}/laps")

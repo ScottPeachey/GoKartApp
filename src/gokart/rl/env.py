@@ -120,5 +120,6 @@ def make_env(
         target_laps=target_laps,
         auto_boot=True,
         max_steps=max_steps,
+        terminate_on_off_track=True,
     )
     return TrackRacingEnv(session_config=config, objective=objective)

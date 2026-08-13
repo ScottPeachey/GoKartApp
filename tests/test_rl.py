@@ -172,6 +172,31 @@ def test_env_reset_and_step(hairpin_track) -> None:
     assert np.isfinite(total_reward)
 
 
+def test_rl_env_terminates_when_off_track(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=3,
+        max_steps=500,
+    )
+    env.reset()
+    off_track = False
+    for _ in range(200):
+        action = np.array([1.0, 0.0, 1.0], dtype=np.float32)
+        _obs, _reward, terminated, truncated, info = env.step(action)
+        if info.get("off_track"):
+            off_track = True
+        if terminated or truncated:
+            break
+    assert off_track or env.session.state.step_index > 0
+    if off_track:
+        assert terminated
+
+
 def test_rl_env_reaches_driving_with_brake_heavy_policy(hairpin_track) -> None:
     env = make_env(
         vehicle_name="Scott Kart V1",

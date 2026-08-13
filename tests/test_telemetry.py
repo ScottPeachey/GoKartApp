@@ -96,6 +96,28 @@ def test_load_samples_limit_returns_latest_rows(temp_store: TelemetryStore) -> N
     assert latest[1]["speed_mps"] == pytest.approx(4.0)
 
 
+def test_load_samples_from_start_returns_earliest_rows(temp_store: TelemetryStore) -> None:
+    recorder = SessionRecorder(
+        SessionMetadata(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            config_hash="from-start-test",
+            driver_profile="Owner",
+            drive_mode="Default",
+        ),
+        store=temp_store,
+        log_every_n=1,
+    )
+    for index in range(5):
+        recorder.record_tick({"time_s": float(index), "speed_mps": float(index)})
+    recorder.close(end_soc=1.0)
+
+    earliest = temp_store.load_samples(recorder.session_id, limit=2, from_start=True)
+    assert len(earliest) == 2
+    assert earliest[0]["speed_mps"] == pytest.approx(0.0)
+    assert earliest[1]["speed_mps"] == pytest.approx(1.0)
+
+
 def test_bus_overflow_does_not_block_producer() -> None:
     bus = TelemetryBus()
     sub_id = bus.subscribe(name="slow", maxsize=2)

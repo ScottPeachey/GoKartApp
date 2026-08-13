@@ -20,6 +20,9 @@ const state = {
   historyReplayScrubbing: false,
   historyReplaySuppressScrub: false,
   historyReplayChartMeta: null,
+  historyReplayPlaying: false,
+  historyReplayRaf: null,
+  historyReplayPlayAnchor: null,
   pendingLiveSample: null,
   liveUiScheduled: false,
   channelRowsBuilt: false,
@@ -155,6 +158,7 @@ const HISTORY_CHART_PX_PER_SAMPLE = 1.5;
 const HISTORY_CHART_TOP_PAD = 24;
 const HISTORY_CHART_PANEL_GAP = 16;
 const HISTORY_CHART_BOTTOM_PAD = 8;
+const HISTORY_REPLAY_PLAYBACK_RATE = 1.0;
 const TRAIN_STATUS_LABELS = {
   idle: "Idle",
   starting: "Starting…",
@@ -1639,6 +1643,7 @@ function drawKartMarker(markerCtx, x, y, headingDeg, dims, toPx, canvas, transfo
 }
 
 function invalidateHistoryDrawCache() {
+  stopHistoryReplayPlayback();
   state.historyViewSessionId = "";
   state.historySamplesFingerprint = "";
   state.historyMarkerFingerprint = "";
@@ -1998,8 +2003,85 @@ function renderHistoryReplayFrame({ scrollToPlayhead = false } = {}) {
   }
 }
 
-function setHistoryReplayIndex(index, { scrollToPlayhead = true } = {}) {
+function isHistoryReplayMode() {
+  return isHistoryReplayPinned() || !isLiveTelemetryDrivingHistory();
+}
+
+function stopHistoryReplayPlayback() {
+  state.historyReplayPlaying = false;
+  state.historyReplayPlayAnchor = null;
+  if (state.historyReplayRaf) {
+    cancelAnimationFrame(state.historyReplayRaf);
+    state.historyReplayRaf = null;
+  }
+}
+
+function startHistoryReplayPlayback({ restart = false } = {}) {
+  if (!isHistoryReplayMode() || state.historyReplayScrubbing) return;
+
+  const samples = state.historyReplaySamples;
+  if (samples.length < 2) return;
+
+  if (restart) {
+    state.historyReplayIndex = 0;
+    renderHistoryReplayFrame({ scrollToPlayhead: true });
+  }
+
+  stopHistoryReplayPlayback();
+  state.historyReplayPlaying = true;
+  state.historyReplayPlayAnchor = {
+    wallMs: performance.now(),
+    timeS: Number(samples[state.historyReplayIndex]?.time_s ?? 0),
+  };
+
+  const tick = () => {
+    if (!state.historyReplayPlaying || state.historyReplayScrubbing || !isHistoryReplayMode()) {
+      stopHistoryReplayPlayback();
+      return;
+    }
+
+    const currentSamples = state.historyReplaySamples;
+    if (currentSamples.length < 2) {
+      stopHistoryReplayPlayback();
+      return;
+    }
+
+    const anchor = state.historyReplayPlayAnchor;
+    if (!anchor) {
+      stopHistoryReplayPlayback();
+      return;
+    }
+
+    const elapsedS = ((performance.now() - anchor.wallMs) / 1000) * HISTORY_REPLAY_PLAYBACK_RATE;
+    const targetTimeS = anchor.timeS + elapsedS;
+    let index = state.historyReplayIndex;
+    while (
+      index < currentSamples.length - 1
+      && Number(currentSamples[index + 1].time_s ?? 0) <= targetTimeS
+    ) {
+      index += 1;
+    }
+
+    if (index !== state.historyReplayIndex) {
+      setHistoryReplayIndex(index, { scrollToPlayhead: true, fromPlayback: true });
+    }
+
+    if (index >= currentSamples.length - 1) {
+      stopHistoryReplayPlayback();
+      return;
+    }
+
+    state.historyReplayRaf = requestAnimationFrame(tick);
+  };
+
+  state.historyReplayRaf = requestAnimationFrame(tick);
+}
+
+function setHistoryReplayIndex(index, { scrollToPlayhead = true, fromPlayback = false } = {}) {
   if (!state.historyReplaySamples.length) return;
+  if (!fromPlayback && state.historyReplayPlaying) {
+    stopHistoryReplayPlayback();
+  }
   const maxIndex = state.historyReplaySamples.length - 1;
   state.historyReplayIndex = Math.max(0, Math.min(index, maxIndex));
   renderHistoryReplayFrame({ scrollToPlayhead });
@@ -2097,10 +2179,11 @@ async function drawSessionChart(sessionId) {
 
   await renderSessionLaps(sessionId);
 
-  const [samples, session] = await Promise.all([
-    api(`/api/sessions/${sessionId}/samples?limit=5000`),
-    api(`/api/sessions/${sessionId}`),
-  ]);
+  const session = await api(`/api/sessions/${sessionId}`);
+  const sampleLimit = Math.min(Math.max(session.sample_count || 5000, 1), 50_000);
+  const samples = await api(
+    `/api/sessions/${sessionId}/samples?limit=${sampleLimit}&from_start=true`,
+  );
 
   const pathCanvas = document.getElementById("history-path");
   if (!samples.length) {
@@ -2179,9 +2262,14 @@ async function drawSessionChart(sessionId) {
     renderHistoryReplayFrame({
       scrollToPlayhead: !replayMode && isLiveTelemetryDrivingHistory(),
     });
-    if (sessionChanged && replayMode) {
-      scrollHistoryChartToStart();
-    } else if (!replayMode) {
+    if (replayMode) {
+      if (sessionChanged) {
+        scrollHistoryChartToStart();
+      }
+      if (sessionChanged || replaySessionChanged) {
+        startHistoryReplayPlayback({ restart: true });
+      }
+    } else {
       scrollHistoryChartToEnd(sessionChanged);
     }
     state.historyChartLastDrawMs = now;
@@ -3117,6 +3205,7 @@ function setupControls() {
   const historyReplayScrubber = document.getElementById("history-replay-scrubber");
   historyReplayScrubber?.addEventListener("pointerdown", () => {
     state.historyReplayScrubbing = true;
+    stopHistoryReplayPlayback();
   });
   historyReplayScrubber?.addEventListener("input", (event) => {
     if (state.historyReplaySuppressScrub) return;

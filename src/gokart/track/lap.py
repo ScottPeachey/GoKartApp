@@ -40,12 +40,14 @@ class LapTimer:
     track: Track
     min_speed_mps: float = 2.0
     min_arm_distance_m: float = 25.0
+    min_lap_distance_fraction: float = 0.75
     state: LapTimerState = field(default_factory=LapTimerState)
     completed_laps: list[CompletedLap] = field(default_factory=list)
     _prev_x: float | None = None
     _prev_y: float | None = None
     _armed: bool = False
     _distance_since_start: float = 0.0
+    _lap_distance_m: float = 0.0
     _lap_start_time_s: float = 0.0
 
     def __post_init__(self) -> None:
@@ -63,6 +65,7 @@ class LapTimer:
         self._prev_y = None
         self._armed = False
         self._distance_since_start = 0.0
+        self._lap_distance_m = 0.0
         self._lap_start_time_s = time_s
 
     def update(self, time_s: float, x: float, y: float, speed_mps: float) -> dict[str, float]:
@@ -73,17 +76,20 @@ class LapTimer:
                 if self._distance_since_start >= self.min_arm_distance_m:
                     self._armed = True
                     self._lap_start_time_s = time_s
-            elif detect_sf_crossing(
-                self._prev_x,
-                self._prev_y,
-                x,
-                y,
-                self._sf,
-                self.track.direction,
-                min_speed_mps=self.min_speed_mps,
-                speed_mps=speed_mps,
-            ):
-                self._on_sf_cross(time_s)
+                    self._lap_distance_m = 0.0
+            else:
+                self._lap_distance_m += step_dist
+                if detect_sf_crossing(
+                    self._prev_x,
+                    self._prev_y,
+                    x,
+                    y,
+                    self._sf,
+                    self.track.direction,
+                    min_speed_mps=self.min_speed_mps,
+                    speed_mps=speed_mps,
+                ):
+                    self._on_sf_cross(time_s)
 
         self._prev_x = x
         self._prev_y = y
@@ -101,7 +107,13 @@ class LapTimer:
 
     def _on_sf_cross(self, time_s: float) -> None:
         lap_time = max(0.0, time_s - self._lap_start_time_s)
-        if self.state.lap_number >= 1 and lap_time > 0.5:
+        min_lap_distance_m = self.track.length_m * self.min_lap_distance_fraction
+        valid_lap = (
+            self.state.lap_number >= 1
+            and lap_time > 0.5
+            and self._lap_distance_m >= min_lap_distance_m
+        )
+        if valid_lap:
             self.state.last_lap_time_s = lap_time
             if not self.state.has_best_lap or lap_time < self.state.best_lap_time_s:
                 self.state.best_lap_time_s = lap_time
@@ -116,6 +128,7 @@ class LapTimer:
             self.state.lap_number += 1
         self._lap_start_time_s = time_s
         self.state.lap_time_s = 0.0
+        self._lap_distance_m = 0.0
 
 
 def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> TrackProjection:

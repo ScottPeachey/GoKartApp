@@ -82,6 +82,7 @@ class SessionConfig:
     dt_s: float = DEFAULT_DT_S
     max_steps: int = 50_000
     free_mode: bool = False
+    terminate_on_off_track: bool = False
 
 
 @dataclass
@@ -493,9 +494,14 @@ class SimulationSession:
 
         terminated = False
         truncated = False
+        lateral_offset_m = abs(float(track_values.get("track_lateral_m", 0.0)))
+        half_width = self.config.track.width_m * 0.5
+        off_track = lateral_offset_m > half_width
         if safety_state == SafetyState.SAFE_SHUTDOWN:
             terminated = True
         elif safety_state == SafetyState.FAULT and self._has_blocking_fault(safety_outputs):
+            terminated = True
+        elif self.config.terminate_on_off_track and off_track:
             terminated = True
         elif (
             self.config.target_laps > 0
@@ -509,10 +515,7 @@ class SimulationSession:
             "delta_track_s_m": delta_s,
             "track_s_m": track_s,
             "lateral_offset_m": float(track_values.get("track_lateral_m", 0.0)),
-            "off_track": float(
-                abs(float(track_values.get("track_lateral_m", 0.0)))
-                > self.config.track.width_m * 0.5
-            ),
+            "off_track": float(off_track),
             "track_width_m": self.config.track.width_m,
             "lap_number": float(track_values.get("lap_number", 0.0)),
             "lap_time_s": float(track_values.get("lap_time_s", 0.0)),

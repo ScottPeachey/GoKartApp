@@ -94,12 +94,36 @@ def test_lap_timer_records_completed_lap(hairpin_track) -> None:
     assert not timer.completed_laps
 
     timer._lap_start_time_s = 0.6
+    timer._lap_distance_m = hairpin_track.length_m * 0.75
     timer._on_sf_cross(2.0)
 
     assert timer.completed_laps
     assert timer.completed_laps[0].lap_number == 1
     assert timer.completed_laps[0].lap_time_s == pytest.approx(1.4, abs=0.05)
     assert timer.state.lap_number == 2
+
+
+def test_lap_timer_ignores_short_loop(hairpin_track) -> None:
+    timer = LapTimer(
+        hairpin_track,
+        min_arm_distance_m=0.0,
+        min_lap_distance_fraction=0.75,
+    )
+    x, y, heading = spawn_pose_on_track(hairpin_track)
+    forward = (math.cos(heading), math.sin(heading))
+    lateral = (-forward[1], forward[0])
+
+    timer.update(0.0, x - forward[0] * 2.0, y - forward[1] * 2.0, 0.0)
+    timer.update(0.6, x + forward[0] * 2.0, y + forward[1] * 2.0, 5.0)
+    timer._lap_start_time_s = 0.6
+    timer._lap_distance_m = hairpin_track.length_m * 0.2
+
+    timer.update(1.0, x + lateral[0] * 8.0, y + lateral[1] * 8.0, 5.0)
+    timer.update(1.4, x - forward[0] * 2.0, y - forward[1] * 2.0, 5.0)
+    timer.update(1.8, x + forward[0] * 2.0, y + forward[1] * 2.0, 5.0)
+
+    assert not timer.completed_laps
+    assert timer.state.lap_number == 1
 
 
 def test_run_simulation_spawns_on_track(hairpin_track) -> None:
