@@ -82,19 +82,19 @@ def test_reward_penalizes_stagnant_terminal() -> None:
 
 
 def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
-    throttle, brake, steering = decode_rl_action(np.array([0.0, 0.0, 0.5], dtype=np.float32))
+    throttle, brake, steering = decode_rl_action(np.array([-1.0, 0.0, 0.5], dtype=np.float32))
     assert throttle == 0.0
     assert brake == 0.0
     assert steering == 0.5
 
     assist_throttle, _, _ = decode_rl_action(
-        np.array([0.2, 0.0, 0.0], dtype=np.float32),
+        np.array([-0.6, 0.0, 0.0], dtype=np.float32),
         speed_mps=0.0,
     )
     assert assist_throttle == pytest.approx(0.2)
 
     moving_throttle, _, _ = decode_rl_action(
-        np.array([0.2, 0.0, 0.0], dtype=np.float32),
+        np.array([-0.6, 0.0, 0.0], dtype=np.float32),
         speed_mps=2.0,
     )
     assert moving_throttle == pytest.approx(0.2)
@@ -103,15 +103,51 @@ def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
     assert full_throttle == 1.0
 
     coast_throttle, coast_brake, _ = decode_rl_action(
-        np.array([0.2, 0.8, 0.0], dtype=np.float32),
+        np.array([-0.6, 0.8, 0.0], dtype=np.float32),
         speed_mps=2.0,
     )
     assert coast_throttle == pytest.approx(0.2)
     assert coast_brake == pytest.approx(0.8)
 
-    hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([0.5, 0.9, 0.0], dtype=np.float32))
+    hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([0.0, 0.9, 0.0], dtype=np.float32))
     assert hard_brake_throttle == 0.0
     assert hard_brake == pytest.approx(0.9)
+
+
+def test_cool_battery_does_not_reward_idling() -> None:
+    state = RewardState()
+    reward, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 0.0,
+            "battery_temp_c": 25.0,
+            "motor_temp_c": 25.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert components.get("battery_margin", 0.0) <= 0.0
+    assert components.get("motor_margin", 0.0) <= 0.0
+    assert reward < 0.0
 
 
 def test_untrained_policy_can_move_from_standstill(hairpin_track) -> None:
@@ -362,7 +398,7 @@ def test_rl_env_reaches_driving_with_brake_heavy_policy(hairpin_track) -> None:
     obs, _ = env.reset()
     driving_steps = 0
     for _ in range(800):
-        action = np.array([0.2, 0.8, 1.0], dtype=np.float32)
+        action = np.array([-0.6, 0.8, 1.0], dtype=np.float32)
         obs, _reward, terminated, truncated, _info = env.step(action)
         if env.session.state.safety_state.value == "DRIVING":
             driving_steps += 1

@@ -40,7 +40,7 @@ class TrackRacingEnv(gym.Env):
         self._stagnant_steps = 0
 
         self.action_space = spaces.Box(
-            low=np.array([0.0, 0.0, -1.0], dtype=np.float32),
+            low=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
             high=np.array([1.0, 1.0, 1.0], dtype=np.float32),
             dtype=np.float32,
         )

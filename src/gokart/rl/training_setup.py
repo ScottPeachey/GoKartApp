@@ -30,6 +30,7 @@ class PpoConfig:
     n_steps: int = 2048
     batch_size: int = 64
     ent_coef: float = 0.05
+    gamma: float = 0.999
 
 
 @dataclass(frozen=True)
@@ -41,11 +42,7 @@ class RlTrainingSetup:
     rewards: RewardWeights = GOD_WEIGHTS
 
     def resolved_rewards(self) -> RewardWeights:
-        if self.objective == "custom":
-            return self.rewards
-        if self.objective == "endurance":
-            return ENDURANCE_WEIGHTS
-        return GOD_WEIGHTS
+        return self.rewards
 
 
 def default_training_setup() -> RlTrainingSetup:
@@ -91,6 +88,7 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "ppo.n_steps": {"step": 256, "min": 256, "max": 16_384},
     "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
     "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
+    "ppo.gamma": {"step": 0.001, "min": 0.9, "max": 0.9999},
     "rewards.progress": {"step": 0.01, "min": 0, "max": 5},
     "rewards.centerline": {"step": 0.01, "min": 0, "max": 5},
     "rewards.heading": {"step": 0.01, "min": 0, "max": 5},
@@ -182,6 +180,7 @@ def training_setup_schema() -> dict[str, Any]:
                     "n_steps": "Rollout length per policy update.",
                     "batch_size": "Minibatch size for PPO updates.",
                     "ent_coef": "Entropy bonus — higher explores more (try 0.01–0.1).",
+                    "gamma": "Discount factor. At 100 Hz use ~0.999 so rewards more than a second ahead still matter.",
                 },
             ),
             "rewards": _section(

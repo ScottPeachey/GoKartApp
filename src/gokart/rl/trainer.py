@@ -178,6 +178,8 @@ def train_policy(
         if config.record_training_episodes:
 
             def _on_episode_complete(ticks: list[dict[str, Any]], episode_index: int) -> None:
+                if episode_index % 20 != 0:
+                    return
                 callbacks.record_episode(
                     ticks=ticks,
                     timestep=training_state["timesteps"],
@@ -203,6 +205,7 @@ def train_policy(
         n_steps=ppo.n_steps,
         batch_size=ppo.batch_size,
         ent_coef=ppo.ent_coef,
+        gamma=ppo.gamma,
     )
 
     eval_history: list[float | None] = []

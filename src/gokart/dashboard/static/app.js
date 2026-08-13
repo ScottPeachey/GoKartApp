@@ -1336,7 +1336,7 @@ function sessionOptionLabel(session, displayNumber) {
 }
 
 function sortSessionsForDisplay(sessions) {
-  return [...sessions].sort((a, b) => compareSessionStartedAt(b, a));
+  return [...sessions].sort(compareSessionStartedAt);
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {

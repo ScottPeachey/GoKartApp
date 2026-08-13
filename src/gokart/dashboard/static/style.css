@@ -8,6 +8,11 @@
 }
 
 * { box-sizing: border-box; }
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -32,6 +37,9 @@ h2 { margin: 0 0 0.75rem; font-size: 1rem; }
 main { padding: 1rem 1.5rem; display: grid; gap: 1rem; }
 
 .page-body {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   padding: 1rem 1.5rem 2rem;
   display: grid;
   gap: 1rem;
@@ -582,6 +590,8 @@ button.btn-path-follow {
   font: inherit;
   line-height: 1.35;
   cursor: pointer;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .session-list-label:hover {
@@ -604,7 +614,7 @@ button.btn-path-follow {
 
 .session-laps-table {
   width: 100%;
-  max-width: 420px;
+  max-width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -642,6 +652,18 @@ button.btn-path-follow {
 .telemetry-split {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.telemetry-panel,
+#tab-history {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#tab-history {
+  overflow-x: hidden;
 }
 
 .telemetry-panel-title {
@@ -754,10 +776,12 @@ button.btn-path-follow {
 
 .history-replay-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
   padding: 0.35rem 0.25rem;
+  max-width: 100%;
 }
 
 .history-replay-session-nav {

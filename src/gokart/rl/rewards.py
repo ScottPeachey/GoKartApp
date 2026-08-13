@@ -87,23 +87,28 @@ def compute_reward(
     if off_track:
         state.off_track_time_s += dt_s
 
+    safety_state = str(tick_values.get("safety_state", "DRIVING"))
+    can_control = safety_state == "DRIVING"
+
     delta_s = float(step_info.get("delta_track_s_m", 0.0))
-    if delta_s > 0.0 and not blocking and not off_track:
+    if can_control and delta_s > 0.0 and not blocking and not off_track:
         progress = weights.progress * delta_s
         reward += progress
         components["progress"] = progress
 
-    reward -= weights.time_penalty * dt_s
-    components["time"] = -weights.time_penalty * dt_s
+    if can_control:
+        reward -= weights.time_penalty * dt_s
+        components["time"] = -weights.time_penalty * dt_s
 
+    motion = min(max(speed / 2.0, 0.0), 1.0)
     normalized_lateral = min(lateral / (track_width * 0.5), 1.0)
-    if not off_track and not blocking:
-        centerline_reward = weights.centerline * (1.0 - normalized_lateral) * dt_s
+    if can_control and not off_track and not blocking:
+        centerline_reward = weights.centerline * (1.0 - normalized_lateral) * motion * dt_s
         reward += centerline_reward
         components["centerline"] = centerline_reward
 
         heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
-        heading_reward = weights.heading * max(0.0, 1.0 - heading_error_deg / 90.0) * dt_s
+        heading_reward = weights.heading * max(0.0, 1.0 - heading_error_deg / 90.0) * motion * dt_s
         reward += heading_reward
         components["heading"] = heading_reward
 
@@ -140,24 +145,25 @@ def compute_reward(
         reward += stagnant_penalty
         components["stagnant_terminal"] = stagnant_penalty
 
-    # proximity shaping
     battery_temp = float(tick_values.get("battery_temp_c", 25.0))
     battery_derate = float(step_info.get("battery_temp_derate_c", 50.0))
     battery_fault = float(step_info.get("battery_temp_fault_c", 60.0))
     motor_temp = float(tick_values.get("motor_temp_c", 25.0))
-    motor_derate = battery_derate  # reuse BMS band for motor margin proxy
     soc = float(tick_values.get("soc", 1.0))
 
-    batt_margin = max(0.0, battery_derate - battery_temp)
-    batt_span = max(battery_fault - battery_derate, 1.0)
-    batt_penalty = -weights.battery_margin * (1.0 - batt_margin / batt_span)
-    reward += batt_penalty
-    components["battery_margin"] = batt_penalty
+    batt_penalty = _heat_proximity_penalty(
+        battery_temp, battery_derate, battery_fault, weights.battery_margin
+    )
+    if batt_penalty != 0.0:
+        reward += batt_penalty
+        components["battery_margin"] = batt_penalty
 
-    motor_margin = max(0.0, motor_derate - motor_temp)
-    motor_penalty = -weights.motor_margin * (1.0 - motor_margin / batt_span)
-    reward += motor_penalty
-    components["motor_margin"] = motor_penalty
+    motor_penalty = _heat_proximity_penalty(
+        motor_temp, battery_derate, battery_fault, weights.motor_margin
+    )
+    if motor_penalty != 0.0:
+        reward += motor_penalty
+        components["motor_margin"] = motor_penalty
 
     if objective == "endurance" and soc < endurance_soc_floor:
         soc_penalty = -weights.soc_margin * (endurance_soc_floor - soc)
@@ -205,6 +211,16 @@ def compute_reward(
     state.prev_brake = brake
     state.prev_steering = steering
     return reward, state, components
+
+
+def _heat_proximity_penalty(temp_c: float, derate_c: float, fault_c: float, weight: float) -> float:
+    """Penalize only when temperature approaches derate; never reward being cool."""
+    span = max(fault_c - derate_c, 1.0)
+    start = derate_c - span
+    if temp_c <= start:
+        return 0.0
+    proximity = min(max((temp_c - start) / span, 0.0), 1.0)
+    return -weight * proximity
 
 
 def _parse_faults(raw: str) -> list[str]:
