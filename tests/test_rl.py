@@ -135,6 +135,29 @@ def test_env_reset_and_step(hairpin_track) -> None:
     assert np.isfinite(total_reward)
 
 
+def test_rl_env_reaches_driving_with_brake_heavy_policy(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=1,
+        max_steps=800,
+    )
+    obs, _ = env.reset()
+    driving_steps = 0
+    for _ in range(800):
+        action = np.array([0.2, 0.8, 1.0], dtype=np.float32)
+        obs, _reward, terminated, truncated, _info = env.step(action)
+        if env.session.state.safety_state.value == "DRIVING":
+            driving_steps += 1
+        if terminated or truncated:
+            break
+    assert driving_steps > 100
+
+
 def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
     identity = build_policy_identity(
         vehicle_name="Scott Kart V1",

@@ -36,6 +36,7 @@ class SafetyInputs:
     driver_authenticated: bool = True
     brake_pressed: bool = False
     throttle: float = 0.0
+    autonomous_drive: bool = False
     detected_faults: set[FaultId] = field(default_factory=set)
     precharge_feedback_ok: bool = True
     contactor_feedback_closed: bool = False
@@ -266,7 +267,9 @@ def safety_step(
             contactor = ContactorCommand.PRECHARGE
         else:
             contactor = ContactorCommand.CLOSE
-            if inputs.throttle > config.throttle_drive_deadband and not inputs.brake_pressed:
+            if inputs.autonomous_drive or (
+                inputs.throttle > config.throttle_drive_deadband and not inputs.brake_pressed
+            ):
                 state = SafetyState.DRIVING
                 timers.state_elapsed_s = 0.0
 

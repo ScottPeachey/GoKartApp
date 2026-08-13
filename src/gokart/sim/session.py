@@ -275,6 +275,9 @@ class SimulationSession:
             ControlSource.AUTO,
             ControlSource.RL,
         }
+        autonomous_boot = (
+            autonomous and self.scenario.auto_boot and not self.config.free_mode
+        )
         if synthetic_brake_hold:
             safety_brake_pressed = True
         elif safety_state == SafetyState.DRIVING and (manual_mode or autonomous):
@@ -340,6 +343,7 @@ class SimulationSession:
                 driver_authenticated=True,
                 brake_pressed=safety_brake_pressed,
                 throttle=detect_throttle if synthetic_brake_hold else throttle,
+                autonomous_drive=autonomous_boot,
                 detected_faults=detected,
                 precharge_feedback_ok=sensors.precharge_feedback_ok,
                 contactor_feedback_closed=sensors.contactor_feedback_closed,

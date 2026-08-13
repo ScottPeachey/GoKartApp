@@ -360,6 +360,12 @@ def run_simulation(
         if precharging:
             synthetic_brake_hold = True
 
+        autonomous_boot = (
+            (auto_drive or learned_drive)
+            and scenario.auto_boot
+            and not free_mode
+        )
+
         if synthetic_brake_hold:
             safety_brake_pressed = True
         elif (
@@ -430,6 +436,7 @@ def run_simulation(
                 driver_authenticated=True,
                 brake_pressed=safety_brake_pressed,
                 throttle=detect_throttle if synthetic_brake_hold else throttle,
+                autonomous_drive=autonomous_boot,
                 detected_faults=detected,
                 precharge_feedback_ok=sensors.precharge_feedback_ok,
                 contactor_feedback_closed=sensors.contactor_feedback_closed,

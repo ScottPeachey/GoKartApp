@@ -65,6 +65,30 @@ def test_happy_path_off_to_driving() -> None:
     assert outputs.contactor_command == ContactorCommand.CLOSE
 
 
+def test_autonomous_drive_skips_throttle_gate() -> None:
+    config = SafetyConfig(self_test_duration_s=0.05, precharge_timeout_s=0.1)
+    state = SafetyState.OFF
+    timers = SafetyTimers()
+    latched: set[FaultId] = set()
+    steps = [
+        SafetyInputs(power_on_request=True),
+        *[SafetyInputs() for _ in range(int(config.self_test_duration_s / 0.01) + 2)],
+        SafetyInputs(arm_request=True, brake_pressed=True, driver_authenticated=True),
+        *[
+            SafetyInputs(throttle=0.0, brake_pressed=True)
+            for _ in range(int(config.precharge_timeout_s / 0.01) + 1)
+        ],
+        SafetyInputs(throttle=0.0, brake_pressed=True, autonomous_drive=True),
+        SafetyInputs(throttle=0.0, brake_pressed=False, autonomous_drive=True),
+    ]
+    for inputs in steps:
+        state, outputs, timers, latched = safety_step(
+            state, inputs, config, timers, latched_faults=latched, dt=0.01
+        )
+    assert state == SafetyState.DRIVING
+    assert outputs.torque_permitted
+
+
 @pytest.mark.parametrize(
     ("mutator", "expected_fault"),
     [
