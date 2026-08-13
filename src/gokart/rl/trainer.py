@@ -195,7 +195,7 @@ def train_policy(
         learning_rate=config.learning_rate,
         n_steps=config.n_steps,
         batch_size=config.batch_size,
-        ent_coef=0.01,
+        ent_coef=0.05,
     )
 
     eval_history: list[float | None] = []

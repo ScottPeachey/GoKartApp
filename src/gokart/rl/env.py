@@ -19,6 +19,9 @@ class TrackRacingEnv(gym.Env):
     """Gym environment stepping the real kart simulation."""
 
     metadata = {"render_modes": []}
+    STAGNANT_SPEED_MPS = 0.15
+    STAGNANT_DELTA_S = 0.0005
+    MAX_STAGNANT_STEPS = 500
 
     def __init__(
         self,
@@ -35,6 +38,7 @@ class TrackRacingEnv(gym.Env):
         self.weights = reward_preset(objective)
         self._reward_state = RewardState()
         self._last_obs = np.zeros(OBS_DIM, dtype=np.float32)
+        self._stagnant_steps = 0
 
         self.action_space = spaces.Box(
             low=np.array([0.0, 0.0, -1.0], dtype=np.float32),
@@ -56,6 +60,7 @@ class TrackRacingEnv(gym.Env):
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
         self._reward_state = RewardState()
+        self._stagnant_steps = 0
         step_result = self.session.reset()
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
@@ -75,6 +80,14 @@ class TrackRacingEnv(gym.Env):
         )
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
+        speed = float(step_result.tick.values.get("speed_mps", 0.0))
+        delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
+        driving = step_result.safety_state.value == "DRIVING"
+        if driving and speed < self.STAGNANT_SPEED_MPS and delta_s < self.STAGNANT_DELTA_S:
+            self._stagnant_steps += 1
+        else:
+            self._stagnant_steps = 0
+        truncated = step_result.truncated or self._stagnant_steps >= self.MAX_STAGNANT_STEPS
         info = {
             **step_result.info,
             "reward_components": components,
@@ -85,7 +98,7 @@ class TrackRacingEnv(gym.Env):
             obs,
             reward,
             step_result.terminated,
-            step_result.truncated,
+            truncated,
             info,
         )
 

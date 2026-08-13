@@ -8,6 +8,7 @@ import numpy as np
 # nearly stopped. Zero throttle must remain zero so the agent can coast.
 THROTTLE_BREAKAWAY = 0.25
 STANDING_START_SPEED_MPS = 0.15
+BRAKE_CUTOFF = 0.85
 
 
 def decode_rl_action(
@@ -21,7 +22,7 @@ def decode_rl_action(
     brake = float(np.clip(values[1], 0.0, 1.0))
     steering = float(np.clip(values[2], -1.0, 1.0))
 
-    if brake > 0.5:
+    if brake > BRAKE_CUTOFF:
         throttle = 0.0
     elif raw_throttle <= 0.0:
         throttle = 0.0

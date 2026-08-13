@@ -15,6 +15,9 @@ class RewardWeights:
     centerline: float = 0.12
     heading: float = 0.06
     speed: float = 0.04
+    standstill: float = 0.35
+    throttle_go: float = 0.08
+    low_speed_steer: float = 0.04
     lap_bonus: float = 25.0
     fault_block: float = 80.0
     fault_derate: float = 12.0
@@ -77,6 +80,9 @@ def compute_reward(
     off_track = lateral > track_width * 0.5
     speed = float(tick_values.get("speed_mps", 0.0))
     max_speed = max(float(tick_values.get("max_speed_mps", 12.5)), 0.1)
+    throttle = float(tick_values.get("throttle", 0.0))
+    brake = float(tick_values.get("brake", 0.0))
+    steering = float(tick_values.get("steering", 0.0))
     if off_track:
         state.off_track_time_s += dt_s
 
@@ -100,10 +106,24 @@ def compute_reward(
         reward += heading_reward
         components["heading"] = heading_reward
 
-        if speed > 0.2:
+        if speed > 0.05:
             speed_reward = weights.speed * (speed / max_speed) * dt_s
             reward += speed_reward
             components["speed"] = speed_reward
+
+        if speed < 0.2:
+            standstill_penalty = -weights.standstill * dt_s
+            reward += standstill_penalty
+            components["standstill"] = standstill_penalty
+            if throttle > 0.05:
+                throttle_go = weights.throttle_go * throttle * dt_s
+                reward += throttle_go
+                components["throttle_go"] = throttle_go
+
+        if speed < 1.0:
+            steer_penalty = -weights.low_speed_steer * abs(steering) * dt_s
+            reward += steer_penalty
+            components["low_speed_steer"] = steer_penalty
 
     if off_track:
         off_penalty = -weights.off_track_rate * dt_s
@@ -138,9 +158,6 @@ def compute_reward(
         reward += soc_penalty
         components["soc"] = soc_penalty
 
-    throttle = float(tick_values.get("throttle", 0.0))
-    brake = float(tick_values.get("brake", 0.0))
-    steering = float(tick_values.get("steering", 0.0))
     jerk = (
         abs(throttle - state.prev_throttle)
         + abs(brake - state.prev_brake)

@@ -45,9 +45,16 @@ def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
     full_throttle, _, _ = decode_rl_action(np.array([1.0, 0.0, 0.0], dtype=np.float32), speed_mps=2.0)
     assert full_throttle == 1.0
 
-    coast_throttle, coast_brake, _ = decode_rl_action(np.array([0.2, 0.8, 0.0], dtype=np.float32))
-    assert coast_throttle == 0.0
+    coast_throttle, coast_brake, _ = decode_rl_action(
+        np.array([0.2, 0.8, 0.0], dtype=np.float32),
+        speed_mps=2.0,
+    )
+    assert coast_throttle == pytest.approx(0.2)
     assert coast_brake == pytest.approx(0.8)
+
+    hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([0.5, 0.9, 0.0], dtype=np.float32))
+    assert hard_brake_throttle == 0.0
+    assert hard_brake == pytest.approx(0.9)
 
 
 def test_untrained_policy_can_move_from_standstill(hairpin_track) -> None:
@@ -126,6 +133,42 @@ def test_reward_penalizes_blocking_fault() -> None:
     )
     assert reward < 0.0
     assert "blocking" in components
+
+
+def test_reward_penalizes_standstill_on_track() -> None:
+    state = RewardState()
+    reward, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "speed_mps": 0.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 1.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "standstill" in components
+    assert components["standstill"] < 0.0
+    assert "low_speed_steer" in components
+    assert components["low_speed_steer"] < 0.0
 
 
 def test_reward_prefers_centered_on_track_alignment() -> None:
