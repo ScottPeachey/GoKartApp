@@ -1358,12 +1358,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       checkbox.className = "session-list-check";
       checkbox.checked = state.historyDeleteSelection.has(session.session_id);
       checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          state.historyDeleteSelection.add(session.session_id);
-        } else {
-          state.historyDeleteSelection.delete(session.session_id);
-        }
-        syncSessionDeleteControls();
+        syncDeleteSelectionFromDom();
       });
 
       const labelBtn = document.createElement("button");
@@ -1396,8 +1391,22 @@ function syncSessionListActiveRow() {
   });
 }
 
+function getSelectedSessionIdsForDelete() {
+  const selected = [];
+  document.querySelectorAll(".session-list-check:checked").forEach((checkbox) => {
+    const sessionId = checkbox.closest(".session-list-item")?.dataset.sessionId;
+    if (sessionId) selected.push(sessionId);
+  });
+  return selected;
+}
+
+function syncDeleteSelectionFromDom() {
+  state.historyDeleteSelection = new Set(getSelectedSessionIdsForDelete());
+  syncSessionDeleteControls();
+}
+
 function syncSessionDeleteControls() {
-  const count = state.historyDeleteSelection.size;
+  const count = getSelectedSessionIdsForDelete().length;
   const deleteBtn = document.getElementById("btn-session-delete-selected");
   if (deleteBtn) {
     deleteBtn.disabled = count === 0;
@@ -1406,27 +1415,50 @@ function syncSessionDeleteControls() {
 }
 
 function selectAllSessionsForDelete() {
-  document.querySelectorAll(".session-list-item").forEach((row) => {
-    const sessionId = row.dataset.sessionId;
-    if (!sessionId) return;
-    const checkbox = row.querySelector(".session-list-check");
-    if (checkbox) checkbox.checked = true;
-    state.historyDeleteSelection.add(sessionId);
+  document.querySelectorAll(".session-list-check").forEach((checkbox) => {
+    checkbox.checked = true;
   });
-  syncSessionDeleteControls();
+  syncDeleteSelectionFromDom();
 }
 
 function clearSessionDeleteSelection() {
-  state.historyDeleteSelection.clear();
   document.querySelectorAll(".session-list-check").forEach((checkbox) => {
     checkbox.checked = false;
   });
-  syncSessionDeleteControls();
+  syncDeleteSelectionFromDom();
+}
+
+async function deleteSessionsOnServer(sessionIds) {
+  const response = await fetch("/api/sessions/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_ids: sessionIds }),
+  });
+  if (response.ok) {
+    return response.json();
+  }
+  if (response.status === 405) {
+    for (const sessionId of sessionIds) {
+      const single = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: "DELETE",
+      });
+      if (!single.ok) {
+        const detail = await single.text();
+        throw new Error(detail || single.statusText);
+      }
+    }
+    return { deleted: sessionIds };
+  }
+  const detail = await response.text();
+  throw new Error(detail || response.statusText);
 }
 
 async function deleteSessions(sessionIds) {
   const uniqueIds = [...new Set(sessionIds.filter(Boolean))];
-  if (!uniqueIds.length) return;
+  if (!uniqueIds.length) {
+    window.alert("Select one or more recordings to delete.");
+    return;
+  }
 
   const count = uniqueIds.length;
   const message = count === 1
@@ -1442,10 +1474,12 @@ async function deleteSessions(sessionIds) {
   stopHistoryReplayPlayback();
   if (willDeleteCurrent) clearHistoryPin();
 
-  await api("/api/sessions/delete", {
-    method: "POST",
-    body: JSON.stringify({ session_ids: uniqueIds }),
-  });
+  try {
+    await deleteSessionsOnServer(uniqueIds);
+  } catch (error) {
+    window.alert(`Failed to delete recordings: ${error.message || error}`);
+    return;
+  }
 
   for (const sessionId of uniqueIds) {
     state.historyDeleteSelection.delete(sessionId);
@@ -3855,7 +3889,7 @@ function setupControls() {
     clearSessionDeleteSelection();
   });
   document.getElementById("btn-session-delete-selected")?.addEventListener("click", () => {
-    void deleteSessions([...state.historyDeleteSelection]);
+    void deleteSessions(getSelectedSessionIdsForDelete());
   });
   document.getElementById("session-select").addEventListener("change", (event) => {
     const sessionId = event.target.value;

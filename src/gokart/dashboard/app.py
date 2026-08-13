@@ -356,6 +356,14 @@ def create_app(
             for session in sessions
         ]
 
+    @app.post("/api/sessions/delete")
+    def api_delete_sessions(request: DeleteSessionsRequest) -> dict[str, Any]:
+        deleted = telemetry_store.delete_sessions(request.session_ids)
+        not_found = [session_id for session_id in request.session_ids if session_id not in deleted]
+        if not deleted:
+            raise HTTPException(status_code=404, detail="No sessions found")
+        return {"deleted": deleted, "not_found": not_found}
+
     @app.get("/api/sessions/{session_id}")
     def api_session(session_id: str) -> dict[str, Any]:
         session = telemetry_store.get_session(session_id)
@@ -407,14 +415,6 @@ def create_app(
         if not telemetry_store.delete_session(session_id):
             raise HTTPException(status_code=404, detail="Session not found")
         return {"deleted": True, "session_id": session_id}
-
-    @app.post("/api/sessions/delete")
-    def api_delete_sessions(request: DeleteSessionsRequest) -> dict[str, Any]:
-        deleted = telemetry_store.delete_sessions(request.session_ids)
-        not_found = [session_id for session_id in request.session_ids if session_id not in deleted]
-        if not deleted:
-            raise HTTPException(status_code=404, detail="No sessions found")
-        return {"deleted": deleted, "not_found": not_found}
 
     @app.get("/api/rl/policy")
     def api_rl_policy(

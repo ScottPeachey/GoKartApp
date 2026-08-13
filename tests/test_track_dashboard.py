@@ -119,3 +119,27 @@ def test_sim_start_with_track_id(client: TestClient) -> None:
     laps = client.get(f"/api/sessions/{session_id}/laps").json()
     assert isinstance(laps, list)
 
+
+def test_bulk_delete_sessions_endpoint(client) -> None:
+    from gokart.telemetry.recorder import SessionMetadata, SessionRecorder
+
+    store = client.app.state.store
+    recorder = SessionRecorder(
+        SessionMetadata(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            config_hash="bulk-delete-api",
+            driver_profile="Owner",
+            drive_mode="Default",
+        ),
+        store=store,
+        log_every_n=1,
+    )
+    recorder.record_tick({"time_s": 0.0, "speed_mps": 1.0})
+    recorder.close(end_soc=1.0)
+
+    response = client.post("/api/sessions/delete", json={"session_ids": [recorder.session_id]})
+    assert response.status_code == 200
+    assert response.json()["deleted"] == [recorder.session_id]
+    assert client.get("/api/sessions").json() == []
+
