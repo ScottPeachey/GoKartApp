@@ -1258,6 +1258,31 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
 
 window.refreshVehicleLists = refreshVehicleLists;
 
+function formatSessionStartedAt(startedAt) {
+  const date = new Date(startedAt);
+  if (Number.isNaN(date.getTime())) return String(startedAt);
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function compareSessionStartedAt(a, b) {
+  return String(a.started_at).localeCompare(String(b.started_at));
+}
+
+function buildSessionDisplayNumbers(sessions) {
+  const ordered = [...sessions].sort(compareSessionStartedAt);
+  const numbers = new Map();
+  ordered.forEach((session, index) => {
+    numbers.set(session.session_id, index + 1);
+  });
+  return numbers;
+}
+
 function rlTrainingSessionMeta(session) {
   const preview = String(session.scenario_name || "").match(/^rl_preview_(\d+)$/);
   if (preview) {
@@ -1274,49 +1299,35 @@ function rlTrainingSessionMeta(session) {
   return null;
 }
 
-function sessionOptionLabel(session) {
-  const when = session.started_at;
+function sessionOptionLabel(session, displayNumber) {
+  const numberTag = displayNumber != null
+    ? `#${String(displayNumber).padStart(3, "0")} · `
+    : "";
+  const when = formatSessionStartedAt(session.started_at);
   const vehicle = `${session.vehicle_name} (${session.sample_count} samples)`;
   const rlMeta = rlTrainingSessionMeta(session);
   if (rlMeta?.kind === "preview") {
-    return `${when} — RL preview @ ${rlMeta.step.toLocaleString()} steps — ${vehicle}`;
+    return `${numberTag}${when} · RL preview @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}`;
   }
   if (rlMeta?.kind === "episode") {
-    return `${when} — RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) — ${vehicle}`;
+    return `${numberTag}${when} · RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) · ${vehicle}`;
   }
-  return `${when} — ${vehicle}`;
+  return `${numberTag}${when} · ${vehicle}`;
 }
 
 function sortSessionsForDisplay(sessions) {
-  const rlSessions = [];
-  const other = [];
-  for (const session of sessions) {
-    if (rlTrainingSessionMeta(session) != null) {
-      rlSessions.push(session);
-    } else {
-      other.push(session);
-    }
-  }
-  rlSessions.sort((a, b) => {
-    const metaA = rlTrainingSessionMeta(a);
-    const metaB = rlTrainingSessionMeta(b);
-    if (metaA.step !== metaB.step) return metaA.step - metaB.step;
-    const episodeA = metaA.episode ?? 0;
-    const episodeB = metaB.episode ?? 0;
-    return episodeA - episodeB;
-  });
-  other.sort((a, b) => String(b.started_at).localeCompare(String(a.started_at)));
-  return [...rlSessions, ...other];
+  return [...sessions].sort((a, b) => compareSessionStartedAt(b, a));
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {
   const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}`).join("|");
   const listEl = document.getElementById("session-list");
+  const displayNumbers = buildSessionDisplayNumbers(sessions);
   if (listKey === state.historySessionListKey && select.options.length === sessions.length) {
     for (const session of sessions) {
       const option = select.querySelector(`option[value="${session.session_id}"]`);
       if (!option) continue;
-      const label = sessionOptionLabel(session);
+      const label = sessionOptionLabel(session, displayNumbers.get(session.session_id));
       if (option.textContent !== label) {
         option.textContent = label;
       }
@@ -1345,7 +1356,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
   for (const session of sorted) {
     const option = document.createElement("option");
     option.value = session.session_id;
-    option.textContent = sessionOptionLabel(session);
+    option.textContent = sessionOptionLabel(session, displayNumbers.get(session.session_id));
     select.appendChild(option);
 
     if (listEl) {
@@ -1364,7 +1375,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       const labelBtn = document.createElement("button");
       labelBtn.type = "button";
       labelBtn.className = "session-list-label";
-      labelBtn.textContent = sessionOptionLabel(session);
+      labelBtn.textContent = sessionOptionLabel(session, displayNumbers.get(session.session_id));
       labelBtn.addEventListener("click", () => {
         void selectReplaySession(session.session_id, { autoPlay: state.historyReplayPlaying });
       });
