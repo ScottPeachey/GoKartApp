@@ -75,7 +75,9 @@ class PolicyRunner:
             max_steps=max_steps,
             step_index=step_index,
         )
-        return self.predict(obs, speed_mps=float(tick_values.get("speed_mps", 0.0)), deterministic=deterministic)
+        return self.predict(
+            obs, speed_mps=float(tick_values.get("speed_mps", 0.0)), deterministic=deterministic
+        )
 
 
 def observation_dim() -> int:

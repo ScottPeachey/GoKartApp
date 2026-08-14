@@ -7,17 +7,37 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from gokart.rl.actions import decode_rl_action
+from gokart.rl.actions import ACTION_DIM, decode_rl_action, encode_expert_action
 from gokart.rl.env import make_env
 from gokart.rl.observations import OBS_DIM, build_observation
-from gokart.rl.policy_key import build_policy_identity
+from gokart.rl.policy_key import build_policy_identity, identity_from_dict
 from gokart.rl.registry import PolicyManifest, save_manifest
 from gokart.rl.rewards import RewardState, compute_reward, reward_preset
-from gokart.rl.training_setup import training_setup_from_dict, training_setup_schema
+from gokart.rl.training_setup import (
+    WarmupConfig,
+    default_training_setup,
+    training_setup_from_dict,
+    training_setup_schema,
+)
 from gokart.track.importer import import_geojson_track
 
 FIXTURES = Path(__file__).parent / "fixtures"
 HAIRPIN = FIXTURES / "test-hairpin.geojson"
+
+_TICK = {
+    "active_faults": "",
+    "safety_state": "DRIVING",
+    "speed_mps": 4.0,
+    "battery_temp_c": 30.0,
+    "motor_temp_c": 35.0,
+    "soc": 0.9,
+    "throttle": 0.7,
+    "brake": 0.0,
+    "steering": 0.0,
+    "max_speed_mps": 12.5,
+    "derating_factor": 1.0,
+    "torque_permitted": 1.0,
+}
 
 
 @pytest.fixture
@@ -25,13 +45,28 @@ def hairpin_track():
     return import_geojson_track(HAIRPIN, track_id="test-hairpin", fetch_elevation=False)
 
 
+def _reward(tick: dict, info: dict, state: RewardState | None = None):
+    return compute_reward(
+        tick_values=tick,
+        step_info=info,
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state or RewardState(),
+        objective="god",
+    )
+
+
 def test_training_setup_from_dict_round_trip() -> None:
     schema = training_setup_schema()
     setup = training_setup_from_dict(schema["defaults"])
     assert setup.objective == "god"
-    assert setup.ppo.ent_coef == pytest.approx(0.05)
+    assert setup.ppo.ent_coef == pytest.approx(0.01)
+    assert setup.warmup.demo_steps == 15_000
+    assert "warmup" in schema["sections"]
     throttle_field = next(
-        field for field in schema["sections"]["action"]["fields"] if field["key"] == "throttle_breakaway"
+        field
+        for field in schema["sections"]["action"]["fields"]
+        if field["key"] == "throttle_breakaway"
     )
     assert throttle_field["step"] == pytest.approx(0.05)
     off_track_field = next(
@@ -45,93 +80,74 @@ def test_training_setup_from_dict_round_trip() -> None:
         {
             "objective": "custom",
             "ppo": {"ent_coef": 0.1},
-            "rewards": {"standstill": 0.5},
+            "rewards": {"standstill": 0.5, "progress": 1.5},
             "env": {"terminate_on_off_track": 0},
+            "warmup": {"demo_steps": 2000, "bc_epochs": 3},
         }
     )
     assert custom.objective == "custom"
     assert custom.ppo.ent_coef == pytest.approx(0.1)
-    assert custom.rewards.standstill == pytest.approx(0.5)
+    assert custom.rewards.progress == pytest.approx(1.5)
+    assert not hasattr(custom.rewards, "standstill")
     assert custom.env.terminate_on_off_track is False
+    assert custom.warmup.demo_steps == 2000
+    assert custom.warmup.bc_epochs == 3
+
+
+def test_default_setup_is_circuit_v2() -> None:
+    setup = default_training_setup()
+    assert setup.env.max_stagnant_steps == 300
+    assert setup.env.max_off_track_steps == 800
+    assert setup.rewards.wall == pytest.approx(8.0)
+    assert setup.warmup.demo_steps == 15_000
+    assert setup.warmup.bc_epochs == 12
+    assert ACTION_DIM == 2
+    assert OBS_DIM == 16
 
 
 def test_reward_penalizes_stagnant_terminal() -> None:
-    state = RewardState()
-    reward, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "speed_mps": 0.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
+    reward, _, components = _reward(
+        {**_TICK, "speed_mps": 0.0, "throttle": 0.0},
+        {
             "delta_track_s_m": 0.0,
             "lateral_offset_m": 0.0,
             "heading_error_deg": 0.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "truncated_stagnant": True,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
     )
-    assert "stagnant_terminal" in components
     assert components["stagnant_terminal"] < 0.0
     assert reward < 0.0
 
 
 def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
-    driving = {
-        "active_faults": "",
-        "safety_state": "DRIVING",
-        "battery_temp_c": 30.0,
-        "motor_temp_c": 35.0,
-        "soc": 0.9,
-        "throttle": 0.4,
-        "brake": 0.0,
-        "steering": 0.0,
-        "max_speed_mps": 12.5,
-        "derating_factor": 1.0,
-        "torque_permitted": 1.0,
-    }
     info = {
         "delta_track_s_m": 0.0,
         "lateral_offset_m": 8.0,
         "heading_error_deg": 20.0,
         "track_width_m": 10.0,
-        "battery_temp_derate_c": 50.0,
-        "battery_temp_fault_c": 60.0,
         "terminated_off_track": True,
     }
-    _, _, slow_parts = compute_reward(
-        tick_values={**driving, "speed_mps": 1.0},
-        step_info=info,
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=RewardState(),
-        objective="god",
-    )
-    _, _, fast_parts = compute_reward(
-        tick_values={**driving, "speed_mps": 12.5},
-        step_info=info,
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=RewardState(),
-        objective="god",
-    )
-    assert slow_parts["wall_hit"] == pytest.approx(-12.0)
+    _, _, slow_parts = _reward({**_TICK, "speed_mps": 1.0}, info)
+    _, _, fast_parts = _reward({**_TICK, "speed_mps": 12.5}, info)
+    assert slow_parts["wall_hit"] == pytest.approx(-8.0)
     assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
-    assert "recover_track" not in slow_parts
+
+
+def test_idle_on_track_is_not_rewarded() -> None:
+    reward, _, components = _reward(
+        {**_TICK, "speed_mps": 0.0, "throttle": 0.0},
+        {
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "terminated_off_track": False,
+        },
+    )
+    assert reward == pytest.approx(0.0)
+    assert "progress" not in components
+    assert "alignment" not in components
 
 
 def test_frozen_policy_predicts_without_mutating_source() -> None:
@@ -145,7 +161,7 @@ def test_frozen_policy_predicts_without_mutating_source() -> None:
             self.training = flag
 
         def predict(self, obs, deterministic=True):
-            return np.array([1.0, 0.0, 0.0], dtype=np.float32), None
+            return np.array([1.0, 0.0], dtype=np.float32), None
 
     source = _Policy()
     frozen = FrozenPolicy(source)
@@ -155,101 +171,58 @@ def test_frozen_policy_predicts_without_mutating_source() -> None:
     assert frozen.policy.training is False
 
 
-def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
-    throttle, brake, steering = decode_rl_action(np.array([-1.0, 0.0, 0.5], dtype=np.float32))
+def test_decode_rl_action_maps_accel_and_steer() -> None:
+    throttle, brake, steering = decode_rl_action(np.array([-1.0, 0.5], dtype=np.float32))
     assert throttle == 0.0
-    assert brake == 0.0
-    assert steering == 0.5
+    assert brake == pytest.approx(1.0)
+    assert steering == pytest.approx(0.5)
 
-    assist_throttle, _, _ = decode_rl_action(
-        np.array([-0.6, 0.0, 0.0], dtype=np.float32),
+    assist_throttle, assist_brake, _ = decode_rl_action(
+        np.array([0.2, 0.0], dtype=np.float32),
         speed_mps=0.0,
     )
-    assert assist_throttle == pytest.approx(0.32)
+    assert assist_brake == 0.0
+    assert assist_throttle == pytest.approx(0.2 + 0.8 * 0.2)
 
     moving_throttle, _, _ = decode_rl_action(
-        np.array([-0.6, 0.0, 0.0], dtype=np.float32),
+        np.array([0.2, 0.0], dtype=np.float32),
         speed_mps=2.0,
     )
     assert moving_throttle == pytest.approx(0.2)
 
-    full_throttle, _, _ = decode_rl_action(np.array([1.0, 0.0, 0.0], dtype=np.float32), speed_mps=2.0)
+    full_throttle, full_brake, _ = decode_rl_action(
+        np.array([1.0, 0.0], dtype=np.float32), speed_mps=2.0
+    )
     assert full_throttle == 1.0
+    assert full_brake == 0.0
 
     coast_throttle, coast_brake, _ = decode_rl_action(
-        np.array([-0.6, 0.8, 0.0], dtype=np.float32),
+        np.array([0.0, 0.0], dtype=np.float32),
         speed_mps=2.0,
     )
-    assert coast_throttle == pytest.approx(0.2)
-    assert coast_brake == pytest.approx(0.8)
+    assert coast_throttle == 0.0
+    assert coast_brake == 0.0
 
-    hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([0.0, 0.9, 0.0], dtype=np.float32))
+    hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([-0.9, 0.0], dtype=np.float32))
     assert hard_brake_throttle == 0.0
     assert hard_brake == pytest.approx(0.9)
 
 
-def test_cool_battery_does_not_reward_idling() -> None:
-    state = RewardState()
-    reward, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 0.0,
-            "battery_temp_c": 25.0,
-            "motor_temp_c": 25.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 0.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert components.get("battery_margin", 0.0) <= 0.0
-    assert components.get("motor_margin", 0.0) <= 0.0
-    assert reward < 0.0
+def test_encode_expert_action_round_trips() -> None:
+    encoded = encode_expert_action(0.7, 0.0, 0.25)
+    throttle, brake, steering = decode_rl_action(encoded, speed_mps=5.0)
+    assert throttle == pytest.approx(0.7)
+    assert brake == pytest.approx(0.0)
+    assert steering == pytest.approx(0.25)
+
+    braked = encode_expert_action(0.0, 0.8, -0.4)
+    throttle, brake, steering = decode_rl_action(braked, speed_mps=5.0)
+    assert throttle == pytest.approx(0.0)
+    assert brake == pytest.approx(0.8)
+    assert steering == pytest.approx(-0.4)
 
 
-def test_untrained_policy_can_move_from_standstill(hairpin_track) -> None:
-    from stable_baselines3 import PPO
-
-    env = make_env(
-        vehicle_name="Scott Kart V1",
-        vehicle_version="V1.0",
-        track=hairpin_track,
-        drive_mode="default",
-        driver_profile="owner",
-        objective="god",
-        target_laps=1,
-        max_steps=900,
-    )
-    model = PPO("MlpPolicy", env, verbose=0, seed=0, n_steps=256, batch_size=64)
-    obs, _ = env.reset()
-    max_speed = 0.0
-    for _ in range(900):
-        action, _ = model.predict(obs, deterministic=True)
-        obs, *_ = env.step(action)
-        tick = env.session.state.last_tick
-        if tick is not None:
-            max_speed = max(max_speed, float(tick.values.get("speed_mps", 0.0)))
-    assert max_speed > 0.1
-
-
-def test_policy_key_stable(hairpin_track) -> None:
+def test_policy_key_includes_circuit_stack(hairpin_track) -> None:
     a = build_policy_identity(
         vehicle_name="Scott Kart V1",
         vehicle_version="V1.0",
@@ -268,511 +241,90 @@ def test_policy_key_stable(hairpin_track) -> None:
     )
     assert a.policy_key == b.policy_key
     assert len(a.policy_key) == 16
-
-
-def test_reward_penalizes_blocking_fault() -> None:
-    state = RewardState()
-    reward, _, components = compute_reward(
-        tick_values={
-            "active_faults": "BATTERY_OVERTEMP",
-            "speed_mps": 5.0,
-            "battery_temp_c": 65.0,
-            "motor_temp_c": 40.0,
-            "soc": 0.9,
-            "throttle": 0.5,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 0.5,
-            "torque_permitted": 0.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.5,
-            "lateral_offset_m": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert reward < 0.0
-    assert "blocking" in components
-
-
-def test_reward_penalizes_standstill_on_track() -> None:
-    state = RewardState()
-    reward, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "speed_mps": 0.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 1.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 0.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert "standstill" in components
-    assert components["standstill"] < 0.0
-    assert "low_speed_steer" in components
-    assert components["low_speed_steer"] < 0.0
-
-
-def test_reward_penalizes_steering_while_off_track() -> None:
-    state = RewardState()
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 0.5,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 1.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 8.0,
-            "heading_error_deg": 90.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert "low_speed_steer" in components
-    assert components["low_speed_steer"] < 0.0
-    assert "off_track" in components
-    assert components["off_track"] < components["low_speed_steer"]
-
-
-def test_reward_does_not_pay_speed_for_tightening_circles() -> None:
-    state = RewardState()
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 4.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.6,
-            "brake": 0.0,
-            "steering": 0.9,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 0.2,
-            "heading_error_deg": 120.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert "speed" not in components
-    assert "centerline" not in components
-    assert "heading" not in components
-    assert components["spin"] < 0.0
-    assert components["forward_speed"] < 0.0
-    assert components["wrong_way"] < 0.0
+    assert a.stack == "circuit_v2"
+    payload = a.to_dict()
+    del payload["stack"]
+    legacy = identity_from_dict(payload)
+    assert legacy.stack == "legacy"
+    assert legacy.policy_key != a.policy_key
 
 
 def test_forward_drive_beats_start_line_u_turn() -> None:
-    shared_ticks = {
-        "active_faults": "",
-        "safety_state": "DRIVING",
-        "speed_mps": 4.0,
-        "battery_temp_c": 30.0,
-        "motor_temp_c": 35.0,
-        "soc": 0.9,
-        "throttle": 0.7,
-        "brake": 0.0,
-        "steering": 0.0,
-        "max_speed_mps": 12.5,
-        "derating_factor": 1.0,
-        "torque_permitted": 1.0,
-    }
-    forward, _, _ = compute_reward(
-        tick_values=shared_ticks,
-        step_info={
+    forward, _, forward_parts = _reward(
+        _TICK,
+        {
             "delta_track_s_m": 0.04,
             "lateral_offset_m": 0.2,
             "heading_error_deg": 5.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "terminated_off_track": False,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=RewardState(),
-        objective="god",
     )
-    u_turn, _, _ = compute_reward(
-        tick_values={**shared_ticks, "steering": 0.9},
-        step_info={
+    u_turn, _, u_turn_parts = _reward(
+        {**_TICK, "steering": 0.9},
+        {
             "delta_track_s_m": -0.01,
             "lateral_offset_m": 0.2,
             "heading_error_deg": 160.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "terminated_off_track": False,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=RewardState(),
-        objective="god",
     )
     assert forward > 0.0
     assert u_turn < 0.0
     assert forward > u_turn
+    assert "progress" in forward_parts
+    assert "reverse" in u_turn_parts
+    assert "alignment" in forward_parts
 
 
-def test_off_track_penalty_scales_with_lateral_distance() -> None:
-    state_near = RewardState()
-    _, _, near = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 2.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 6.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state_near,
-        objective="god",
-    )
-    state_far = RewardState()
-    _, _, far = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 2.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.0,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 20.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state_far,
-        objective="god",
-    )
-    assert near["off_track"] < 0.0
-    assert far["off_track"] < near["off_track"]
-
-
-def test_reward_recovers_toward_track_when_off_track() -> None:
-    state = RewardState(prev_lateral_m=8.0)
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 1.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.4,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 6.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert components.get("recover_track", 0.0) > 0.0
-
-
-def test_reward_does_not_pay_progress_for_off_track_shortcuts() -> None:
-    state = RewardState()
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 4.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.5,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
+def test_off_track_is_penalized_and_does_not_pay_progress() -> None:
+    _, _, components = _reward(
+        _TICK,
+        {
             "delta_track_s_m": 80.0,
             "lateral_offset_m": 12.0,
             "heading_error_deg": 20.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "terminated_off_track": False,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
     )
     assert "progress" not in components
-    assert components["shortcut"] < 0.0
+    assert "alignment" not in components
+    assert components["off_track"] < 0.0
 
 
 def test_reward_penalizes_reverse_track_progress() -> None:
-    state = RewardState()
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 3.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.4,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
+    _, _, components = _reward(
+        _TICK,
+        {
             "delta_track_s_m": -0.2,
             "lateral_offset_m": 0.2,
             "heading_error_deg": 170.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "terminated_off_track": False,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
     )
     assert components["reverse"] < 0.0
     assert "progress" not in components
 
 
-def test_on_track_does_not_reward_returning_to_leave_point() -> None:
-    state = RewardState(best_s_m=200.0, prev_lateral_m=8.0, was_off_track=True)
-    driving = {
-        "active_faults": "",
-        "safety_state": "DRIVING",
-        "speed_mps": 4.0,
-        "battery_temp_c": 30.0,
-        "motor_temp_c": 35.0,
-        "soc": 0.9,
-        "throttle": 0.5,
-        "brake": 0.0,
-        "steering": 0.0,
-        "max_speed_mps": 12.5,
-        "derating_factor": 1.0,
-        "torque_permitted": 1.0,
-    }
-    _, state, on_track = compute_reward(
-        tick_values=driving,
-        step_info={
-            "delta_track_s_m": 0.2,
-            "track_s_m": 190.2,
-            "track_length_m": 1000.0,
-            "lateral_offset_m": 0.4,
-            "heading_error_deg": 8.0,
+def test_reward_pays_lap_bonus() -> None:
+    state = RewardState(last_lap_number=1.0)
+    reward, _, components = _reward(
+        _TICK,
+        {
+            "delta_track_s_m": 0.04,
+            "lateral_offset_m": 0.1,
+            "heading_error_deg": 3.0,
             "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
+            "lap_number": 2.0,
             "terminated_off_track": False,
         },
-        weights=reward_preset("god"),
-        dt_s=0.01,
         state=state,
-        objective="god",
     )
-    assert "recover_track" not in on_track
-    assert "progress" not in on_track
-    assert state.best_s_m == pytest.approx(200.0)
-
-    _, _, reverse_to_exit = compute_reward(
-        tick_values=driving,
-        step_info={
-            "delta_track_s_m": -0.3,
-            "track_s_m": 199.7,
-            "track_length_m": 1000.0,
-            "lateral_offset_m": 0.2,
-            "heading_error_deg": 170.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=RewardState(best_s_m=220.0, was_off_track=False),
-        objective="god",
-    )
-    assert reverse_to_exit["reverse"] < 0.0
-    assert "progress" not in reverse_to_exit
-    assert "recover_track" not in reverse_to_exit
-
-
-def test_wander_terminal_reward_applied() -> None:
-    state = RewardState()
-    _, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 2.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.5,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 8.0,
-            "heading_error_deg": 0.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "truncated_off_track_wander": True,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert components["wander_terminal"] < 0.0
-
-
-def test_default_setup_caps_off_track_wander() -> None:
-    from gokart.rl.training_setup import default_training_setup
-
-    setup = default_training_setup()
-    assert setup.env.max_off_track_steps == 2500
-    assert setup.rewards.off_track_lateral_cap == pytest.approx(2.0)
-    assert setup.rewards.throttle_go > setup.rewards.standstill
-
-
-def test_reward_prefers_centered_on_track_alignment() -> None:
-    state = RewardState()
-    reward, _, components = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "speed_mps": 6.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.5,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.4,
-            "lateral_offset_m": 0.2,
-            "heading_error_deg": 5.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": False,
-        },
-        weights=reward_preset("god"),
-        dt_s=0.01,
-        state=state,
-        objective="god",
-    )
-    assert reward > 0.0
-    assert "centerline" in components
-    assert "heading" in components
-    assert "speed" in components
+    assert components["lap"] == pytest.approx(20.0)
+    assert reward > 20.0
 
 
 def test_observation_shape(hairpin_track) -> None:
@@ -796,9 +348,8 @@ def test_observation_shape(hairpin_track) -> None:
         step_info={
             "track_s_m": 0.0,
             "lateral_offset_m": 0.0,
+            "heading_error_deg": 5.0,
             "off_track": 0.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
             "completed_laps": 0,
         },
         track=hairpin_track,
@@ -808,6 +359,9 @@ def test_observation_shape(hairpin_track) -> None:
     )
     assert obs.shape == (OBS_DIM,)
     assert np.isfinite(obs).all()
+    assert obs[8] == pytest.approx(0.4)
+    assert obs[9] == pytest.approx(0.0)
+    assert obs[10] == pytest.approx(0.1)
 
 
 def test_env_reset_and_step(hairpin_track) -> None:
@@ -823,6 +377,7 @@ def test_env_reset_and_step(hairpin_track) -> None:
     )
     obs, info = env.reset()
     assert obs.shape == (OBS_DIM,)
+    assert env.action_space.shape == (ACTION_DIM,)
     assert "safety_state" in info
     total_reward = 0.0
     for _ in range(50):
@@ -847,8 +402,8 @@ def test_env_reset_starts_driving_without_boot_brake(hairpin_track) -> None:
     )
     obs, info = env.reset()
     assert info["safety_state"] == "DRIVING"
-    assert obs[17] == pytest.approx(0.0)
-    assert obs[18] == pytest.approx(0.0)
+    assert obs[8] == pytest.approx(0.0)
+    assert obs[9] == pytest.approx(0.0)
     assert float(env.session.state.last_tick.values["brake"]) < 0.5
 
 
@@ -867,7 +422,7 @@ def test_mean_throttle_action_moves_after_reset(hairpin_track) -> None:
     moved = False
     for _ in range(200):
         _obs, _reward, terminated, truncated, _info = env.step(
-            np.array([0.0, 0.0, 0.0], dtype=np.float32)
+            np.array([0.8, 0.0], dtype=np.float32)
         )
         if float(env.session.state.vehicle_state.speed_mps) > 0.5:
             moved = True
@@ -890,8 +445,9 @@ def test_rl_env_terminates_when_off_track(hairpin_track) -> None:
     )
     env.reset()
     off_track = False
+    terminated = False
     for _ in range(200):
-        action = np.array([1.0, 0.0, 1.0], dtype=np.float32)
+        action = np.array([1.0, 1.0], dtype=np.float32)
         _obs, _reward, terminated, truncated, info = env.step(action)
         if info.get("off_track"):
             off_track = True
@@ -911,18 +467,98 @@ def test_rl_env_reaches_driving_with_brake_heavy_policy(hairpin_track) -> None:
         driver_profile="owner",
         objective="god",
         target_laps=1,
-        max_steps=800,
+        max_steps=400,
     )
-    obs, _ = env.reset()
+    env.reset()
     driving_steps = 0
-    for _ in range(800):
-        action = np.array([-0.6, 0.8, 1.0], dtype=np.float32)
-        obs, _reward, terminated, truncated, _info = env.step(action)
+    for _ in range(200):
+        _obs, _reward, terminated, truncated, _info = env.step(
+            np.array([-0.8, 1.0], dtype=np.float32)
+        )
         if env.session.state.safety_state.value == "DRIVING":
             driving_steps += 1
         if terminated or truncated:
             break
-    assert driving_steps > 100
+    assert driving_steps > 50
+
+
+def test_expert_dataset_moves_forward(hairpin_track) -> None:
+    from gokart.rl.demos import collect_expert_dataset
+
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=800,
+    )
+    observations, actions = collect_expert_dataset(env, steps=250)
+    assert observations.shape == (250, OBS_DIM)
+    assert actions.shape == (250, ACTION_DIM)
+    assert float(np.mean(actions[:, 0])) > 0.05
+    assert np.isfinite(observations).all()
+    assert np.isfinite(actions).all()
+
+
+def test_behavior_clone_fits_expert_mean(hairpin_track) -> None:
+    from stable_baselines3 import PPO
+
+    from gokart.rl.demos import behavior_clone, collect_expert_dataset
+
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=800,
+    )
+    observations, actions = collect_expert_dataset(env, steps=300)
+    model = PPO("MlpPolicy", env, verbose=0, seed=0, n_steps=64, batch_size=64)
+    loss = behavior_clone(model, observations, actions, epochs=3, batch_size=64)
+    assert np.isfinite(loss)
+    predicted, _ = model.predict(observations[:64], deterministic=True)
+    predicted = np.asarray(predicted, dtype=np.float32)
+    assert float(np.mean(predicted[:, 0])) > 0.0
+
+
+def test_warm_start_can_be_skipped(hairpin_track) -> None:
+    from stable_baselines3 import PPO
+
+    from gokart.rl.trainer import TrainingConfig, _warm_start_from_expert
+    from gokart.rl.training_setup import RlTrainingSetup
+
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=1,
+        max_steps=200,
+    )
+    model = PPO("MlpPolicy", env, verbose=0, seed=0, n_steps=64, batch_size=64)
+    statuses: list[str] = []
+    setup = RlTrainingSetup(warmup=WarmupConfig(demo_steps=0, bc_epochs=0))
+    _warm_start_from_expert(
+        model,
+        config=TrainingConfig(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            track_id=hairpin_track.id,
+        ),
+        track=hairpin_track,
+        setup=setup,
+        should_stop=lambda: False,
+        on_status=lambda status, **_kwargs: statuses.append(status),
+    )
+    assert statuses == []
 
 
 def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
@@ -937,10 +573,10 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
     manifest = PolicyManifest(identity=identity, status="training")
     path = save_manifest(manifest, root=tmp_path)
     assert path.exists()
-    loaded = PolicyManifest.from_dict(
-        __import__("json").loads(path.read_text(encoding="utf-8"))
-    )
+    loaded = PolicyManifest.from_dict(__import__("json").loads(path.read_text(encoding="utf-8")))
     assert loaded.identity.policy_key == identity.policy_key
+    assert loaded.identity.stack == "circuit_v2"
+    assert loaded.reward_preset == "circuit_v2"
 
 
 def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
@@ -951,7 +587,7 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
     class _StubModel:
         def predict(self, obs, deterministic=True):
             calls.append(deterministic)
-            return np.array([0.25, 0.0, 0.05], dtype=np.float32), None
+            return np.array([0.4, 0.05], dtype=np.float32), None
 
     recorded: list[dict] = []
 
@@ -971,7 +607,15 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
         def finish_preview_recording(self) -> None:
             return
 
-        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0, episode_reward=None) -> str:
+        def record_episode(
+            self,
+            *,
+            ticks,
+            timestep,
+            kind="episode",
+            episode_index=0,
+            episode_reward=None,
+        ) -> str:
             recorded.extend(ticks)
             return "preview-session"
 
@@ -1001,7 +645,6 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
 def test_episode_recording_env_flushes_on_done(hairpin_track) -> None:
     from stable_baselines3.common.monitor import Monitor
 
-    from gokart.rl.env import make_env
     from gokart.rl.episode_recording import EpisodeRecordingEnv
 
     episodes: list[list[dict]] = []
@@ -1056,14 +699,14 @@ def test_stream_training_tick_unwraps_monitor() -> None:
         def finish_preview_recording(self) -> None:
             return
 
-        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0, episode_reward=None) -> str:
+        def record_episode(
+            self, *, ticks, timestep, kind="episode", episode_index=0, episode_reward=None
+        ) -> str:
             return ""
 
     inner = SimpleNamespace(
         session=SimpleNamespace(
-            state=SimpleNamespace(
-                last_tick=SimpleNamespace(to_row=lambda: {"speed_mps": 3.2})
-            )
+            state=SimpleNamespace(last_tick=SimpleNamespace(to_row=lambda: {"speed_mps": 3.2}))
         )
     )
     vec = SimpleNamespace(envs=[SimpleNamespace(env=inner)])

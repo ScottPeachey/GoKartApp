@@ -31,9 +31,7 @@ class TrainingProgress:
             "timesteps": self.timesteps,
             "total_timesteps": self.total_timesteps,
             "progress_pct": (
-                100.0 * self.timesteps / self.total_timesteps
-                if self.total_timesteps > 0
-                else 0.0
+                100.0 * self.timesteps / self.total_timesteps if self.total_timesteps > 0 else 0.0
             ),
             "status": self.status,
             "policy_key": self.policy_key,

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from gokart.config.hashing import content_hash
 from gokart.config.store import data_root, load_vehicle
 from gokart.rl.hooks import TrainingProgress
 from gokart.rl.trainer import TrainingConfig, train_policy
-from gokart.rl.training_setup import RlTrainingSetup, training_setup_from_dict
+from gokart.rl.training_setup import training_setup_from_dict
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import validate_sample_row
 from gokart.telemetry.recorder import SessionMetadata, SessionRecorder
@@ -151,13 +151,7 @@ class TrainingController:
 
         setup = training_setup_from_dict(request.setup)
         if request.objective:
-            setup = RlTrainingSetup(
-                objective=request.objective,
-                action=setup.action,
-                env=setup.env,
-                ppo=setup.ppo,
-                rewards=setup.rewards,
-            )
+            setup = replace(setup, objective=request.objective)
 
         config = TrainingConfig(
             vehicle_name=request.vehicle_name,
@@ -315,9 +309,7 @@ class _DashboardTrainingHooks:
             notes = f"Manual RL test at {timestep:,} training steps"
         else:
             scenario_name = f"rl_episode_{timestep}_{episode_index}"
-            notes = (
-                f"RL training episode {episode_index} at {timestep:,} training steps"
-            )
+            notes = f"RL training episode {episode_index} at {timestep:,} training steps"
         if episode_reward is not None:
             notes = f"{notes} · reward {episode_reward:.2f}"
 

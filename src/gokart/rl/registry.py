@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from gokart.config.store import data_root
-from gokart.rl.policy_key import PolicyIdentity, policy_dir
+from gokart.rl.policy_key import PolicyIdentity, identity_from_dict, policy_dir
 
 PolicyStatus = Literal["training", "ceiling_reached", "stale", "failed"]
 
@@ -22,7 +22,7 @@ class PolicyManifest:
     updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     training_seed: int = 0
     sim_version: str = "0.1.0"
-    reward_preset: str = "god_v1"
+    reward_preset: str = "circuit_v2"
     ceiling_lap_s: float | None = None
     clean_lap_rate: float | None = None
     parent_policy_key: str | None = None
@@ -37,17 +37,9 @@ class PolicyManifest:
     def from_dict(cls, data: dict[str, Any]) -> PolicyManifest:
         nested = data.get("identity")
         if isinstance(nested, dict):
-            identity = PolicyIdentity(**nested)
+            identity = identity_from_dict(nested)
         else:
-            identity = PolicyIdentity(
-                vehicle_name=data["vehicle_name"],
-                vehicle_version=data["vehicle_version"],
-                config_hash=data["config_hash"],
-                track_id=data["track_id"],
-                drive_mode=data["drive_mode"],
-                driver_profile=data["driver_profile"],
-                objective=data["objective"],
-            )
+            identity = identity_from_dict(data)
         return cls(
             identity=identity,
             status=data.get("status", "training"),
@@ -55,7 +47,7 @@ class PolicyManifest:
             updated_at=data.get("updated_at", datetime.now(UTC).isoformat()),
             training_seed=int(data.get("training_seed", 0)),
             sim_version=data.get("sim_version", "0.1.0"),
-            reward_preset=data.get("reward_preset", "god_v1"),
+            reward_preset=data.get("reward_preset", "circuit_v2"),
             ceiling_lap_s=data.get("ceiling_lap_s"),
             clean_lap_rate=data.get("clean_lap_rate"),
             parent_policy_key=data.get("parent_policy_key"),
@@ -93,7 +85,9 @@ def list_policies(root: Path | None = None) -> list[PolicyManifest]:
     for entry in sorted(base.iterdir()):
         manifest_file = entry / "manifest.json"
         if manifest_file.is_file():
-            manifests.append(PolicyManifest.from_dict(json.loads(manifest_file.read_text(encoding="utf-8"))))
+            manifests.append(
+                PolicyManifest.from_dict(json.loads(manifest_file.read_text(encoding="utf-8")))
+            )
     return manifests
 
 

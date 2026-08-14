@@ -177,6 +177,8 @@ const TRAIN_STATUS_LABELS = {
   starting: "Starting…",
   loading_libraries: "Loading PyTorch (first run can take a minute)…",
   building_model: "Building policy network…",
+  collecting_demos: "Recording expert laps to clone…",
+  behavior_cloning: "Copying the racing-line driver into the policy…",
   preview_recording: "Recording preview lap…",
   testing_policy: "Testing current policy (training continues)…",
   training: "Training",
@@ -3362,7 +3364,7 @@ function renderRlTrainingSections(setup) {
   for (const [sectionKey, section] of Object.entries(rlTrainingSchema.sections)) {
     const details = document.createElement("details");
     details.className = "rl-config-details";
-    details.open = sectionKey === "ppo" || sectionKey === "rewards";
+    details.open = sectionKey === "warmup" || sectionKey === "rewards";
     const summary = document.createElement("summary");
     summary.textContent = section.title;
     details.appendChild(summary);
@@ -3415,7 +3417,13 @@ function renderRlTrainingSections(setup) {
 
 function readRlTrainingSetupFromForm() {
   const objective = document.getElementById("train-objective")?.value || "god";
-  const setup = { objective, action: {}, env: {}, ppo: {}, rewards: {} };
+  const sectionKeys = rlTrainingSchema
+    ? Object.keys(rlTrainingSchema.sections)
+    : ["warmup", "action", "env", "ppo", "rewards"];
+  const setup = { objective };
+  for (const key of sectionKeys) {
+    setup[key] = {};
+  }
   document.querySelectorAll("#rl-train-config-sections [data-section]").forEach((input) => {
     const section = input.dataset.section;
     const key = input.dataset.key;

@@ -33,6 +33,8 @@ def test_training_status_labels_cover_init_phases() -> None:
         "starting",
         "loading_libraries",
         "building_model",
+        "collecting_demos",
+        "behavior_cloning",
         "training",
         "preview_recording",
     ):

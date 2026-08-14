@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from gokart import __version__
+from gokart.rl.demos import behavior_clone, collect_expert_dataset
 from gokart.rl.env import make_env
 from gokart.rl.episode_recording import EpisodeRecordingEnv, session_tick_row
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
@@ -181,7 +182,7 @@ def train_policy(
         status="training",
         training_seed=config.seed,
         sim_version=__version__,
-        reward_preset=f"{config.objective}_v1",
+        reward_preset="circuit_v2",
     )
     save_manifest(manifest, root=root)
 
@@ -237,6 +238,15 @@ def train_policy(
         batch_size=ppo.batch_size,
         ent_coef=ppo.ent_coef,
         gamma=ppo.gamma,
+    )
+
+    _warm_start_from_expert(
+        model,
+        config=config,
+        track=track,
+        setup=setup,
+        should_stop=lambda: should_stop() or callbacks.should_stop(),
+        on_status=_status,
     )
 
     eval_history: list[float | None] = []
@@ -456,6 +466,47 @@ def train_policy(
             eval_history, config.plateau_evals, config.min_improvement_s
         ),
     )
+
+
+def _warm_start_from_expert(
+    model: Any,
+    *,
+    config: TrainingConfig,
+    track: Any,
+    setup: RlTrainingSetup,
+    should_stop: Callable[[], bool],
+    on_status: Callable[..., None],
+) -> None:
+    warmup = setup.warmup
+    if warmup.demo_steps <= 0 or warmup.bc_epochs <= 0:
+        return
+    if should_stop():
+        return
+    on_status("collecting_demos")
+    demo_env = make_env(
+        vehicle_name=config.vehicle_name,
+        vehicle_version=config.vehicle_version,
+        track=track,
+        drive_mode=config.drive_mode,
+        driver_profile=config.driver_profile,
+        objective=config.objective,
+        target_laps=config.target_laps,
+        setup=setup,
+    )
+    try:
+        observations, actions = collect_expert_dataset(
+            demo_env,
+            steps=warmup.demo_steps,
+            should_stop=should_stop,
+        )
+    finally:
+        demo_env.close()
+    if should_stop() or observations.shape[0] == 0:
+        return
+    on_status("behavior_cloning")
+    if hasattr(model.policy, "set_training_mode"):
+        model.policy.set_training_mode(True)
+    behavior_clone(model, observations, actions, epochs=warmup.bc_epochs)
 
 
 def evaluate_policy(

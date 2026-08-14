@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from gokart.config.hashing import content_hash
 from gokart.config.store import data_root, load_vehicle
@@ -23,6 +23,7 @@ class PolicyIdentity:
     drive_mode: str
     driver_profile: str
     objective: SessionObjective
+    stack: str = "circuit_v2"
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -52,7 +53,16 @@ def build_policy_identity(
         drive_mode=drive_mode,
         driver_profile=driver_profile,
         objective=objective,
+        stack="circuit_v2",
     )
+
+
+def identity_from_dict(data: dict[str, Any]) -> PolicyIdentity:
+    allowed = {item.name for item in fields(PolicyIdentity)}
+    payload = {key: value for key, value in data.items() if key in allowed}
+    if "stack" not in data:
+        payload["stack"] = "legacy"
+    return PolicyIdentity(**payload)
 
 
 def policy_dir(identity: PolicyIdentity, root: Path | None = None) -> Path:

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from gokart.rl.actions import decode_rl_action
+from gokart.rl.actions import ACTION_DIM, decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.rewards import RewardState, compute_reward
 from gokart.rl.training_setup import EnvRuntimeConfig, RlTrainingSetup, default_training_setup
@@ -52,8 +53,8 @@ class TrackRacingEnv(gym.Env):
         self._last_policy_controls = (0.0, 0.0, 0.0)
 
         self.action_space = spaces.Box(
-            low=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
-            high=np.array([1.0, 1.0, 1.0], dtype=np.float32),
+            low=np.full(ACTION_DIM, -1.0, dtype=np.float32),
+            high=np.full(ACTION_DIM, 1.0, dtype=np.float32),
             dtype=np.float32,
         )
         self.observation_space = spaces.Box(
@@ -81,10 +82,7 @@ class TrackRacingEnv(gym.Env):
         self._last_policy_controls = (0.0, 0.0, 0.0)
         step_result = self.session.reset()
         boot_steps = 0
-        while (
-            step_result.safety_state != SafetyState.DRIVING
-            and boot_steps < BOOT_STEP_ALLOWANCE
-        ):
+        while step_result.safety_state != SafetyState.DRIVING and boot_steps < BOOT_STEP_ALLOWANCE:
             step_result = self.session.step(action=None)
             boot_steps += 1
         # Controls are chosen from the previous safety state, so the first
@@ -106,17 +104,13 @@ class TrackRacingEnv(gym.Env):
         self._last_policy_controls = action_tuple
         step_result = self.session.step(action=action_tuple)
         env_cfg = self._env_cfg
-        speed = float(step_result.tick.values.get("speed_mps", 0.0))
-        steering = abs(float(step_result.tick.values.get("steering", 0.0)))
         delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
         driving = step_result.safety_state.value == "DRIVING"
         lateral_offset_m = abs(float(step_result.info.get("lateral_offset_m", 0.0)))
         track_width_m = max(float(step_result.info.get("track_width_m", 10.0)), 1.0)
         off_track_now = lateral_offset_m > track_width_m * 0.5
         no_forward = delta_s < env_cfg.stagnant_delta_s
-        spinning = steering >= 0.35 and speed >= env_cfg.stagnant_speed_mps and no_forward
-        idle = speed < env_cfg.stagnant_speed_mps and no_forward
-        stagnant_now = driving and env_cfg.max_stagnant_steps > 0 and (idle or spinning)
+        stagnant_now = driving and env_cfg.max_stagnant_steps > 0 and no_forward
         if stagnant_now and self._stagnant_steps + 1 >= env_cfg.max_stagnant_steps:
             step_result.info["truncated_stagnant"] = True
         if (
@@ -196,13 +190,7 @@ def make_env(
 ) -> TrackRacingEnv:
     resolved_setup = setup or default_training_setup()
     if objective and resolved_setup.objective != objective:
-        resolved_setup = RlTrainingSetup(
-            objective=objective,
-            action=resolved_setup.action,
-            env=resolved_setup.env,
-            ppo=resolved_setup.ppo,
-            rewards=resolved_setup.rewards,
-        )
+        resolved_setup = replace(resolved_setup, objective=objective)
     env_cfg = resolved_setup.env
     drive_steps = max_steps if max_steps is not None else env_cfg.max_steps
     config = SessionConfig(

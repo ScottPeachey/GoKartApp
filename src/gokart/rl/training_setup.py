@@ -10,19 +10,23 @@ from gokart.rl.rewards import ENDURANCE_WEIGHTS, GOD_WEIGHTS, RewardWeights
 
 @dataclass(frozen=True)
 class ActionConfig:
-    throttle_breakaway: float = 0.15
-    standing_start_speed_mps: float = 0.15
-    brake_cutoff: float = 0.85
+    throttle_breakaway: float = 0.2
+    standing_start_speed_mps: float = 0.25
 
 
 @dataclass(frozen=True)
 class EnvRuntimeConfig:
     max_steps: int = 12_000
     terminate_on_off_track: bool = True
-    stagnant_speed_mps: float = 0.15
-    stagnant_delta_s: float = 0.0005
-    max_stagnant_steps: int = 500
-    max_off_track_steps: int = 2500
+    stagnant_delta_s: float = 0.001
+    max_stagnant_steps: int = 300
+    max_off_track_steps: int = 800
+
+
+@dataclass(frozen=True)
+class WarmupConfig:
+    demo_steps: int = 15_000
+    bc_epochs: int = 12
 
 
 @dataclass(frozen=True)
@@ -30,7 +34,7 @@ class PpoConfig:
     learning_rate: float = 3e-4
     n_steps: int = 2048
     batch_size: int = 64
-    ent_coef: float = 0.05
+    ent_coef: float = 0.01
     gamma: float = 0.999
 
 
@@ -39,6 +43,7 @@ class RlTrainingSetup:
     objective: str = "god"
     action: ActionConfig = ActionConfig()
     env: EnvRuntimeConfig = EnvRuntimeConfig()
+    warmup: WarmupConfig = WarmupConfig()
     ppo: PpoConfig = PpoConfig()
     rewards: RewardWeights = GOD_WEIGHTS
 
@@ -55,10 +60,18 @@ def training_setup_from_dict(data: dict[str, Any] | None) -> RlTrainingSetup:
         return default_training_setup()
     action = ActionConfig(**_subset(data.get("action", {}), ActionConfig))
     env = EnvRuntimeConfig(**_subset(data.get("env", {}), EnvRuntimeConfig))
+    warmup = WarmupConfig(**_subset(data.get("warmup", {}), WarmupConfig))
     ppo = PpoConfig(**_subset(data.get("ppo", {}), PpoConfig))
     rewards = RewardWeights(**_subset(data.get("rewards", {}), RewardWeights))
     objective = str(data.get("objective", "god"))
-    return RlTrainingSetup(objective=objective, action=action, env=env, ppo=ppo, rewards=rewards)
+    return RlTrainingSetup(
+        objective=objective,
+        action=action,
+        env=env,
+        warmup=warmup,
+        ppo=ppo,
+        rewards=rewards,
+    )
 
 
 def training_setup_to_dict(setup: RlTrainingSetup) -> dict[str, Any]:
@@ -66,6 +79,7 @@ def training_setup_to_dict(setup: RlTrainingSetup) -> dict[str, Any]:
         "objective": setup.objective,
         "action": asdict(setup.action),
         "env": asdict(setup.env),
+        "warmup": asdict(setup.warmup),
         "ppo": asdict(setup.ppo),
         "rewards": asdict(setup.rewards),
     }
@@ -80,47 +94,24 @@ def reward_preset_dict(objective: str) -> dict[str, float]:
 _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "action.throttle_breakaway": {"step": 0.05, "min": 0, "max": 1},
     "action.standing_start_speed_mps": {"step": 0.05, "min": 0, "max": 5},
-    "action.brake_cutoff": {"step": 0.05, "min": 0, "max": 1},
     "env.max_steps": {"step": 500, "min": 100, "max": 100_000},
-    "env.stagnant_speed_mps": {"step": 0.01, "min": 0, "max": 2},
-    "env.stagnant_delta_s": {"step": 0.0001, "min": 0, "max": 1},
+    "env.stagnant_delta_s": {"step": 0.0005, "min": 0, "max": 1},
     "env.max_stagnant_steps": {"step": 50, "min": 50, "max": 10_000},
-    "env.max_off_track_steps": {"step": 250, "min": 0, "max": 20_000},
+    "env.max_off_track_steps": {"step": 50, "min": 0, "max": 20_000},
+    "warmup.demo_steps": {"step": 1000, "min": 0, "max": 200_000},
+    "warmup.bc_epochs": {"step": 1, "min": 0, "max": 100},
     "ppo.learning_rate": {"step": 0.00001, "min": 0.000001, "max": 0.01},
     "ppo.n_steps": {"step": 256, "min": 256, "max": 16_384},
     "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
     "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
     "ppo.gamma": {"step": 0.001, "min": 0.9, "max": 0.9999},
-    "rewards.progress": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.centerline": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.heading": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.speed": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.forward_speed": {"step": 0.05, "min": 0, "max": 10},
-    "rewards.standstill": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.throttle_go": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.low_speed_steer": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.spin": {"step": 0.05, "min": 0, "max": 5},
-    "rewards.lap_bonus": {"step": 1, "min": 0, "max": 500},
-    "rewards.fault_block": {"step": 1, "min": 0, "max": 500},
-    "rewards.fault_derate": {"step": 1, "min": 0, "max": 500},
-    "rewards.off_track_rate": {"step": 0.1, "min": 0, "max": 50},
-    "rewards.off_track_lateral_cap": {"step": 0.1, "min": 1, "max": 10},
-    "rewards.off_track_progress": {"step": 0.01, "min": 0, "max": 1},
-    "rewards.recover_track": {"step": 0.05, "min": 0, "max": 5},
-    "rewards.heading_off_track": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.reverse": {"step": 0.05, "min": 0, "max": 5},
-    "rewards.wrong_way": {"step": 0.05, "min": 0, "max": 10},
-    "rewards.shortcut": {"step": 0.1, "min": 0, "max": 50},
-    "rewards.max_progress_delta_m": {"step": 0.1, "min": 0.05, "max": 20},
-    "rewards.off_track_terminal": {"step": 1, "min": 0, "max": 500},
-    "rewards.wander_terminal": {"step": 1, "min": 0, "max": 500},
-    "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 500},
-    "rewards.battery_margin": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.motor_margin": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.soc_margin": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.jerk": {"step": 0.01, "min": 0, "max": 5},
-    "rewards.throttle_brake_overlap": {"step": 0.1, "min": 0, "max": 50},
-    "rewards.time_penalty": {"step": 0.005, "min": 0, "max": 1},
+    "rewards.progress": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.alignment": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.reverse": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.off_track": {"step": 0.1, "min": 0, "max": 50},
+    "rewards.wall": {"step": 1, "min": 0, "max": 50},
+    "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 50},
+    "rewards.lap": {"step": 1, "min": 0, "max": 200},
 }
 
 
@@ -166,14 +157,28 @@ def training_setup_schema() -> dict[str, Any]:
             "endurance": reward_preset_dict("endurance"),
         },
         "sections": {
+            "warmup": _section(
+                WarmupConfig,
+                "warmup",
+                "Expert warmup",
+                {
+                    "demo_steps": (
+                        "Ticks cloned from the racing-line driver before PPO. 0 skips warmup."
+                    ),
+                    "bc_epochs": "Passes over those demos to copy expert steering and throttle.",
+                },
+                {
+                    "demo_steps": "Expert demo ticks",
+                    "bc_epochs": "Clone epochs",
+                },
+            ),
             "action": _section(
                 ActionConfig,
                 "action",
                 "Action mapping",
                 {
-                    "throttle_breakaway": "Minimum throttle applied when the policy requests gas from a standstill.",
-                    "standing_start_speed_mps": "Below this speed, standing-start assist is active.",
-                    "brake_cutoff": "Brake input above this cancels throttle (0–1).",
+                    "throttle_breakaway": "Minimum throttle when asking for gas from a standstill.",
+                    "standing_start_speed_mps": "Below this speed, standing-start assist is on.",
                 },
             ),
             "env": _section(
@@ -181,16 +186,17 @@ def training_setup_schema() -> dict[str, Any]:
                 "env",
                 "Episode / environment",
                 {
-                    "max_steps": "How long ONE episode may last, in sim ticks (0.01 s each). 12,000 = 120 seconds, not 'record every 12,000 training steps'.",
-                    "terminate_on_off_track": "End the episode as soon as the kart leaves the track (like hitting a wall). Applies the wall-hit penalty on that tick.",
-                    "stagnant_speed_mps": "Speed below this counts as not moving.",
-                    "stagnant_delta_s": "Forward progress below this counts as stagnant.",
-                    "max_stagnant_steps": "End the episode after this many ticks with no forward track progress — sitting still OR circling in place (~ticks × 0.01 s).",
-                    "max_off_track_steps": "When off-track termination is off, end the episode after this many consecutive off-track ticks (0 = unlimited). Caps penalty from long wanders.",
+                    "max_steps": "Max ticks in one episode (0.01 s each). 12,000 = 120 seconds.",
+                    "terminate_on_off_track": "End the episode when the kart leaves the track.",
+                    "stagnant_delta_s": "Forward progress below this counts as not moving.",
+                    "max_stagnant_steps": "End the episode after this many ticks with no progress.",
+                    "max_off_track_steps": (
+                        "If off-track terminate is off, cut after these ticks."
+                    ),
                 },
                 {
                     "max_steps": "Max ticks per episode",
-                    "max_stagnant_steps": "Idle/spin ticks before cut",
+                    "max_stagnant_steps": "Idle ticks before cut",
                     "max_off_track_steps": "Off-track ticks before cut",
                 },
             ),
@@ -200,10 +206,10 @@ def training_setup_schema() -> dict[str, Any]:
                 "PPO learner",
                 {
                     "learning_rate": "Adam learning rate.",
-                    "n_steps": "How many ticks PPO collects before one learning update (not recording frequency).",
+                    "n_steps": "Ticks collected before one PPO update.",
                     "batch_size": "Minibatch size for PPO updates.",
-                    "ent_coef": "Entropy bonus — higher explores more (try 0.01–0.1).",
-                    "gamma": "Discount factor. At 100 Hz use ~0.999 so rewards more than a second ahead still matter.",
+                    "ent_coef": "Entropy bonus after warmup. Keep small once the expert is cloned.",
+                    "gamma": "Discount factor. At 100 Hz use ~0.999.",
                 },
             ),
             "rewards": _section(
@@ -212,30 +218,12 @@ def training_setup_schema() -> dict[str, Any]:
                 "Reward weights",
                 {
                     "progress": "Reward per metre of forward track progress.",
-                    "centerline": "Shaping for staying near centre line.",
-                    "heading": "Shaping for aligning with track heading.",
-                    "speed": "Small extra speed bonus while facing along the circuit.",
-                    "forward_speed": "Speed along the circuit; negative if it turns around.",
-                    "standstill": "Penalty per second while stopped on track.",
-                    "throttle_go": "Bonus for throttle while slow and facing forward.",
-                    "low_speed_steer": "Penalty for large steering at low speed.",
-                    "spin": "Penalty for steering hard while making no forward track progress (donuts / tightening circles).",
-                    "heading_off_track": "Keep at 0. Off-track heading bonuses can reward spinning to face a nearby stretch.",
-                    "lap_bonus": "Bonus for a clean completed lap.",
-                    "off_track_rate": "Per-second penalty while off track; scales with distance beyond the edge up to the lateral cap.",
-                    "off_track_lateral_cap": "Maximum lateral-distance multiplier for the off-track penalty (limits damage from one long wander).",
-                    "off_track_progress": "Fraction of on-track progress still paid while off track. Keep at 0 so infield shortcuts are not rewarded.",
-                    "recover_track": "Off-track only: reward per metre back toward the stretch you left. Stops the instant you are on the circuit again.",
-                    "reverse": "Penalty per metre of backward circuit progress. Stronger on track so the kart cannot reverse to the leave-point.",
-                    "wrong_way": "Penalty for facing more than 90° from circuit direction.",
-                    "shortcut": "Penalty when track progress jumps more than max_progress_delta_m in one tick (snapping to another section).",
-                    "max_progress_delta_m": "Largest along-track jump counted as real progress in one 0.01 s tick. Bigger jumps are treated as shortcuts.",
-                    "off_track_terminal": "Wall-hit cost. Keep ~12; 80+ makes sitting still better than driving.",
-                    "wander_terminal": "One-shot penalty when episode ends from the off-track wander limit.",
-                    "stagnant_terminal": "One-shot penalty when episode ends from standing still too long.",
-                    "time_penalty": "Per-second living cost.",
-                    "jerk": "Penalty for abrupt control changes.",
-                    "throttle_brake_overlap": "Penalty for overlapping throttle and brake.",
+                    "alignment": "Reward for speed while facing along the circuit.",
+                    "reverse": "Penalty per metre of backward progress.",
+                    "off_track": "Per-second penalty while off the circuit.",
+                    "wall": "One-shot cost when off-track terminate ends the episode.",
+                    "stagnant_terminal": "One-shot cost when the episode is cut for not moving.",
+                    "lap": "Bonus for completing a lap.",
                 },
             ),
         },
