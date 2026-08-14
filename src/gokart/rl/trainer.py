@@ -340,12 +340,19 @@ def train_policy(
                     preview_running=True,
                     status="preview_recording",
                 )
+                preview_max_steps = (
+                    config.setup.env.max_steps
+                    if config.setup is not None
+                    else config.preview_max_steps
+                )
                 lap, clean, reward, preview_session_id = run_preview_episode(
                     model,
                     config=config,
                     track=track,
                     hooks=callbacks,
                     timestep=self.num_timesteps,
+                    max_steps=preview_max_steps,
+                    target_laps=config.target_laps,
                 )
                 previews_completed += 1
                 last_episode_reward = reward

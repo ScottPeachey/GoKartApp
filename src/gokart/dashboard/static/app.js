@@ -1847,6 +1847,14 @@ function ensureHistoryChartStaticCache(canvas, samples, meta) {
   staticCanvas.height = canvas.height;
   const staticCtx = staticCanvas.getContext("2d");
   drawHistoryChartGrid(staticCtx, staticCanvas.width, layout, samples.length);
+  plotPedalOverlay(
+    staticCtx,
+    samples,
+    meta.throttlePct,
+    meta.brakePct,
+    layout.speedTop,
+    layout.panelHeight,
+  );
   plotSeries(staticCtx, samples, meta.speeds, "#3dd6c6", layout.speedTop, layout.panelHeight, meta.maxSpeed);
   plotSeries(
     staticCtx,
@@ -1859,7 +1867,11 @@ function ensureHistoryChartStaticCache(canvas, samples, meta) {
   );
   staticCtx.fillStyle = "#8aa0b8";
   staticCtx.font = "12px sans-serif";
-  staticCtx.fillText(`Speed (max ${meta.maxSpeed.toFixed(1)} km/h)`, 10, 16);
+  staticCtx.fillText(
+    `Speed (max ${meta.maxSpeed.toFixed(1)} km/h) · throttle green · brake red`,
+    10,
+    16,
+  );
   staticCtx.fillText(`Steering (±${meta.maxSteer.toFixed(0)}°)`, 10, layout.steerTop - 4);
 
   state.historyChartStaticCanvas = staticCanvas;
@@ -2441,6 +2453,40 @@ function plotSeries(ctx, samples, values, color, topPad, height, maxValue) {
   ctx.stroke();
 }
 
+function plotPedalOverlay(ctx, samples, throttlePct, brakePct, topPad, height) {
+  const width = ctx.canvas.width;
+  const pedalSpan = height * 0.38;
+  const pedalBase = topPad + height;
+  const pedalY = (value) => pedalBase - (Math.max(0, Math.min(100, value)) / 100) * pedalSpan;
+
+  const drawPedalFill = (values, fillStyle, strokeStyle) => {
+    if (!values.length) return;
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.moveTo(historyChartX(0, samples.length, width), pedalBase);
+    values.forEach((value, index) => {
+      ctx.lineTo(historyChartX(index, samples.length, width), pedalY(value));
+    });
+    ctx.lineTo(historyChartX(samples.length - 1, samples.length, width), pedalBase);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    values.forEach((value, index) => {
+      const x = historyChartX(index, samples.length, width);
+      const y = pedalY(value);
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  };
+
+  drawPedalFill(throttlePct, "rgba(76, 175, 80, 0.28)", "rgba(129, 199, 132, 0.95)");
+  drawPedalFill(brakePct, "rgba(244, 67, 54, 0.42)", "rgba(255, 82, 82, 0.98)");
+}
+
 function formatReplayTime(seconds) {
   const value = Math.max(0, Number(seconds) || 0);
   return `${value.toFixed(2)} s`;
@@ -2540,6 +2586,14 @@ function renderHistoryReplayFrame({ scrollToPlayhead = false, playback = false }
     prepareHistoryChartCanvas(canvas, samples.length);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawHistoryChartGrid(ctx, canvas.width, layout, samples.length);
+    plotPedalOverlay(
+      ctx,
+      samples,
+      meta.throttlePct,
+      meta.brakePct,
+      layout.speedTop,
+      layout.panelHeight,
+    );
     plotSeries(ctx, samples, meta.speeds, "#3dd6c6", layout.speedTop, layout.panelHeight, meta.maxSpeed);
     plotSeries(
       ctx,
@@ -2553,7 +2607,11 @@ function renderHistoryReplayFrame({ scrollToPlayhead = false, playback = false }
     drawHistoryChartPlayhead(ctx, index, samples.length, layout);
     ctx.fillStyle = "#8aa0b8";
     ctx.font = "12px sans-serif";
-    ctx.fillText(`Speed (max ${meta.maxSpeed.toFixed(1)} km/h)`, 10, 16);
+    ctx.fillText(
+      `Speed (max ${meta.maxSpeed.toFixed(1)} km/h) · throttle green · brake red`,
+      10,
+      16,
+    );
     ctx.fillText(`Steering (±${meta.maxSteer.toFixed(0)}°)`, 10, layout.steerTop - 4);
     ensureHistoryChartStaticCache(canvas, samples, meta);
   }
@@ -2792,6 +2850,8 @@ async function drawSessionChart(sessionId) {
 
   const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
   const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
+  const throttlePct = samples.map((s) => Math.max(0, Math.min(100, Number(s.throttle || 0) * 100)));
+  const brakePct = samples.map((s) => Math.max(0, Math.min(100, Number(s.brake || 0) * 100)));
   const peakSpeed = Math.max(...speeds, 0);
   const maxSpeed = Math.max(peakSpeed, 1);
   const maxSteer = Math.max(...steers.map((v) => Math.abs(v)), 1);
@@ -2804,7 +2864,7 @@ async function drawSessionChart(sessionId) {
 
   state.historyReplaySamples = samples;
   state.historyReplaySessionId = sessionId;
-  state.historyReplayChartMeta = { speeds, steerNorm, maxSpeed, maxSteer };
+  state.historyReplayChartMeta = { speeds, steerNorm, throttlePct, brakePct, maxSpeed, maxSteer };
 
   if (replaySessionChanged) {
     state.historyReplayPathDrawnIndex = -1;
