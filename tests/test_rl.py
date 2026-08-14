@@ -112,7 +112,7 @@ def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
         np.array([-0.6, 0.0, 0.0], dtype=np.float32),
         speed_mps=0.0,
     )
-    assert assist_throttle == pytest.approx(0.2)
+    assert assist_throttle == pytest.approx(0.32)
 
     moving_throttle, _, _ = decode_rl_action(
         np.array([-0.6, 0.0, 0.0], dtype=np.float32),
@@ -385,6 +385,83 @@ def test_off_track_penalty_scales_with_lateral_distance() -> None:
     )
     assert near["off_track"] < 0.0
     assert far["off_track"] < near["off_track"]
+
+
+def test_reward_recovers_toward_track_when_off_track() -> None:
+    state = RewardState(prev_lateral_m=8.0)
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 1.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.4,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 6.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert components.get("recover_track", 0.0) > 0.0
+
+
+def test_wander_terminal_reward_applied() -> None:
+    state = RewardState()
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 2.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.5,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 8.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "truncated_off_track_wander": True,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert components["wander_terminal"] < 0.0
+
+
+def test_default_setup_caps_off_track_wander() -> None:
+    from gokart.rl.training_setup import default_training_setup
+
+    setup = default_training_setup()
+    assert setup.env.max_off_track_steps == 2500
+    assert setup.rewards.off_track_lateral_cap == pytest.approx(2.0)
+    assert setup.rewards.throttle_go > setup.rewards.standstill
 
 
 def test_reward_prefers_centered_on_track_alignment() -> None:

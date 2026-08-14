@@ -38,6 +38,7 @@ class TrackRacingEnv(gym.Env):
         self._reward_state = RewardState()
         self._last_obs = np.zeros(OBS_DIM, dtype=np.float32)
         self._stagnant_steps = 0
+        self._off_track_steps = 0
 
         self.action_space = spaces.Box(
             low=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
@@ -64,6 +65,7 @@ class TrackRacingEnv(gym.Env):
         super().reset(seed=seed)
         self._reward_state = RewardState()
         self._stagnant_steps = 0
+        self._off_track_steps = 0
         step_result = self.session.reset()
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
@@ -81,6 +83,9 @@ class TrackRacingEnv(gym.Env):
         speed = float(step_result.tick.values.get("speed_mps", 0.0))
         delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
         driving = step_result.safety_state.value == "DRIVING"
+        lateral_offset_m = abs(float(step_result.info.get("lateral_offset_m", 0.0)))
+        track_width_m = max(float(step_result.info.get("track_width_m", 10.0)), 1.0)
+        off_track_now = lateral_offset_m > track_width_m * 0.5
         stagnant_now = (
             driving
             and env_cfg.max_stagnant_steps > 0
@@ -89,6 +94,13 @@ class TrackRacingEnv(gym.Env):
         )
         if stagnant_now and self._stagnant_steps + 1 >= env_cfg.max_stagnant_steps:
             step_result.info["truncated_stagnant"] = True
+        if (
+            not env_cfg.terminate_on_off_track
+            and env_cfg.max_off_track_steps > 0
+            and off_track_now
+            and self._off_track_steps + 1 >= env_cfg.max_off_track_steps
+        ):
+            step_result.info["truncated_off_track_wander"] = True
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
             step_info=step_result.info,
@@ -103,9 +115,15 @@ class TrackRacingEnv(gym.Env):
             self._stagnant_steps += 1
         else:
             self._stagnant_steps = 0
+        if off_track_now:
+            self._off_track_steps += 1
+        else:
+            self._off_track_steps = 0
         truncated = step_result.truncated
         if env_cfg.max_stagnant_steps > 0:
             truncated = truncated or self._stagnant_steps >= env_cfg.max_stagnant_steps
+        if env_cfg.max_off_track_steps > 0:
+            truncated = truncated or self._off_track_steps >= env_cfg.max_off_track_steps
         info = {
             **step_result.info,
             "reward_components": components,

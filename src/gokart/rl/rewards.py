@@ -15,14 +15,18 @@ class RewardWeights:
     centerline: float = 0.12
     heading: float = 0.06
     speed: float = 0.06
-    standstill: float = 0.5
-    throttle_go: float = 0.15
+    standstill: float = 0.35
+    throttle_go: float = 0.55
     low_speed_steer: float = 0.08
     lap_bonus: float = 25.0
     fault_block: float = 80.0
     fault_derate: float = 12.0
-    off_track_rate: float = 8.0
+    off_track_rate: float = 4.0
+    off_track_lateral_cap: float = 2.0
+    off_track_progress: float = 0.12
+    recover_track: float = 0.15
     off_track_terminal: float = 25.0
+    wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
     motor_margin: float = 0.05
@@ -52,6 +56,7 @@ class RewardState:
     lap_faults: set[str] = field(default_factory=set)
     off_track_time_s: float = 0.0
     last_lap_number: float = 0.0
+    prev_lateral_m: float = 0.0
 
 
 def reward_preset(objective: str) -> RewardWeights:
@@ -93,8 +98,11 @@ def compute_reward(
     can_control = safety_state == "DRIVING"
 
     delta_s = float(step_info.get("delta_track_s_m", 0.0))
-    if can_control and delta_s > 0.0 and not blocking and not off_track:
-        progress = weights.progress * delta_s
+    if can_control and delta_s > 0.0 and not blocking:
+        if not off_track:
+            progress = weights.progress * delta_s
+        else:
+            progress = weights.progress * weights.off_track_progress * delta_s
         reward += progress
         components["progress"] = progress
 
@@ -135,13 +143,22 @@ def compute_reward(
             components["low_speed_steer"] = steer_penalty
 
     if off_track:
-        off_penalty = -weights.off_track_rate * max(lateral_ratio, 1.0) * dt_s
+        penalty_lateral = min(max(lateral_ratio, 1.0), max(weights.off_track_lateral_cap, 1.0))
+        off_penalty = -weights.off_track_rate * penalty_lateral * dt_s
         reward += off_penalty
         components["off_track"] = off_penalty
+        if can_control and lateral + 1e-6 < state.prev_lateral_m:
+            recover = weights.recover_track * (state.prev_lateral_m - lateral)
+            reward += recover
+            components["recover_track"] = recover
         if bool(step_info.get("terminated_off_track")):
             terminal_penalty = -weights.off_track_terminal
             reward += terminal_penalty
             components["off_track_terminal"] = terminal_penalty
+        if bool(step_info.get("truncated_off_track_wander")):
+            wander_penalty = -weights.wander_terminal
+            reward += wander_penalty
+            components["wander_terminal"] = wander_penalty
 
     if bool(step_info.get("truncated_stagnant")):
         stagnant_penalty = -weights.stagnant_terminal
@@ -209,6 +226,7 @@ def compute_reward(
         state.lap_faults.clear()
         state.off_track_time_s = 0.0
     state.last_lap_number = lap_number
+    state.prev_lateral_m = lateral
 
     state.prev_throttle = throttle
     state.prev_brake = brake

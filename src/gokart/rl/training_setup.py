@@ -10,7 +10,7 @@ from gokart.rl.rewards import ENDURANCE_WEIGHTS, GOD_WEIGHTS, RewardWeights
 
 @dataclass(frozen=True)
 class ActionConfig:
-    throttle_breakaway: float = 0.0
+    throttle_breakaway: float = 0.15
     standing_start_speed_mps: float = 0.15
     brake_cutoff: float = 0.85
 
@@ -22,6 +22,7 @@ class EnvRuntimeConfig:
     stagnant_speed_mps: float = 0.15
     stagnant_delta_s: float = 0.0005
     max_stagnant_steps: int = 500
+    max_off_track_steps: int = 2500
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "env.stagnant_speed_mps": {"step": 0.01, "min": 0, "max": 2},
     "env.stagnant_delta_s": {"step": 0.0001, "min": 0, "max": 1},
     "env.max_stagnant_steps": {"step": 50, "min": 50, "max": 10_000},
+    "env.max_off_track_steps": {"step": 250, "min": 0, "max": 20_000},
     "ppo.learning_rate": {"step": 0.00001, "min": 0.000001, "max": 0.01},
     "ppo.n_steps": {"step": 256, "min": 256, "max": 16_384},
     "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
@@ -100,7 +102,11 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "rewards.fault_block": {"step": 1, "min": 0, "max": 500},
     "rewards.fault_derate": {"step": 1, "min": 0, "max": 500},
     "rewards.off_track_rate": {"step": 0.1, "min": 0, "max": 50},
+    "rewards.off_track_lateral_cap": {"step": 0.1, "min": 1, "max": 10},
+    "rewards.off_track_progress": {"step": 0.01, "min": 0, "max": 1},
+    "rewards.recover_track": {"step": 0.01, "min": 0, "max": 5},
     "rewards.off_track_terminal": {"step": 1, "min": 0, "max": 500},
+    "rewards.wander_terminal": {"step": 1, "min": 0, "max": 500},
     "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 500},
     "rewards.battery_margin": {"step": 0.01, "min": 0, "max": 5},
     "rewards.motor_margin": {"step": 0.01, "min": 0, "max": 5},
@@ -171,10 +177,12 @@ def training_setup_schema() -> dict[str, Any]:
                     "stagnant_speed_mps": "Speed below this counts as not moving.",
                     "stagnant_delta_s": "Forward progress below this counts as stagnant.",
                     "max_stagnant_steps": "End the episode after this many idle ticks (~ticks × 0.01 s).",
+                    "max_off_track_steps": "When off-track termination is off, end the episode after this many consecutive off-track ticks (0 = unlimited). Caps penalty from long wanders.",
                 },
                 {
                     "max_steps": "Max ticks per episode",
                     "max_stagnant_steps": "Idle ticks before cut",
+                    "max_off_track_steps": "Off-track ticks before cut",
                 },
             ),
             "ppo": _section(
@@ -202,8 +210,12 @@ def training_setup_schema() -> dict[str, Any]:
                     "throttle_go": "Bonus for applying throttle while slow.",
                     "low_speed_steer": "Penalty for large steering at low speed.",
                     "lap_bonus": "Bonus for a clean completed lap.",
-                    "off_track_rate": "Per-second penalty while off track; scales with distance beyond the edge.",
+                    "off_track_rate": "Per-second penalty while off track; scales with distance beyond the edge up to the lateral cap.",
+                    "off_track_lateral_cap": "Maximum lateral-distance multiplier for the off-track penalty (limits damage from one long wander).",
+                    "off_track_progress": "Fraction of on-track progress reward still paid while off track.",
+                    "recover_track": "Reward per metre of lateral distance recovered toward the circuit.",
                     "off_track_terminal": "One-shot penalty when episode ends off track.",
+                    "wander_terminal": "One-shot penalty when episode ends from the off-track wander limit.",
                     "stagnant_terminal": "One-shot penalty when episode ends from standing still too long.",
                     "time_penalty": "Per-second living cost.",
                     "jerk": "Penalty for abrupt control changes.",
