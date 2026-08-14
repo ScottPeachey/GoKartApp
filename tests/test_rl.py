@@ -129,7 +129,7 @@ def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
         state=RewardState(),
         objective="god",
     )
-    assert slow_parts["wall_hit"] == pytest.approx(-80.0)
+    assert slow_parts["wall_hit"] == pytest.approx(-12.0)
     assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
     assert "recover_track" not in slow_parts
 
@@ -395,7 +395,7 @@ def test_reward_does_not_pay_speed_for_tightening_circles() -> None:
         step_info={
             "delta_track_s_m": 0.0,
             "lateral_offset_m": 0.2,
-            "heading_error_deg": 8.0,
+            "heading_error_deg": 120.0,
             "track_width_m": 10.0,
             "battery_temp_derate_c": 50.0,
             "battery_temp_fault_c": 60.0,
@@ -410,6 +410,60 @@ def test_reward_does_not_pay_speed_for_tightening_circles() -> None:
     assert "centerline" not in components
     assert "heading" not in components
     assert components["spin"] < 0.0
+    assert components["forward_speed"] < 0.0
+    assert components["wrong_way"] < 0.0
+
+
+def test_forward_drive_beats_start_line_u_turn() -> None:
+    shared_ticks = {
+        "active_faults": "",
+        "safety_state": "DRIVING",
+        "speed_mps": 4.0,
+        "battery_temp_c": 30.0,
+        "motor_temp_c": 35.0,
+        "soc": 0.9,
+        "throttle": 0.7,
+        "brake": 0.0,
+        "steering": 0.0,
+        "max_speed_mps": 12.5,
+        "derating_factor": 1.0,
+        "torque_permitted": 1.0,
+    }
+    forward, _, _ = compute_reward(
+        tick_values=shared_ticks,
+        step_info={
+            "delta_track_s_m": 0.04,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 5.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=RewardState(),
+        objective="god",
+    )
+    u_turn, _, _ = compute_reward(
+        tick_values={**shared_ticks, "steering": 0.9},
+        step_info={
+            "delta_track_s_m": -0.01,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 160.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=RewardState(),
+        objective="god",
+    )
+    assert forward > 0.0
+    assert u_turn < 0.0
+    assert forward > u_turn
 
 
 def test_off_track_penalty_scales_with_lateral_distance() -> None:

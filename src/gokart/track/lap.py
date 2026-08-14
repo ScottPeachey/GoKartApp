@@ -228,6 +228,7 @@ def _best_projection(
     length_m: float,
 ) -> TrackProjection | None:
     best_dist_sq = float("inf")
+    best_s_err = float("inf")
     best: TrackProjection | None = None
 
     for index in range(1, len(centerline)):
@@ -246,13 +247,22 @@ def _best_projection(
         proj_x = prev.x + dx * t
         proj_y = prev.y + dy * t
         dist_sq = (x - proj_x) ** 2 + (y - proj_y) ** 2
-        if dist_sq >= best_dist_sq:
-            continue
         heading = math.atan2(dy, dx)
         lateral = (x - proj_x) * (-math.sin(heading)) + (y - proj_y) * math.cos(heading)
+        s_m = prev.s + (curr.s - prev.s) * t
+        s_err = (
+            abs(along_track_delta(s_m, around_s_m, length_m))
+            if around_s_m is not None
+            else 0.0
+        )
+        closer = dist_sq < best_dist_sq - 1e-9
+        same_spot = abs(dist_sq - best_dist_sq) <= 1e-9 and s_err < best_s_err
+        if not closer and not same_spot:
+            continue
         best_dist_sq = dist_sq
+        best_s_err = s_err
         best = TrackProjection(
-            s_m=prev.s + (curr.s - prev.s) * t,
+            s_m=s_m,
             lateral_m=lateral,
             heading_rad=heading,
             gradient_rad=prev.gradient_rad + (curr.gradient_rad - prev.gradient_rad) * t,

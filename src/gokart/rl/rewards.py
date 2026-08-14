@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -12,10 +13,11 @@ from gokart.track.lap import along_track_delta
 
 @dataclass(frozen=True)
 class RewardWeights:
-    progress: float = 0.5
+    progress: float = 0.8
     centerline: float = 0.12
     heading: float = 0.06
     speed: float = 0.06
+    forward_speed: float = 2.0
     standstill: float = 0.35
     throttle_go: float = 0.55
     low_speed_steer: float = 0.08
@@ -28,10 +30,11 @@ class RewardWeights:
     recover_track: float = 0.8
     heading_off_track: float = 0.0
     reverse: float = 0.4
+    wrong_way: float = 2.5
     shortcut: float = 2.0
     max_progress_delta_m: float = 1.5
-    spin: float = 0.6
-    off_track_terminal: float = 80.0
+    spin: float = 0.8
+    off_track_terminal: float = 12.0
     wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
@@ -109,6 +112,8 @@ def compute_reward(
     track_s = float(step_info.get("track_s_m", 0.0))
     track_length = float(step_info.get("track_length_m", 0.0))
     heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
+    heading_cos = math.cos(math.radians(min(heading_error_deg, 180.0)))
+    facing_forward = heading_cos > 0.5
     max_progress_delta = max(weights.max_progress_delta_m, 0.05)
     shortcut_jump = abs(delta_s) > max_progress_delta
     if state.best_s_m is None:
@@ -142,7 +147,7 @@ def compute_reward(
         components["time"] = -weights.time_penalty * dt_s
 
     motion = min(max(speed / 2.0, 0.0), 1.0)
-    making_progress = delta_s > 0.0
+    making_progress = delta_s > 0.0 or (facing_forward and speed > 0.15)
     normalized_lateral = min(lateral_ratio, 1.0)
     if can_control and not off_track and not blocking and making_progress:
         centerline_reward = weights.centerline * (1.0 - normalized_lateral) * motion * dt_s
@@ -163,7 +168,7 @@ def compute_reward(
             standstill_penalty = -weights.standstill * dt_s
             reward += standstill_penalty
             components["standstill"] = standstill_penalty
-            if throttle > 0.05 and not off_track:
+            if throttle > 0.05 and not off_track and facing_forward:
                 throttle_go = weights.throttle_go * throttle * dt_s
                 reward += throttle_go
                 components["throttle_go"] = throttle_go
@@ -177,6 +182,21 @@ def compute_reward(
             spin_penalty = -weights.spin * abs(steering) * (0.5 + speed) * dt_s
             reward += spin_penalty
             components["spin"] = spin_penalty
+
+        if not off_track and speed > 0.05:
+            forward = weights.forward_speed * (speed / max_speed) * heading_cos * dt_s
+            reward += forward
+            components["forward_speed"] = forward
+
+        if not off_track and heading_error_deg > 90.0 and speed > 0.05:
+            turn_around = (
+                -weights.wrong_way
+                * ((heading_error_deg - 90.0) / 90.0)
+                * (0.5 + speed)
+                * dt_s
+            )
+            reward += turn_around
+            components["wrong_way"] = turn_around
 
     if off_track:
         penalty_lateral = min(max(lateral_ratio, 1.0), max(weights.off_track_lateral_cap, 1.0))

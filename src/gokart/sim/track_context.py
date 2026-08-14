@@ -29,7 +29,7 @@ class TrackSimulationContext:
 
     def reset(self) -> None:
         self.lap_timer.reset()
-        self._progress_s = None
+        self._progress_s = self.track.start_finish.s_m
 
     def spawn_pose(self) -> tuple[float, float, float]:
         return spawn_pose_on_track(self.track)
