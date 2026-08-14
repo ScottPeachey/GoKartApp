@@ -780,6 +780,49 @@ def test_env_reset_and_step(hairpin_track) -> None:
     assert np.isfinite(total_reward)
 
 
+def test_env_reset_starts_driving_without_boot_brake(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=500,
+    )
+    obs, info = env.reset()
+    assert info["safety_state"] == "DRIVING"
+    assert obs[17] == pytest.approx(0.0)
+    assert obs[18] == pytest.approx(0.0)
+    assert float(env.session.state.last_tick.values["brake"]) < 0.5
+
+
+def test_mean_throttle_action_moves_after_reset(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=400,
+    )
+    env.reset()
+    moved = False
+    for _ in range(200):
+        _obs, _reward, terminated, truncated, _info = env.step(
+            np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        )
+        if float(env.session.state.vehicle_state.speed_mps) > 0.5:
+            moved = True
+            break
+        if terminated or truncated:
+            break
+    assert moved
+
+
 def test_rl_env_terminates_when_off_track(hairpin_track) -> None:
     env = make_env(
         vehicle_name="Scott Kart V1",
@@ -849,8 +892,11 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
 def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
     from gokart.rl.trainer import TrainingConfig, run_preview_episode
 
+    calls: list[bool] = []
+
     class _StubModel:
         def predict(self, obs, deterministic=True):
+            calls.append(deterministic)
             return np.array([0.25, 0.0, 0.05], dtype=np.float32), None
 
     recorded: list[dict] = []
@@ -892,6 +938,8 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
     assert np.isfinite(reward)
     assert clean in {0.0, 1.0}
     assert session_id == "preview-session"
+    assert calls
+    assert all(flag is False for flag in calls)
     assert len(recorded) > 50
     assert "speed_mps" in recorded[0]
 

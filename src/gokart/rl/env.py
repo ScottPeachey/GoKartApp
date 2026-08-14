@@ -12,8 +12,13 @@ from gokart.rl.actions import decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.rewards import RewardState, compute_reward
 from gokart.rl.training_setup import EnvRuntimeConfig, RlTrainingSetup, default_training_setup
+from gokart.safety.types import SafetyState
 from gokart.sim.session import ControlSource, SessionConfig, SimulationSession
 from gokart.track.model import Track
+
+# Auto-boot (self-test + precharge) is ~250 ticks at 100 Hz. Keep it out of
+# policy rollouts so the agent does not learn from a held brake pedal.
+BOOT_STEP_ALLOWANCE = 400
 
 
 class TrackRacingEnv(gym.Env):
@@ -27,6 +32,7 @@ class TrackRacingEnv(gym.Env):
         session_config: SessionConfig,
         setup: RlTrainingSetup | None = None,
         render_mode: str | None = None,
+        max_drive_steps: int | None = None,
     ) -> None:
         super().__init__()
         self.session_config = session_config
@@ -39,6 +45,11 @@ class TrackRacingEnv(gym.Env):
         self._last_obs = np.zeros(OBS_DIM, dtype=np.float32)
         self._stagnant_steps = 0
         self._off_track_steps = 0
+        self._max_drive_steps = (
+            max_drive_steps if max_drive_steps is not None else session_config.max_steps
+        )
+        self._drive_steps = 0
+        self._last_policy_controls = (0.0, 0.0, 0.0)
 
         self.action_space = spaces.Box(
             low=np.array([-1.0, -1.0, -1.0], dtype=np.float32),
@@ -66,18 +77,33 @@ class TrackRacingEnv(gym.Env):
         self._reward_state = RewardState()
         self._stagnant_steps = 0
         self._off_track_steps = 0
+        self._drive_steps = 0
+        self._last_policy_controls = (0.0, 0.0, 0.0)
         step_result = self.session.reset()
+        boot_steps = 0
+        while (
+            step_result.safety_state != SafetyState.DRIVING
+            and boot_steps < BOOT_STEP_ALLOWANCE
+        ):
+            step_result = self.session.step(action=None)
+            boot_steps += 1
+        # Controls are chosen from the previous safety state, so the first
+        # DRIVING tick still carries the precharge brake. Step once more.
+        if step_result.safety_state == SafetyState.DRIVING:
+            step_result = self.session.step(action=(0.0, 0.0, 0.0))
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
         return obs, {"safety_state": step_result.safety_state.value}
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
-        speed_mps = float(self.session.state.vehicle_state.speed_mps) if self.session.state.vehicle_state else 0.0
+        vehicle = self.session.state.vehicle_state
+        speed_mps = float(vehicle.speed_mps) if vehicle else 0.0
         action_tuple = decode_rl_action(
             action,
             speed_mps=speed_mps,
             action_config=self.setup.action,
         )
+        self._last_policy_controls = action_tuple
         step_result = self.session.step(action=action_tuple)
         env_cfg = self._env_cfg
         speed = float(step_result.tick.values.get("speed_mps", 0.0))
@@ -118,7 +144,10 @@ class TrackRacingEnv(gym.Env):
             self._off_track_steps += 1
         else:
             self._off_track_steps = 0
+        self._drive_steps += 1
         truncated = step_result.truncated
+        if self._max_drive_steps > 0:
+            truncated = truncated or self._drive_steps >= self._max_drive_steps
         if env_cfg.max_stagnant_steps > 0:
             truncated = truncated or self._stagnant_steps >= env_cfg.max_stagnant_steps
         if env_cfg.max_off_track_steps > 0:
@@ -138,13 +167,18 @@ class TrackRacingEnv(gym.Env):
         )
 
     def _obs_from_step(self, tick_values: dict[str, Any], step_info: dict[str, Any]) -> np.ndarray:
+        throttle, brake, steering = self._last_policy_controls
+        values = dict(tick_values)
+        values["throttle"] = throttle
+        values["brake"] = brake
+        values["steering"] = steering
         return build_observation(
-            tick_values=tick_values,
+            tick_values=values,
             step_info=step_info,
             track=self.session_config.track,
             target_laps=self.session_config.target_laps,
-            max_steps=self.session_config.max_steps,
-            step_index=self.session.state.step_index,
+            max_steps=self._max_drive_steps,
+            step_index=self._drive_steps,
         )
 
 
@@ -170,6 +204,7 @@ def make_env(
             rewards=resolved_setup.rewards,
         )
     env_cfg = resolved_setup.env
+    drive_steps = max_steps if max_steps is not None else env_cfg.max_steps
     config = SessionConfig(
         vehicle_name=vehicle_name,
         vehicle_version=vehicle_version,
@@ -179,7 +214,11 @@ def make_env(
         control_source=ControlSource.RL,
         target_laps=target_laps,
         auto_boot=True,
-        max_steps=max_steps if max_steps is not None else env_cfg.max_steps,
+        max_steps=drive_steps + BOOT_STEP_ALLOWANCE,
         terminate_on_off_track=env_cfg.terminate_on_off_track,
     )
-    return TrackRacingEnv(session_config=config, setup=resolved_setup)
+    return TrackRacingEnv(
+        session_config=config,
+        setup=resolved_setup,
+        max_drive_steps=drive_steps,
+    )

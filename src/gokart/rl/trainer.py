@@ -69,7 +69,11 @@ def run_preview_episode(
     target_laps: int | None = None,
     kind: str = "preview",
 ) -> tuple[float | None, float, float, str]:
-    """Run one deterministic rollout, optionally streaming ticks to hooks."""
+    """Run one rollout, optionally streaming ticks to hooks.
+
+    Previews sample the policy like training episodes. Mean-action eval is
+    used for explicit tests so they show what a deployed policy would do.
+    """
     env = make_env(
         vehicle_name=config.vehicle_name,
         vehicle_version=config.vehicle_version,
@@ -90,8 +94,9 @@ def run_preview_episode(
     if row := session_tick_row(env):
         ticks.append(row)
     preview_session_id = ""
+    deterministic = kind != "preview"
     while not done:
-        action, _ = model.predict(obs, deterministic=True)
+        action, _ = model.predict(obs, deterministic=deterministic)
         obs, reward, terminated, truncated, info = env.step(action)
         episode_reward += float(reward)
         done = terminated or truncated
