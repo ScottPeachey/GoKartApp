@@ -167,7 +167,7 @@ def training_setup_schema() -> dict[str, Any]:
                 "Episode / environment",
                 {
                     "max_steps": "How long ONE episode may last, in sim ticks (0.01 s each). 12,000 = 120 seconds, not 'record every 12,000 training steps'.",
-                    "terminate_on_off_track": "End episode when the kart leaves the track.",
+                    "terminate_on_off_track": "End episode as soon as the kart leaves the track. If off, episodes can run the full max ticks while wandering off circuit.",
                     "stagnant_speed_mps": "Speed below this counts as not moving.",
                     "stagnant_delta_s": "Forward progress below this counts as stagnant.",
                     "max_stagnant_steps": "End the episode after this many idle ticks (~ticks × 0.01 s).",
@@ -202,7 +202,7 @@ def training_setup_schema() -> dict[str, Any]:
                     "throttle_go": "Bonus for applying throttle while slow.",
                     "low_speed_steer": "Penalty for large steering at low speed.",
                     "lap_bonus": "Bonus for a clean completed lap.",
-                    "off_track_rate": "Per-second penalty while off track.",
+                    "off_track_rate": "Per-second penalty while off track; scales with distance beyond the edge.",
                     "off_track_terminal": "One-shot penalty when episode ends off track.",
                     "stagnant_terminal": "One-shot penalty when episode ends from standing still too long.",
                     "time_penalty": "Per-second living cost.",

@@ -285,6 +285,108 @@ def test_reward_penalizes_standstill_on_track() -> None:
     assert components["low_speed_steer"] < 0.0
 
 
+def test_reward_penalizes_steering_while_off_track() -> None:
+    state = RewardState()
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 0.5,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 1.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 8.0,
+            "heading_error_deg": 90.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "low_speed_steer" in components
+    assert components["low_speed_steer"] < 0.0
+    assert "off_track" in components
+    assert components["off_track"] < components["low_speed_steer"]
+
+
+def test_off_track_penalty_scales_with_lateral_distance() -> None:
+    state_near = RewardState()
+    _, _, near = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 2.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 6.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state_near,
+        objective="god",
+    )
+    state_far = RewardState()
+    _, _, far = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 2.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 20.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state_far,
+        objective="god",
+    )
+    assert near["off_track"] < 0.0
+    assert far["off_track"] < near["off_track"]
+
+
 def test_reward_prefers_centered_on_track_alignment() -> None:
     state = RewardState()
     reward, _, components = compute_reward(

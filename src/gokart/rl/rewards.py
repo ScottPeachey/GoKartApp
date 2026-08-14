@@ -21,8 +21,8 @@ class RewardWeights:
     lap_bonus: float = 25.0
     fault_block: float = 80.0
     fault_derate: float = 12.0
-    off_track_rate: float = 2.5
-    off_track_terminal: float = 12.0
+    off_track_rate: float = 8.0
+    off_track_terminal: float = 25.0
     stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
     motor_margin: float = 0.05
@@ -78,7 +78,9 @@ def compute_reward(
     derate = _derate_fault_names(active_faults)
     lateral = abs(float(step_info.get("lateral_offset_m", 0.0)))
     track_width = max(float(step_info.get("track_width_m", 10.0)), 1.0)
-    off_track = lateral > track_width * 0.5
+    half_width = track_width * 0.5
+    lateral_ratio = lateral / max(half_width, 0.1)
+    off_track = lateral_ratio > 1.0
     speed = float(tick_values.get("speed_mps", 0.0))
     max_speed = max(float(tick_values.get("max_speed_mps", 12.5)), 0.1)
     throttle = float(tick_values.get("throttle", 0.0))
@@ -101,7 +103,7 @@ def compute_reward(
         components["time"] = -weights.time_penalty * dt_s
 
     motion = min(max(speed / 2.0, 0.0), 1.0)
-    normalized_lateral = min(lateral / (track_width * 0.5), 1.0)
+    normalized_lateral = min(lateral_ratio, 1.0)
     if can_control and not off_track and not blocking:
         centerline_reward = weights.centerline * (1.0 - normalized_lateral) * motion * dt_s
         reward += centerline_reward
@@ -117,11 +119,12 @@ def compute_reward(
             reward += speed_reward
             components["speed"] = speed_reward
 
+    if can_control and not blocking:
         if speed < 0.2:
             standstill_penalty = -weights.standstill * dt_s
             reward += standstill_penalty
             components["standstill"] = standstill_penalty
-            if throttle > 0.05:
+            if throttle > 0.05 and not off_track:
                 throttle_go = weights.throttle_go * throttle * dt_s
                 reward += throttle_go
                 components["throttle_go"] = throttle_go
@@ -132,7 +135,7 @@ def compute_reward(
             components["low_speed_steer"] = steer_penalty
 
     if off_track:
-        off_penalty = -weights.off_track_rate * dt_s
+        off_penalty = -weights.off_track_rate * max(lateral_ratio, 1.0) * dt_s
         reward += off_penalty
         components["off_track"] = off_penalty
         if bool(step_info.get("terminated_off_track")):
