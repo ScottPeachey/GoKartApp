@@ -3289,11 +3289,11 @@ function renderRlTrainingSections(setup) {
         input.dataset.section = sectionKey;
         input.dataset.key = field.key;
         input.dataset.type = "bool";
-        label.appendChild(document.createTextNode(field.key.replaceAll("_", " ")));
+        label.appendChild(document.createTextNode(field.label || field.key.replaceAll("_", " ")));
         label.appendChild(input);
       } else {
         label.setAttribute("for", rlFieldId(sectionKey, field.key));
-        label.appendChild(document.createTextNode(field.key.replaceAll("_", " ")));
+        label.appendChild(document.createTextNode(field.label || field.key.replaceAll("_", " ")));
         const input = document.createElement("input");
         input.type = "number";
         input.id = rlFieldId(sectionKey, field.key);

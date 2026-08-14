@@ -120,11 +120,13 @@ def training_setup_schema() -> dict[str, Any]:
         section_key: str,
         title: str,
         descriptions: dict[str, str],
+        labels: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         field_defs: list[dict[str, Any]] = []
         for field in fields(cls):
             entry: dict[str, Any] = {
                 "key": field.name,
+                "label": (labels or {}).get(field.name, field.name.replace("_", " ")),
                 "type": "bool" if field.type is bool else "number",
                 "default": getattr(cls(), field.name),
                 "description": descriptions.get(field.name, ""),
@@ -164,11 +166,15 @@ def training_setup_schema() -> dict[str, Any]:
                 "env",
                 "Episode / environment",
                 {
-                    "max_steps": "Maximum ticks per episode before truncation.",
+                    "max_steps": "How long ONE episode may last, in sim ticks (0.01 s each). 12,000 = 120 seconds, not 'record every 12,000 training steps'.",
                     "terminate_on_off_track": "End episode when the kart leaves the track.",
                     "stagnant_speed_mps": "Speed below this counts as not moving.",
                     "stagnant_delta_s": "Forward progress below this counts as stagnant.",
-                    "max_stagnant_steps": "End episode after this many stagnant ticks (~steps × 0.01 s).",
+                    "max_stagnant_steps": "End the episode after this many idle ticks (~ticks × 0.01 s).",
+                },
+                {
+                    "max_steps": "Max ticks per episode",
+                    "max_stagnant_steps": "Idle ticks before cut",
                 },
             ),
             "ppo": _section(
@@ -177,7 +183,7 @@ def training_setup_schema() -> dict[str, Any]:
                 "PPO learner",
                 {
                     "learning_rate": "Adam learning rate.",
-                    "n_steps": "Rollout length per policy update.",
+                    "n_steps": "How many ticks PPO collects before one learning update (not recording frequency).",
                     "batch_size": "Minibatch size for PPO updates.",
                     "ent_coef": "Entropy bonus — higher explores more (try 0.01–0.1).",
                     "gamma": "Discount factor. At 100 Hz use ~0.999 so rewards more than a second ahead still matter.",
