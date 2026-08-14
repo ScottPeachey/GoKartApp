@@ -30,7 +30,8 @@ class RewardWeights:
     reverse: float = 0.4
     shortcut: float = 2.0
     max_progress_delta_m: float = 1.5
-    off_track_terminal: float = 25.0
+    off_track_terminal: float = 80.0
+    wall_speed: float = 1.0
     wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
@@ -176,35 +177,40 @@ def compute_reward(
         off_penalty = -weights.off_track_rate * penalty_lateral * dt_s
         reward += off_penalty
         components["off_track"] = off_penalty
-        if can_control and lateral + 1e-6 < state.prev_lateral_m:
-            recover = weights.recover_track * (state.prev_lateral_m - lateral)
-            reward += recover
-            components["recover_track"] = recover
-        elif can_control and lateral > state.prev_lateral_m + 1e-6:
-            depart = -weights.recover_track * (lateral - state.prev_lateral_m)
-            reward += depart
-            components["depart_track"] = depart
-        if can_control and speed > 0.3:
-            heading_recover = (
-                weights.heading_off_track
-                * max(0.0, 1.0 - heading_error_deg / 90.0)
-                * motion
-                * dt_s
-            )
-            reward += heading_recover
-            components["heading_off_track"] = heading_recover
-            if heading_error_deg > 90.0:
-                wrong_way = -weights.heading_off_track * motion * dt_s
-                reward += wrong_way
-                components["wrong_way"] = wrong_way
-        if bool(step_info.get("terminated_off_track")):
-            terminal_penalty = -weights.off_track_terminal
-            reward += terminal_penalty
-            components["off_track_terminal"] = terminal_penalty
+        hit_wall = bool(step_info.get("terminated_off_track"))
+        if not hit_wall:
+            if can_control and lateral + 1e-6 < state.prev_lateral_m:
+                recover = weights.recover_track * (state.prev_lateral_m - lateral)
+                reward += recover
+                components["recover_track"] = recover
+            elif can_control and lateral > state.prev_lateral_m + 1e-6:
+                depart = -weights.recover_track * (lateral - state.prev_lateral_m)
+                reward += depart
+                components["depart_track"] = depart
+            if can_control and speed > 0.3:
+                heading_recover = (
+                    weights.heading_off_track
+                    * max(0.0, 1.0 - heading_error_deg / 90.0)
+                    * motion
+                    * dt_s
+                )
+                reward += heading_recover
+                components["heading_off_track"] = heading_recover
+                if heading_error_deg > 90.0:
+                    wrong_way = -weights.heading_off_track * motion * dt_s
+                    reward += wrong_way
+                    components["wrong_way"] = wrong_way
         if bool(step_info.get("truncated_off_track_wander")):
             wander_penalty = -weights.wander_terminal
             reward += wander_penalty
             components["wander_terminal"] = wander_penalty
+
+    if bool(step_info.get("terminated_off_track")):
+        impact = 1.0 + max(weights.wall_speed, 0.0) * min(max(speed / max_speed, 0.0), 1.5)
+        wall_penalty = -weights.off_track_terminal * impact
+        reward += wall_penalty
+        components["wall_hit"] = wall_penalty
+        components["off_track_terminal"] = wall_penalty
 
     if bool(step_info.get("truncated_stagnant")):
         stagnant_penalty = -weights.stagnant_terminal
