@@ -91,68 +91,46 @@ def test_reward_penalizes_stagnant_terminal() -> None:
 
 
 def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
-    slow = RewardState()
+    driving = {
+        "active_faults": "",
+        "safety_state": "DRIVING",
+        "battery_temp_c": 30.0,
+        "motor_temp_c": 35.0,
+        "soc": 0.9,
+        "throttle": 0.4,
+        "brake": 0.0,
+        "steering": 0.0,
+        "max_speed_mps": 12.5,
+        "derating_factor": 1.0,
+        "torque_permitted": 1.0,
+    }
+    info = {
+        "delta_track_s_m": 0.0,
+        "lateral_offset_m": 8.0,
+        "heading_error_deg": 20.0,
+        "track_width_m": 10.0,
+        "battery_temp_derate_c": 50.0,
+        "battery_temp_fault_c": 60.0,
+        "terminated_off_track": True,
+    }
     _, _, slow_parts = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 1.0,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 0.4,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 8.0,
-            "heading_error_deg": 20.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": True,
-        },
+        tick_values={**driving, "speed_mps": 1.0},
+        step_info=info,
         weights=reward_preset("god"),
         dt_s=0.01,
-        state=slow,
+        state=RewardState(),
         objective="god",
     )
-    fast = RewardState()
     _, _, fast_parts = compute_reward(
-        tick_values={
-            "active_faults": "",
-            "safety_state": "DRIVING",
-            "speed_mps": 12.5,
-            "battery_temp_c": 30.0,
-            "motor_temp_c": 35.0,
-            "soc": 0.9,
-            "throttle": 1.0,
-            "brake": 0.0,
-            "steering": 0.0,
-            "max_speed_mps": 12.5,
-            "derating_factor": 1.0,
-            "torque_permitted": 1.0,
-        },
-        step_info={
-            "delta_track_s_m": 0.0,
-            "lateral_offset_m": 8.0,
-            "heading_error_deg": 20.0,
-            "track_width_m": 10.0,
-            "battery_temp_derate_c": 50.0,
-            "battery_temp_fault_c": 60.0,
-            "terminated_off_track": True,
-        },
+        tick_values={**driving, "speed_mps": 12.5},
+        step_info=info,
         weights=reward_preset("god"),
         dt_s=0.01,
-        state=fast,
+        state=RewardState(),
         objective="god",
     )
-    assert slow_parts["wall_hit"] <= -80.0
-    assert fast_parts["wall_hit"] < slow_parts["wall_hit"]
+    assert slow_parts["wall_hit"] == pytest.approx(-80.0)
+    assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
     assert "recover_track" not in slow_parts
 
 

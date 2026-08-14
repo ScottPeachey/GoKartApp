@@ -31,7 +31,6 @@ class RewardWeights:
     shortcut: float = 2.0
     max_progress_delta_m: float = 1.5
     off_track_terminal: float = 80.0
-    wall_speed: float = 1.0
     wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
     battery_margin: float = 0.08
@@ -206,8 +205,7 @@ def compute_reward(
             components["wander_terminal"] = wander_penalty
 
     if bool(step_info.get("terminated_off_track")):
-        impact = 1.0 + max(weights.wall_speed, 0.0) * min(max(speed / max_speed, 0.0), 1.5)
-        wall_penalty = -weights.off_track_terminal * impact
+        wall_penalty = -weights.off_track_terminal
         reward += wall_penalty
         components["wall_hit"] = wall_penalty
         components["off_track_terminal"] = wall_penalty
