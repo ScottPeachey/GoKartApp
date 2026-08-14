@@ -21,6 +21,9 @@ class TrainingProgress:
     preview_session_id: str = ""
     preview_sessions: list[dict[str, Any]] = field(default_factory=list)
     previews_completed: int = 0
+    test_running: bool = False
+    tests_completed: int = 0
+    last_test_session_id: str = ""
     error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -43,6 +46,9 @@ class TrainingProgress:
             "preview_session_id": self.preview_session_id,
             "preview_sessions": list(self.preview_sessions),
             "previews_completed": self.previews_completed,
+            "test_running": self.test_running,
+            "tests_completed": self.tests_completed,
+            "last_test_session_id": self.last_test_session_id,
             "error": self.error,
         }
 
@@ -53,6 +59,8 @@ class TrainingHooks(Protocol):
     def on_preview_tick(self, row: dict[str, Any]) -> None: ...
 
     def should_stop(self) -> bool: ...
+
+    def consume_test_request(self) -> bool: ...
 
     def start_preview_recording(self, *, timestep: int) -> str: ...
 
@@ -78,6 +86,9 @@ class NullTrainingHooks:
         return
 
     def should_stop(self) -> bool:
+        return False
+
+    def consume_test_request(self) -> bool:
         return False
 
     def start_preview_recording(self, *, timestep: int) -> str:

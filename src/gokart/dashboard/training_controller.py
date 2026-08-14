@@ -49,6 +49,9 @@ class TrainingController:
         self._request: TrainingRunRequest | None = None
         self._preview_recorder: SessionRecorder | None = None
         self._preview_timestep = 0
+        self._test_requested = False
+        self._test_running = False
+        self._last_test_session_id = ""
         self.status = TrainingControllerStatus()
 
     def snapshot(self) -> dict[str, Any]:
@@ -56,6 +59,9 @@ class TrainingController:
             payload = self.status.progress.to_dict()
             payload["running"] = self.status.running
             payload["seq"] = self.status.metrics_seq
+            payload["test_running"] = self._test_running
+            payload["test_requested"] = self._test_requested
+            payload["last_test_session_id"] = self._last_test_session_id
             return payload
 
     def poll_metrics(self, since_seq: int) -> dict[str, Any] | None:
@@ -65,6 +71,9 @@ class TrainingController:
             payload = self.status.progress.to_dict()
             payload["running"] = self.status.running
             payload["seq"] = self.status.metrics_seq
+            payload["test_running"] = self._test_running
+            payload["test_requested"] = self._test_requested
+            payload["last_test_session_id"] = self._last_test_session_id
             return payload
 
     def start(self, request: TrainingRunRequest) -> None:
@@ -81,6 +90,9 @@ class TrainingController:
                 ),
             )
             self.status.metrics_seq = 1
+            self._test_requested = False
+            self._test_running = False
+            self._last_test_session_id = ""
             self._thread = threading.Thread(
                 target=self._run,
                 kwargs={"request": request},
@@ -104,6 +116,30 @@ class TrainingController:
             self._stop_requested = False
             self._preview_recorder = None
             self._preview_timestep = 0
+            self._test_requested = False
+            self._test_running = False
+            self._last_test_session_id = ""
+
+    def request_test(self) -> None:
+        with self._lock:
+            if not self.status.running:
+                raise RuntimeError("Start training before testing the current policy.")
+            if self._test_running or self._test_requested:
+                raise RuntimeError("A test run is already in progress.")
+            self._test_requested = True
+
+    def consume_test_request(self) -> bool:
+        with self._lock:
+            if not self._test_requested or self._test_running:
+                return False
+            self._test_requested = False
+            self._test_running = True
+            return True
+
+    def finish_user_test(self) -> None:
+        with self._lock:
+            self._test_running = False
+            self._test_requested = False
 
     def _publish_progress(self, progress: TrainingProgress) -> None:
         with self._lock:
@@ -207,7 +243,10 @@ class _DashboardTrainingHooks:
             preview_running=progress.preview_running,
             preview_session_id=progress.preview_session_id,
             preview_sessions=list(self.preview_sessions),
-            previews_completed=len(self.preview_sessions),
+            previews_completed=progress.previews_completed,
+            tests_completed=progress.tests_completed,
+            test_running=self._controller._test_running,
+            last_test_session_id=progress.last_test_session_id,
             error=progress.error,
         )
         self._controller._publish_progress(merged)
@@ -221,6 +260,12 @@ class _DashboardTrainingHooks:
 
     def should_stop(self) -> bool:
         return self._controller._should_stop()
+
+    def consume_test_request(self) -> bool:
+        return self._controller.consume_test_request()
+
+    def finish_user_test(self) -> None:
+        self._controller.finish_user_test()
 
     def start_preview_recording(self, *, timestep: int) -> str:
         request = self._controller._request
@@ -264,6 +309,9 @@ class _DashboardTrainingHooks:
         if kind == "preview":
             scenario_name = f"rl_preview_{timestep}"
             notes = f"RL preview at {timestep:,} training steps"
+        elif kind == "test":
+            scenario_name = f"rl_test_{timestep}"
+            notes = f"Manual RL test at {timestep:,} training steps"
         else:
             scenario_name = f"rl_episode_{timestep}_{episode_index}"
             notes = (
@@ -296,6 +344,9 @@ class _DashboardTrainingHooks:
         }
         if kind == "episode":
             entry["episode"] = episode_index
+        if kind == "test":
+            entry["kind"] = "test"
+            self._controller._last_test_session_id = recorder.session_id
         self.preview_sessions.append(entry)
         return recorder.session_id
 

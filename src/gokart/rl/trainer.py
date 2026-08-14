@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import json
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -64,6 +66,8 @@ def run_preview_episode(
     hooks: TrainingHooks | None = None,
     timestep: int = 0,
     max_steps: int | None = None,
+    target_laps: int | None = None,
+    kind: str = "preview",
 ) -> tuple[float | None, float, float, str]:
     """Run one deterministic rollout, optionally streaming ticks to hooks."""
     env = make_env(
@@ -73,7 +77,7 @@ def run_preview_episode(
         drive_mode=config.drive_mode,
         driver_profile=config.driver_profile,
         objective=config.objective,
-        target_laps=config.preview_laps,
+        target_laps=target_laps if target_laps is not None else config.preview_laps,
         max_steps=max_steps or config.preview_max_steps,
         setup=config.setup,
     )
@@ -102,10 +106,26 @@ def run_preview_episode(
         preview_session_id = hooks.record_episode(
             ticks=ticks,
             timestep=timestep,
-            kind="preview",
+            kind=kind,
         )
     clean = 1.0 if lap_best is not None and not had_fault else 0.0
     return lap_best, clean, episode_reward, preview_session_id
+
+
+class FrozenPolicy:
+    """Thread-safe snapshot of a PPO policy for a background test rollout."""
+
+    def __init__(self, policy: Any) -> None:
+        self.policy = copy.deepcopy(policy)
+        if hasattr(self.policy, "set_training_mode"):
+            self.policy.set_training_mode(False)
+
+    def predict(self, obs, deterministic: bool = True):
+        return self.policy.predict(obs, deterministic=deterministic)
+
+
+def snapshot_policy(model: Any) -> FrozenPolicy:
+    return FrozenPolicy(model.policy)
 
 
 def train_policy(
@@ -213,6 +233,7 @@ def train_policy(
     clean_rates: list[float] = []
     stop_training_flag = False
     previews_completed = 0
+    tests_completed = 0
     last_episode_reward: float | None = None
     last_eval_lap: float | None = None
 
@@ -237,17 +258,53 @@ def train_policy(
                 preview_running=preview_running,
                 preview_session_id=preview_session_id,
                 previews_completed=previews_completed,
+                tests_completed=tests_completed,
             )
         )
 
     class CeilingCallback(BaseCallback):
         def _on_step(self) -> bool:
-            nonlocal best_lap, stop_training_flag, previews_completed
+            nonlocal best_lap, stop_training_flag, previews_completed, tests_completed
             nonlocal last_episode_reward, last_eval_lap
             training_state["timesteps"] = self.num_timesteps
             if stop_training_flag or should_stop() or callbacks.should_stop():
                 stop_training_flag = True
                 return False
+
+            if callbacks.consume_test_request():
+                frozen = snapshot_policy(model)
+                test_timestep = self.num_timesteps
+                test_max_steps = (
+                    config.setup.env.max_steps
+                    if config.setup is not None
+                    else config.preview_max_steps
+                )
+
+                def _run_user_test() -> None:
+                    nonlocal tests_completed
+                    session_id = ""
+                    try:
+                        _lap, _clean, _reward, session_id = run_preview_episode(
+                            frozen,
+                            config=config,
+                            track=track,
+                            hooks=callbacks,
+                            timestep=test_timestep,
+                            max_steps=test_max_steps,
+                            target_laps=config.target_laps,
+                            kind="test",
+                        )
+                        tests_completed += 1
+                    finally:
+                        finish = getattr(callbacks, "finish_user_test", None)
+                        if callable(finish):
+                            finish()
+                        _emit_progress(
+                            timesteps=training_state["timesteps"],
+                            preview_session_id=session_id,
+                        )
+
+                threading.Thread(target=_run_user_test, name="rl-user-test", daemon=True).start()
 
             if (
                 self.num_timesteps > 0

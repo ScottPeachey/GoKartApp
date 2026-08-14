@@ -488,6 +488,14 @@ def create_app(
         training_controller.stop()
         return {"status": "stopping"}
 
+    @app.post("/api/rl/train/test")
+    def api_rl_train_test() -> dict[str, Any]:
+        try:
+            training_controller.request_test()
+        except RuntimeError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return {"status": "test_requested", "training": training_controller.snapshot()}
+
     @app.post("/api/rl/train/reset")
     def api_rl_train_reset() -> dict[str, str]:
         training_controller.reset()

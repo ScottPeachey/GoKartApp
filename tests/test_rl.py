@@ -81,6 +81,27 @@ def test_reward_penalizes_stagnant_terminal() -> None:
     assert reward < 0.0
 
 
+def test_frozen_policy_predicts_without_mutating_source() -> None:
+    from gokart.rl.trainer import FrozenPolicy
+
+    class _Policy:
+        def __init__(self) -> None:
+            self.training = True
+
+        def set_training_mode(self, flag: bool) -> None:
+            self.training = flag
+
+        def predict(self, obs, deterministic=True):
+            return np.array([1.0, 0.0, 0.0], dtype=np.float32), None
+
+    source = _Policy()
+    frozen = FrozenPolicy(source)
+    action, _ = frozen.predict(None, deterministic=True)
+    assert action[0] == pytest.approx(1.0)
+    assert source.training is True
+    assert frozen.policy.training is False
+
+
 def test_decode_rl_action_keeps_zero_throttle_at_zero() -> None:
     throttle, brake, steering = decode_rl_action(np.array([-1.0, 0.0, 0.5], dtype=np.float32))
     assert throttle == 0.0

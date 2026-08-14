@@ -178,6 +178,7 @@ const TRAIN_STATUS_LABELS = {
   loading_libraries: "Loading PyTorch (first run can take a minute)…",
   building_model: "Building policy network…",
   preview_recording: "Recording preview lap…",
+  testing_policy: "Testing current policy (training continues)…",
   training: "Training",
   stopping: "Stopping…",
   stopped: "Stopped",
@@ -1316,6 +1317,10 @@ function rlTrainingSessionMeta(session) {
       episode: Number(episode[2]),
     };
   }
+  const test = String(session.scenario_name || "").match(/^rl_test_(\d+)$/);
+  if (test) {
+    return { kind: "test", step: Number(test[1]), episode: null };
+  }
   return null;
 }
 
@@ -1328,6 +1333,9 @@ function sessionOptionLabel(session, displayNumber) {
   const rlMeta = rlTrainingSessionMeta(session);
   if (rlMeta?.kind === "preview") {
     return `${numberTag}${when} · RL preview @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}`;
+  }
+  if (rlMeta?.kind === "test") {
+    return `${numberTag}${when} · RL test @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}`;
   }
   if (rlMeta?.kind === "episode") {
     return `${numberTag}${when} · RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) · ${vehicle}`;
@@ -3159,6 +3167,7 @@ function updateSimModeUi() {
 function applyTrainingMetrics(metrics) {
   const wasRunning = state.trainingRunning;
   const previousPreviews = Number(state.trainingMetrics?.previews_completed || 0);
+  const previousTests = Number(state.trainingMetrics?.tests_completed || 0);
   state.trainingMetrics = metrics;
   state.trainingRunning = Boolean(metrics.running);
   renderTrainingMetricsPanel(metrics);
@@ -3166,6 +3175,12 @@ function applyTrainingMetrics(metrics) {
   ensureTrainingStatusPoll();
   if (Number(metrics.previews_completed || 0) > previousPreviews) {
     void refreshHistoryView(true);
+  }
+  if (Number(metrics.tests_completed || 0) > previousTests) {
+    const testId = metrics.last_test_session_id;
+    void refreshHistoryView(true).then(() => {
+      if (testId) void selectReplaySession(testId, { autoPlay: false });
+    });
   }
   if (wasRunning && !state.trainingRunning) {
     void refreshHistoryView(true);
@@ -3208,7 +3223,9 @@ function renderTrainingMetricsPanel(metrics) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   };
-  const statusKey = metrics.status || "—";
+  const statusKey = (metrics.test_running || metrics.test_requested)
+    ? "testing_policy"
+    : (metrics.status || "—");
   const statusLabel = TRAIN_STATUS_LABELS[statusKey] || statusKey;
   setText("train-status", statusLabel);
   setText(
@@ -3245,9 +3262,15 @@ function renderTrainingMetricsPanel(metrics) {
 function syncTrainingControlsState() {
   const startBtn = document.getElementById("btn-train-start");
   const stopBtn = document.getElementById("btn-train-stop");
+  const testBtn = document.getElementById("btn-train-test");
   const simStartBtn = document.getElementById("btn-start");
+  const testing = Boolean(state.trainingMetrics?.test_running || state.trainingMetrics?.test_requested);
   if (startBtn) startBtn.disabled = state.trainingRunning || state.simRunning;
   if (stopBtn) stopBtn.disabled = !state.trainingRunning;
+  if (testBtn) {
+    testBtn.disabled = !state.trainingRunning || testing;
+    testBtn.textContent = testing ? "Testing…" : "Test current policy";
+  }
   if (simStartBtn && state.trainingRunning) {
     simStartBtn.disabled = true;
   } else if (simStartBtn && !state.simRunning) {
@@ -3458,6 +3481,16 @@ async function startRlTraining() {
 
 async function stopRlTraining() {
   await api("/api/rl/train/stop", { method: "POST" });
+  await refreshTrainingStatus();
+}
+
+async function testCurrentRlPolicy() {
+  try {
+    await api("/api/rl/train/test", { method: "POST" });
+  } catch (error) {
+    window.alert(`Could not start a test run: ${error.message || error}`);
+    return;
+  }
   await refreshTrainingStatus();
 }
 
@@ -3887,6 +3920,9 @@ function setupControls() {
 
   document.getElementById("btn-train-start")?.addEventListener("click", () => {
     void startRlTraining();
+  });
+  document.getElementById("btn-train-test")?.addEventListener("click", () => {
+    void testCurrentRlPolicy();
   });
   document.getElementById("btn-train-stop")?.addEventListener("click", () => {
     void stopRlTraining();
