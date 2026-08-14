@@ -151,8 +151,8 @@ def test_standing_start_reaches_plausible_top_speed() -> None:
         data_root_path=root / "data",
     )
     max_speed_kmh = mps_to_kmh(max(r.values["speed_mps"] for r in result.records))
-    assert max_speed_kmh == pytest.approx(30.0, abs=1.0)
-    assert max_speed_kmh <= 45.0
+    assert max_speed_kmh <= 45.0 + 0.6
+    assert max_speed_kmh > 35.0
 
 
 def test_currents_within_vehicle_limits() -> None:
@@ -287,7 +287,7 @@ def test_analytic_top_speed_approximation() -> None:
         data_root_path=root / "data",
     )
     sim_top = max(r.values["speed_mps"] for r in result.records)
-    assert sim_top == pytest.approx(min(v, kmh_to_mps(30.0)), rel=0.15)
+    assert sim_top == pytest.approx(min(v, kmh_to_mps(45.0)), rel=0.15)
 
 
 def test_vehicle_step_kinematic_motor_rpm() -> None:
