@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, fields
-from typing import Any
+from typing import Any, get_type_hints
 
 from gokart.rl.rewards import ENDURANCE_WEIGHTS, GOD_WEIGHTS, RewardWeights
 
@@ -132,16 +132,18 @@ def training_setup_schema() -> dict[str, Any]:
         descriptions: dict[str, str],
         labels: dict[str, str] | None = None,
     ) -> dict[str, Any]:
+        hints = get_type_hints(cls)
         field_defs: list[dict[str, Any]] = []
         for field in fields(cls):
+            is_bool = hints.get(field.name) is bool
             entry: dict[str, Any] = {
                 "key": field.name,
                 "label": (labels or {}).get(field.name, field.name.replace("_", " ")),
-                "type": "bool" if field.type is bool else "number",
+                "type": "bool" if is_bool else "number",
                 "default": getattr(cls(), field.name),
                 "description": descriptions.get(field.name, ""),
             }
-            if field.type is not bool:
+            if not is_bool:
                 entry.update(_NUMBER_FIELD_META.get(f"{section_key}.{field.name}", {"step": 0.01}))
             field_defs.append(entry)
         return {
@@ -236,4 +238,21 @@ def training_setup_schema() -> dict[str, Any]:
 
 def _subset(data: dict[str, Any], cls: type) -> dict[str, Any]:
     allowed = {field.name for field in fields(cls)}
-    return {key: value for key, value in data.items() if key in allowed}
+    hints = get_type_hints(cls)
+    coerced: dict[str, Any] = {}
+    for key, value in data.items():
+        if key not in allowed:
+            continue
+        if hints.get(key) is bool:
+            coerced[key] = _as_bool(value)
+        else:
+            coerced[key] = value
+    return coerced
+
+
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(value, (int, float)):
+        return value != 0
+    return bool(value)

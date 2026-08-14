@@ -34,16 +34,25 @@ def test_training_setup_from_dict_round_trip() -> None:
         field for field in schema["sections"]["action"]["fields"] if field["key"] == "throttle_breakaway"
     )
     assert throttle_field["step"] == pytest.approx(0.05)
+    off_track_field = next(
+        field
+        for field in schema["sections"]["env"]["fields"]
+        if field["key"] == "terminate_on_off_track"
+    )
+    assert off_track_field["type"] == "bool"
+    assert off_track_field["default"] is True
     custom = training_setup_from_dict(
         {
             "objective": "custom",
             "ppo": {"ent_coef": 0.1},
             "rewards": {"standstill": 0.5},
+            "env": {"terminate_on_off_track": 0},
         }
     )
     assert custom.objective == "custom"
     assert custom.ppo.ent_coef == pytest.approx(0.1)
     assert custom.rewards.standstill == pytest.approx(0.5)
+    assert custom.env.terminate_on_off_track is False
 
 
 def test_reward_penalizes_stagnant_terminal() -> None:
