@@ -26,13 +26,14 @@ class EpisodeRecordingEnv(gym.Wrapper):
         env: gym.Env,
         *,
         timestep_provider: Callable[[], int],
-        on_episode_complete: Callable[[list[dict[str, Any]], int], None],
+        on_episode_complete: Callable[..., None],
     ) -> None:
         super().__init__(env)
         self._timestep_provider = timestep_provider
         self._on_episode_complete = on_episode_complete
         self._episode_ticks: list[dict[str, Any]] = []
         self._episode_index = 0
+        self._episode_reward = 0.0
         self._finalized = False
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
@@ -40,12 +41,14 @@ class EpisodeRecordingEnv(gym.Wrapper):
             self._finalize_episode()
         self._finalized = False
         self._episode_ticks = []
+        self._episode_reward = 0.0
         observation, info = self.env.reset(seed=seed, options=options)
         self._append_tick()
         return observation, info
 
     def step(self, action):
         observation, reward, terminated, truncated, info = self.env.step(action)
+        self._episode_reward += float(reward)
         self._append_tick()
         if terminated or truncated:
             self._finalize_episode()
@@ -61,5 +64,10 @@ class EpisodeRecordingEnv(gym.Wrapper):
         if not self._episode_ticks:
             return
         self._episode_index += 1
-        self._on_episode_complete(list(self._episode_ticks), self._episode_index)
+        self._on_episode_complete(
+            list(self._episode_ticks),
+            self._episode_index,
+            episode_reward=self._episode_reward,
+        )
         self._episode_ticks = []
+        self._episode_reward = 0.0

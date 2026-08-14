@@ -1324,23 +1324,33 @@ function rlTrainingSessionMeta(session) {
   return null;
 }
 
+function formatEpisodeReward(value) {
+  if (value == null || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  const sign = n > 0 ? "+" : "";
+  return `reward ${sign}${n.toFixed(1)}`;
+}
+
 function sessionOptionLabel(session, displayNumber) {
   const numberTag = displayNumber != null
     ? `#${String(displayNumber).padStart(3, "0")} · `
     : "";
   const when = formatSessionStartedAt(session.started_at);
   const vehicle = `${session.vehicle_name} (${session.sample_count} samples)`;
+  const rewardTag = formatEpisodeReward(session.episode_reward);
+  const rewardSuffix = rewardTag ? ` · ${rewardTag}` : "";
   const rlMeta = rlTrainingSessionMeta(session);
   if (rlMeta?.kind === "preview") {
-    return `${numberTag}${when} · RL preview @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}`;
+    return `${numberTag}${when} · RL preview @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}${rewardSuffix}`;
   }
   if (rlMeta?.kind === "test") {
-    return `${numberTag}${when} · RL test @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}`;
+    return `${numberTag}${when} · RL test @ ${rlMeta.step.toLocaleString()} steps · ${vehicle}${rewardSuffix}`;
   }
   if (rlMeta?.kind === "episode") {
-    return `${numberTag}${when} · RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) · ${vehicle}`;
+    return `${numberTag}${when} · RL episode @ ${rlMeta.step.toLocaleString()} steps (#${rlMeta.episode}) · ${vehicle}${rewardSuffix}`;
   }
-  return `${numberTag}${when} · ${vehicle}`;
+  return `${numberTag}${when} · ${vehicle}${rewardSuffix}`;
 }
 
 function sortSessionsForDisplay(sessions) {
@@ -1348,7 +1358,7 @@ function sortSessionsForDisplay(sessions) {
 }
 
 function updateSessionSelect(sessions, select, previousSessionId) {
-  const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}`).join("|");
+  const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}:${s.episode_reward ?? ""}`).join("|");
   const listEl = document.getElementById("session-list");
   const displayNumbers = buildSessionDisplayNumbers(sessions);
   if (listKey === state.historySessionListKey && select.options.length === sessions.length) {

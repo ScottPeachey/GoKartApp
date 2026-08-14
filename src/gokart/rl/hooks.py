@@ -73,6 +73,7 @@ class TrainingHooks(Protocol):
         timestep: int,
         kind: str = "episode",
         episode_index: int = 0,
+        episode_reward: float | None = None,
     ) -> str: ...
 
 
@@ -104,5 +105,6 @@ class NullTrainingHooks:
         timestep: int,
         kind: str = "episode",
         episode_index: int = 0,
+        episode_reward: float | None = None,
     ) -> str:
         return ""

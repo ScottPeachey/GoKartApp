@@ -46,6 +46,28 @@ def test_recorder_writes_metadata_and_samples(temp_store: TelemetryStore) -> Non
     assert session.end_soc == pytest.approx(0.9)
 
 
+def test_recorder_stores_episode_reward(temp_store: TelemetryStore) -> None:
+    recorder = SessionRecorder(
+        SessionMetadata(
+            vehicle_name="Scott Kart V1",
+            vehicle_version="V1.0",
+            config_hash="abc123",
+            driver_profile="Owner",
+            drive_mode="Default",
+            scenario_name="rl_episode_1000_1",
+        ),
+        store=temp_store,
+        log_every_n=1,
+    )
+    recorder.record_tick({"time_s": 0.0, "speed_mps": 1.0})
+    recorder.close(end_soc=0.9, episode_reward=-12.34)
+    session = temp_store.get_session(recorder.session_id)
+    assert session is not None
+    assert session.episode_reward == pytest.approx(-12.34)
+    listed = temp_store.list_sessions()
+    assert listed[0].episode_reward == pytest.approx(-12.34)
+
+
 def test_csv_export_matches_sqlite(temp_store: TelemetryStore, tmp_path: Path) -> None:
     recorder = SessionRecorder(
         SessionMetadata(

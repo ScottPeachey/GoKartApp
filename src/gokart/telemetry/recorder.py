@@ -90,7 +90,7 @@ class SessionRecorder:
         self.store.append_samples(self.session_id, self._buffer)
         self._buffer.clear()
 
-    def close(self, *, end_soc: float | None) -> None:
+    def close(self, *, end_soc: float | None, episode_reward: float | None = None) -> None:
         if self._closed:
             return
         self.flush()
@@ -98,6 +98,7 @@ class SessionRecorder:
             self.session_id,
             ended_at=datetime.now(UTC).isoformat(),
             end_soc=end_soc,
+            episode_reward=episode_reward,
         )
         self._closed = True
 

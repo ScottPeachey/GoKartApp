@@ -112,6 +112,7 @@ def run_preview_episode(
             ticks=ticks,
             timestep=timestep,
             kind=kind,
+            episode_reward=episode_reward,
         )
     clean = 1.0 if lap_best is not None and not had_fault else 0.0
     return lap_best, clean, episode_reward, preview_session_id
@@ -202,7 +203,11 @@ def train_policy(
         )
         if config.record_training_episodes:
 
-            def _on_episode_complete(ticks: list[dict[str, Any]], episode_index: int) -> None:
+            def _on_episode_complete(
+                ticks: list[dict[str, Any]],
+                episode_index: int,
+                episode_reward: float = 0.0,
+            ) -> None:
                 if episode_index % 20 != 0:
                     return
                 callbacks.record_episode(
@@ -210,6 +215,7 @@ def train_policy(
                     timestep=training_state["timesteps"],
                     kind="episode",
                     episode_index=episode_index,
+                    episode_reward=episode_reward,
                 )
 
             env = EpisodeRecordingEnv(

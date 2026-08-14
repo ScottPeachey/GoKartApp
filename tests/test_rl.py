@@ -971,7 +971,7 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
         def finish_preview_recording(self) -> None:
             return
 
-        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0) -> str:
+        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0, episode_reward=None) -> str:
             recorded.extend(ticks)
             return "preview-session"
 
@@ -1019,7 +1019,7 @@ def test_episode_recording_env_flushes_on_done(hairpin_track) -> None:
     env = EpisodeRecordingEnv(
         env,
         timestep_provider=lambda: 42,
-        on_episode_complete=lambda ticks, episode_index: episodes.append(ticks),
+        on_episode_complete=lambda ticks, episode_index, **_kwargs: episodes.append(ticks),
     )
     env = Monitor(env)
     obs, _ = env.reset()
@@ -1056,7 +1056,7 @@ def test_stream_training_tick_unwraps_monitor() -> None:
         def finish_preview_recording(self) -> None:
             return
 
-        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0) -> str:
+        def record_episode(self, *, ticks, timestep, kind="episode", episode_index=0, episode_reward=None) -> str:
             return ""
 
     inner = SimpleNamespace(

@@ -301,6 +301,7 @@ class _DashboardTrainingHooks:
         timestep: int,
         kind: str = "episode",
         episode_index: int = 0,
+        episode_reward: float | None = None,
     ) -> str:
         request = self._controller._request
         if request is None or not ticks:
@@ -317,6 +318,8 @@ class _DashboardTrainingHooks:
             notes = (
                 f"RL training episode {episode_index} at {timestep:,} training steps"
             )
+        if episode_reward is not None:
+            notes = f"{notes} · reward {episode_reward:.2f}"
 
         vehicle = load_vehicle(request.vehicle_name, request.vehicle_version, root=data_root())
         recorder = SessionRecorder(
@@ -336,11 +339,12 @@ class _DashboardTrainingHooks:
         )
         for row in ticks:
             recorder.record_tick(row)
-        recorder.close(end_soc=None)
+        recorder.close(end_soc=None, episode_reward=episode_reward)
 
         entry: dict[str, Any] = {
             "timestep": timestep,
             "session_id": recorder.session_id,
+            "episode_reward": episode_reward,
         }
         if kind == "episode":
             entry["episode"] = episode_index

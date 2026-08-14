@@ -353,6 +353,7 @@ def create_app(
                 "sample_count": session.sample_count,
                 "start_soc": session.start_soc,
                 "end_soc": session.end_soc,
+                "episode_reward": session.episode_reward,
             }
             for session in sessions
         ]
@@ -384,6 +385,7 @@ def create_app(
             "sample_count": session.sample_count,
             "start_soc": session.start_soc,
             "end_soc": session.end_soc,
+            "episode_reward": session.episode_reward,
         }
 
     @app.get("/api/sessions/{session_id}/samples")

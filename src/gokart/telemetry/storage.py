@@ -31,6 +31,7 @@ class SessionInfo:
     end_soc: float | None
     sample_count: int
     notes: str | None
+    episode_reward: float | None = None
 
 
 @dataclass(frozen=True)
@@ -114,6 +115,7 @@ class TelemetryStore:
                 """
             )
             self._ensure_column(conn, "sessions", "track_id", "TEXT")
+            self._ensure_column(conn, "sessions", "episode_reward", "REAL")
             conn.commit()
 
     @staticmethod
@@ -218,11 +220,16 @@ class TelemetryStore:
         *,
         ended_at: str,
         end_soc: float | None,
+        episode_reward: float | None = None,
     ) -> None:
         with self._connect() as conn:
             conn.execute(
-                "UPDATE sessions SET ended_at = ?, end_soc = ? WHERE id = ?",
-                (ended_at, end_soc, session_id),
+                """
+                UPDATE sessions
+                SET ended_at = ?, end_soc = ?, episode_reward = ?
+                WHERE id = ?
+                """,
+                (ended_at, end_soc, episode_reward, session_id),
             )
             conn.commit()
 
@@ -376,4 +383,9 @@ class TelemetryStore:
             end_soc=row["end_soc"],
             sample_count=int(row["sample_count"]),
             notes=row["notes"],
+            episode_reward=(
+                float(row["episode_reward"])
+                if "episode_reward" in row.keys() and row["episode_reward"] is not None
+                else None
+            ),
         )
