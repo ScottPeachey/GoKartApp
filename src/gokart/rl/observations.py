@@ -29,13 +29,18 @@ def build_observation(
     track_s = float(step_info.get("track_s_m", 0.0))
     lateral = float(step_info.get("lateral_offset_m", 0.0))
     half_width = max(track.width_m * 0.5, 0.1)
-
-    projection = project_xy_to_track(
-        track.centerline,
-        float(tick_values.get("position_x_m", 0.0)),
-        float(tick_values.get("position_y_m", 0.0)),
-    )
-    heading_error = _angle_wrap(heading_deg - math.degrees(projection.heading_rad))
+    if "heading_error_deg" in step_info:
+        heading_error = float(step_info["heading_error_deg"])
+    else:
+        projection = project_xy_to_track(
+            track.centerline,
+            float(tick_values.get("position_x_m", 0.0)),
+            float(tick_values.get("position_y_m", 0.0)),
+            around_s_m=track_s,
+            window_m=40.0,
+            length_m=track.length_m,
+        )
+        heading_error = _angle_wrap(heading_deg - math.degrees(projection.heading_rad))
 
     curvature_samples = [
         _curvature_at_s(track, track_s + distance) for distance in CURVATURE_LOOKAHEAD_M

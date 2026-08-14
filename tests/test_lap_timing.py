@@ -43,6 +43,28 @@ def test_project_xy_to_track_on_segment_midpoint() -> None:
     assert projection.elevation_m == pytest.approx(2.5)
 
 
+def test_project_xy_to_track_window_stays_on_local_section() -> None:
+    centerline = [
+        TrackPoint(x=0, y=0, z=0, s=0),
+        TrackPoint(x=100, y=0, z=0, s=100),
+        TrackPoint(x=100, y=40, z=0, s=140),
+        TrackPoint(x=0, y=40, z=0, s=240),
+        TrackPoint(x=0, y=0, z=0, s=280),
+    ]
+    nearest = project_xy_to_track(centerline, 50.0, 38.0)
+    assert nearest.s_m == pytest.approx(190.0, abs=1.0)
+    local = project_xy_to_track(
+        centerline,
+        50.0,
+        38.0,
+        around_s_m=50.0,
+        window_m=30.0,
+        length_m=280.0,
+    )
+    assert local.s_m == pytest.approx(50.0, abs=1.0)
+    assert abs(local.lateral_m) > 30.0
+
+
 def test_segments_intersect_crossing_lines() -> None:
     assert segments_intersect(0, 0, 10, 10, 0, 10, 10, 0)
     assert not segments_intersect(0, 0, 1, 0, 5, 5, 6, 5)

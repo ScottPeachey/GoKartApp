@@ -195,7 +195,7 @@ class SimulationSession:
         vehicle_state.heading_rad = spawn_heading
         self.state.vehicle_state = vehicle_state
         self.state.limits = self.base_limits
-        self.track_context.lap_timer.reset()
+        self.track_context.reset()
         if self.auto_driver is not None:
             self.auto_driver.reset_progress()
         self._pending_rl_action = None
@@ -460,7 +460,11 @@ class SimulationSession:
                 "roll_deg": roll_deg,
                 "position_x_m": physics_out.position_x_m,
                 "position_y_m": physics_out.position_y_m,
-                **{k: v for k, v in track_values.items() if k != "elevation_m"},
+                **{
+                    k: v
+                    for k, v in track_values.items()
+                    if k not in {"elevation_m", "path_heading_rad"}
+                },
                 "motor_rpm": physics_out.motor_rpm,
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
@@ -488,8 +492,12 @@ class SimulationSession:
 
         track_s = float(track_values.get("track_s_m", ctx.prev_track_s_m))
         delta_s = track_s - ctx.prev_track_s_m
-        if delta_s < -self.config.track.length_m * 0.5:
-            delta_s += self.config.track.length_m
+        length_m = self.config.track.length_m
+        if length_m > 0.0:
+            if delta_s < -length_m * 0.5:
+                delta_s += length_m
+            elif delta_s > length_m * 0.5:
+                delta_s -= length_m
         ctx.prev_track_s_m = track_s
 
         terminated = False
@@ -500,8 +508,7 @@ class SimulationSession:
         off_track = abs(lateral_offset_m) > half_width
         heading_error_deg = self._heading_error_deg(
             physics_out.heading_deg,
-            physics_out.position_x_m,
-            physics_out.position_y_m,
+            path_heading_rad=float(track_values.get("path_heading_rad", 0.0)),
         )
         if safety_state == SafetyState.SAFE_SHUTDOWN:
             terminated = True
@@ -526,6 +533,7 @@ class SimulationSession:
             "off_track": float(off_track),
             "terminated_off_track": terminated_off_track,
             "track_width_m": self.config.track.width_m,
+            "track_length_m": self.config.track.length_m,
             "lap_number": float(track_values.get("lap_number", 0.0)),
             "lap_time_s": float(track_values.get("lap_time_s", 0.0)),
             "completed_laps": len(self.track_context.completed_laps),
@@ -625,11 +633,8 @@ class SimulationSession:
         throttle, brake = self.scenario.driver_inputs_at(self.state.time_s)
         return throttle, brake, 0.0
 
-    def _heading_error_deg(self, heading_deg: float, x: float, y: float) -> float:
-        from gokart.track.lap import project_xy_to_track
-
-        projection = project_xy_to_track(self.config.track.centerline, x, y)
-        error_deg = heading_deg - math.degrees(projection.heading_rad)
+    def _heading_error_deg(self, heading_deg: float, *, path_heading_rad: float) -> float:
+        error_deg = heading_deg - math.degrees(path_heading_rad)
         while error_deg > 180.0:
             error_deg -= 360.0
         while error_deg < -180.0:

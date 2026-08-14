@@ -131,8 +131,34 @@ class LapTimer:
         self._lap_distance_m = 0.0
 
 
-def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> TrackProjection:
-    """Project world coordinates onto the nearest centerline segment."""
+def along_track_delta(s_m: float, around_s_m: float, length_m: float) -> float:
+    """Signed along-track distance from around_s_m to s_m, wrapping at length_m."""
+    delta = s_m - around_s_m
+    if length_m <= 0.0:
+        return delta
+    half = length_m * 0.5
+    while delta > half:
+        delta -= length_m
+    while delta < -half:
+        delta += length_m
+    return delta
+
+
+def project_xy_to_track(
+    centerline: list[TrackPoint],
+    x: float,
+    y: float,
+    *,
+    around_s_m: float | None = None,
+    window_m: float | None = None,
+    length_m: float = 0.0,
+) -> TrackProjection:
+    """Project world coordinates onto the nearest centerline segment.
+
+    When around_s_m and window_m are set, only segments within window_m of
+    around_s_m along the circuit are considered. That keeps off-track karts
+    locked to the stretch they left instead of snapping to another section.
+    """
     if not centerline:
         return TrackProjection(0.0, 0.0, 0.0, 0.0, 0.0)
     if len(centerline) == 1:
@@ -146,17 +172,70 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
             elevation_m=point.z,
         )
 
+    use_window = around_s_m is not None and window_m is not None and window_m > 0.0
+    best = _best_projection(
+        centerline,
+        x,
+        y,
+        around_s_m=around_s_m if use_window else None,
+        window_m=window_m if use_window else None,
+        length_m=length_m,
+    )
+    if best is None and use_window:
+        best = _best_projection(centerline, x, y, around_s_m=None, window_m=None, length_m=length_m)
+    if best is None:
+        point = centerline[0]
+        return TrackProjection(point.s, 0.0, 0.0, point.gradient_rad, point.curvature, point.z)
+    return best
+
+
+def _forward_arc_length(s0: float, s1: float, length_m: float) -> float:
+    span = s1 - s0
+    if length_m > 0.0 and span < 0.0:
+        span += length_m
+    return span
+
+
+def _s_on_forward_arc(s_m: float, s0: float, s1: float, length_m: float) -> bool:
+    span = _forward_arc_length(s0, s1, length_m)
+    pos = s_m - s0
+    if length_m > 0.0 and pos < 0.0:
+        pos += length_m
+    return 0.0 <= pos <= span + 1e-9
+
+
+def _segment_in_window(
+    s0: float,
+    s1: float,
+    around_s_m: float,
+    window_m: float,
+    length_m: float,
+) -> bool:
+    if abs(along_track_delta(s0, around_s_m, length_m)) <= window_m:
+        return True
+    if abs(along_track_delta(s1, around_s_m, length_m)) <= window_m:
+        return True
+    return _s_on_forward_arc(around_s_m, s0, s1, length_m)
+
+
+def _best_projection(
+    centerline: list[TrackPoint],
+    x: float,
+    y: float,
+    *,
+    around_s_m: float | None,
+    window_m: float | None,
+    length_m: float,
+) -> TrackProjection | None:
     best_dist_sq = float("inf")
-    best_s = centerline[0].s
-    best_lateral = 0.0
-    best_heading = 0.0
-    best_gradient = centerline[0].gradient_rad
-    best_curvature = centerline[0].curvature
-    best_elevation = centerline[0].z
+    best: TrackProjection | None = None
 
     for index in range(1, len(centerline)):
         prev = centerline[index - 1]
         curr = centerline[index]
+        if around_s_m is not None and window_m is not None:
+            if not _segment_in_window(prev.s, curr.s, around_s_m, window_m, length_m):
+                continue
         dx = curr.x - prev.x
         dy = curr.y - prev.y
         seg_len_sq = dx * dx + dy * dy
@@ -172,21 +251,15 @@ def project_xy_to_track(centerline: list[TrackPoint], x: float, y: float) -> Tra
         heading = math.atan2(dy, dx)
         lateral = (x - proj_x) * (-math.sin(heading)) + (y - proj_y) * math.cos(heading)
         best_dist_sq = dist_sq
-        best_s = prev.s + (curr.s - prev.s) * t
-        best_lateral = lateral
-        best_heading = heading
-        best_gradient = prev.gradient_rad + (curr.gradient_rad - prev.gradient_rad) * t
-        best_curvature = prev.curvature + (curr.curvature - prev.curvature) * t
-        best_elevation = prev.z + (curr.z - prev.z) * t
-
-    return TrackProjection(
-        s_m=best_s,
-        lateral_m=best_lateral,
-        heading_rad=best_heading,
-        gradient_rad=best_gradient,
-        curvature=best_curvature,
-        elevation_m=best_elevation,
-    )
+        best = TrackProjection(
+            s_m=prev.s + (curr.s - prev.s) * t,
+            lateral_m=lateral,
+            heading_rad=heading,
+            gradient_rad=prev.gradient_rad + (curr.gradient_rad - prev.gradient_rad) * t,
+            curvature=prev.curvature + (curr.curvature - prev.curvature) * t,
+            elevation_m=prev.z + (curr.z - prev.z) * t,
+        )
+    return best
 
 
 def segments_intersect(

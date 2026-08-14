@@ -558,7 +558,11 @@ def run_simulation(
                 "roll_deg": roll_deg,
                 "position_x_m": physics_out.position_x_m,
                 "position_y_m": physics_out.position_y_m,
-                **{k: v for k, v in track_values.items() if k != "elevation_m"},
+                **{
+                    k: v
+                    for k, v in track_values.items()
+                    if k not in {"elevation_m", "path_heading_rad"}
+                },
                 "motor_rpm": physics_out.motor_rpm,
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,

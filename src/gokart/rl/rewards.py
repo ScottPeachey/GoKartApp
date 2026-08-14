@@ -7,6 +7,7 @@ from typing import Any
 
 from gokart.safety.faults import FAULT_REGISTRY
 from gokart.safety.types import FaultSeverity
+from gokart.track.lap import along_track_delta
 
 
 @dataclass(frozen=True)
@@ -23,8 +24,12 @@ class RewardWeights:
     fault_derate: float = 12.0
     off_track_rate: float = 4.0
     off_track_lateral_cap: float = 2.0
-    off_track_progress: float = 0.12
-    recover_track: float = 0.15
+    off_track_progress: float = 0.0
+    recover_track: float = 0.8
+    heading_off_track: float = 0.12
+    reverse: float = 0.4
+    shortcut: float = 2.0
+    max_progress_delta_m: float = 1.5
     off_track_terminal: float = 25.0
     wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
@@ -57,6 +62,8 @@ class RewardState:
     off_track_time_s: float = 0.0
     last_lap_number: float = 0.0
     prev_lateral_m: float = 0.0
+    best_s_m: float | None = None
+    was_off_track: bool = False
 
 
 def reward_preset(objective: str) -> RewardWeights:
@@ -98,13 +105,36 @@ def compute_reward(
     can_control = safety_state == "DRIVING"
 
     delta_s = float(step_info.get("delta_track_s_m", 0.0))
-    if can_control and delta_s > 0.0 and not blocking:
-        if not off_track:
-            progress = weights.progress * delta_s
-        else:
+    track_s = float(step_info.get("track_s_m", 0.0))
+    track_length = float(step_info.get("track_length_m", 0.0))
+    heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
+    max_progress_delta = max(weights.max_progress_delta_m, 0.05)
+    shortcut_jump = abs(delta_s) > max_progress_delta
+    if state.best_s_m is None:
+        state.best_s_m = track_s
+    frontier_gain = along_track_delta(track_s, state.best_s_m, track_length)
+    behind_frontier = frontier_gain < -1e-6
+    if can_control and not blocking:
+        if shortcut_jump:
+            shortcut_penalty = -weights.shortcut * min(abs(delta_s) / max_progress_delta, 8.0)
+            reward += shortcut_penalty
+            components["shortcut"] = shortcut_penalty
+        elif delta_s < 0.0:
+            reverse_scale = 1.0 if off_track else 1.75
+            reverse_penalty = -weights.reverse * reverse_scale * abs(delta_s)
+            reward += reverse_penalty
+            components["reverse"] = reverse_penalty
+        elif delta_s > 0.0 and not off_track:
+            # New ground only. Catching up to the leave-point from behind
+            # must not pay progress.
+            if not behind_frontier:
+                progress = weights.progress * delta_s
+                reward += progress
+                components["progress"] = progress
+        elif delta_s > 0.0 and off_track and weights.off_track_progress > 0.0:
             progress = weights.progress * weights.off_track_progress * delta_s
-        reward += progress
-        components["progress"] = progress
+            reward += progress
+            components["progress"] = progress
 
     if can_control:
         reward -= weights.time_penalty * dt_s
@@ -117,7 +147,6 @@ def compute_reward(
         reward += centerline_reward
         components["centerline"] = centerline_reward
 
-        heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
         heading_reward = weights.heading * max(0.0, 1.0 - heading_error_deg / 90.0) * motion * dt_s
         reward += heading_reward
         components["heading"] = heading_reward
@@ -151,6 +180,23 @@ def compute_reward(
             recover = weights.recover_track * (state.prev_lateral_m - lateral)
             reward += recover
             components["recover_track"] = recover
+        elif can_control and lateral > state.prev_lateral_m + 1e-6:
+            depart = -weights.recover_track * (lateral - state.prev_lateral_m)
+            reward += depart
+            components["depart_track"] = depart
+        if can_control and speed > 0.3:
+            heading_recover = (
+                weights.heading_off_track
+                * max(0.0, 1.0 - heading_error_deg / 90.0)
+                * motion
+                * dt_s
+            )
+            reward += heading_recover
+            components["heading_off_track"] = heading_recover
+            if heading_error_deg > 90.0:
+                wrong_way = -weights.heading_off_track * motion * dt_s
+                reward += wrong_way
+                components["wrong_way"] = wrong_way
         if bool(step_info.get("terminated_off_track")):
             terminal_penalty = -weights.off_track_terminal
             reward += terminal_penalty
@@ -227,6 +273,11 @@ def compute_reward(
         state.off_track_time_s = 0.0
     state.last_lap_number = lap_number
     state.prev_lateral_m = lateral
+    if shortcut_jump and not off_track and frontier_gain > 0.0:
+        state.best_s_m = track_s
+    elif not off_track and delta_s > 0.0 and not shortcut_jump and not behind_frontier:
+        state.best_s_m = track_s
+    state.was_off_track = off_track
 
     state.prev_throttle = throttle
     state.prev_brake = brake

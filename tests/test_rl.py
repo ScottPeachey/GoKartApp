@@ -421,6 +421,137 @@ def test_reward_recovers_toward_track_when_off_track() -> None:
     assert components.get("recover_track", 0.0) > 0.0
 
 
+def test_reward_does_not_pay_progress_for_off_track_shortcuts() -> None:
+    state = RewardState()
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 4.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.5,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 80.0,
+            "lateral_offset_m": 12.0,
+            "heading_error_deg": 20.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "progress" not in components
+    assert components["shortcut"] < 0.0
+
+
+def test_reward_penalizes_reverse_track_progress() -> None:
+    state = RewardState()
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 3.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.4,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": -0.2,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 170.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert components["reverse"] < 0.0
+    assert "progress" not in components
+
+
+def test_on_track_does_not_reward_returning_to_leave_point() -> None:
+    state = RewardState(best_s_m=200.0, prev_lateral_m=8.0, was_off_track=True)
+    driving = {
+        "active_faults": "",
+        "safety_state": "DRIVING",
+        "speed_mps": 4.0,
+        "battery_temp_c": 30.0,
+        "motor_temp_c": 35.0,
+        "soc": 0.9,
+        "throttle": 0.5,
+        "brake": 0.0,
+        "steering": 0.0,
+        "max_speed_mps": 12.5,
+        "derating_factor": 1.0,
+        "torque_permitted": 1.0,
+    }
+    _, state, on_track = compute_reward(
+        tick_values=driving,
+        step_info={
+            "delta_track_s_m": 0.2,
+            "track_s_m": 190.2,
+            "track_length_m": 1000.0,
+            "lateral_offset_m": 0.4,
+            "heading_error_deg": 8.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "recover_track" not in on_track
+    assert "progress" not in on_track
+    assert state.best_s_m == pytest.approx(200.0)
+
+    _, _, reverse_to_exit = compute_reward(
+        tick_values=driving,
+        step_info={
+            "delta_track_s_m": -0.3,
+            "track_s_m": 199.7,
+            "track_length_m": 1000.0,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 170.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=RewardState(best_s_m=220.0, was_off_track=False),
+        objective="god",
+    )
+    assert reverse_to_exit["reverse"] < 0.0
+    assert "progress" not in reverse_to_exit
+    assert "recover_track" not in reverse_to_exit
+
+
 def test_wander_terminal_reward_applied() -> None:
     state = RewardState()
     _, _, components = compute_reward(
