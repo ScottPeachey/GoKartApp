@@ -375,6 +375,43 @@ def test_reward_penalizes_steering_while_off_track() -> None:
     assert components["off_track"] < components["low_speed_steer"]
 
 
+def test_reward_does_not_pay_speed_for_tightening_circles() -> None:
+    state = RewardState()
+    _, _, components = compute_reward(
+        tick_values={
+            "active_faults": "",
+            "safety_state": "DRIVING",
+            "speed_mps": 4.0,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 35.0,
+            "soc": 0.9,
+            "throttle": 0.6,
+            "brake": 0.0,
+            "steering": 0.9,
+            "max_speed_mps": 12.5,
+            "derating_factor": 1.0,
+            "torque_permitted": 1.0,
+        },
+        step_info={
+            "delta_track_s_m": 0.0,
+            "lateral_offset_m": 0.2,
+            "heading_error_deg": 8.0,
+            "track_width_m": 10.0,
+            "battery_temp_derate_c": 50.0,
+            "battery_temp_fault_c": 60.0,
+            "terminated_off_track": False,
+        },
+        weights=reward_preset("god"),
+        dt_s=0.01,
+        state=state,
+        objective="god",
+    )
+    assert "speed" not in components
+    assert "centerline" not in components
+    assert "heading" not in components
+    assert components["spin"] < 0.0
+
+
 def test_off_track_penalty_scales_with_lateral_distance() -> None:
     state_near = RewardState()
     _, _, near = compute_reward(

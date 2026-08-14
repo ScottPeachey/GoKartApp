@@ -26,10 +26,11 @@ class RewardWeights:
     off_track_lateral_cap: float = 2.0
     off_track_progress: float = 0.0
     recover_track: float = 0.8
-    heading_off_track: float = 0.12
+    heading_off_track: float = 0.0
     reverse: float = 0.4
     shortcut: float = 2.0
     max_progress_delta_m: float = 1.5
+    spin: float = 0.6
     off_track_terminal: float = 80.0
     wander_terminal: float = 8.0
     stagnant_terminal: float = 10.0
@@ -141,8 +142,9 @@ def compute_reward(
         components["time"] = -weights.time_penalty * dt_s
 
     motion = min(max(speed / 2.0, 0.0), 1.0)
+    making_progress = delta_s > 0.0
     normalized_lateral = min(lateral_ratio, 1.0)
-    if can_control and not off_track and not blocking:
+    if can_control and not off_track and not blocking and making_progress:
         centerline_reward = weights.centerline * (1.0 - normalized_lateral) * motion * dt_s
         reward += centerline_reward
         components["centerline"] = centerline_reward
@@ -170,6 +172,11 @@ def compute_reward(
             steer_penalty = -weights.low_speed_steer * abs(steering) * dt_s
             reward += steer_penalty
             components["low_speed_steer"] = steer_penalty
+
+        if not making_progress and abs(steering) > 0.15 and speed > 0.05:
+            spin_penalty = -weights.spin * abs(steering) * (0.5 + speed) * dt_s
+            reward += spin_penalty
+            components["spin"] = spin_penalty
 
     if off_track:
         penalty_lateral = min(max(lateral_ratio, 1.0), max(weights.off_track_lateral_cap, 1.0))

@@ -81,17 +81,16 @@ class TrackRacingEnv(gym.Env):
         step_result = self.session.step(action=action_tuple)
         env_cfg = self._env_cfg
         speed = float(step_result.tick.values.get("speed_mps", 0.0))
+        steering = abs(float(step_result.tick.values.get("steering", 0.0)))
         delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
         driving = step_result.safety_state.value == "DRIVING"
         lateral_offset_m = abs(float(step_result.info.get("lateral_offset_m", 0.0)))
         track_width_m = max(float(step_result.info.get("track_width_m", 10.0)), 1.0)
         off_track_now = lateral_offset_m > track_width_m * 0.5
-        stagnant_now = (
-            driving
-            and env_cfg.max_stagnant_steps > 0
-            and speed < env_cfg.stagnant_speed_mps
-            and delta_s < env_cfg.stagnant_delta_s
-        )
+        no_forward = delta_s < env_cfg.stagnant_delta_s
+        spinning = steering >= 0.35 and speed >= env_cfg.stagnant_speed_mps and no_forward
+        idle = speed < env_cfg.stagnant_speed_mps and no_forward
+        stagnant_now = driving and env_cfg.max_stagnant_steps > 0 and (idle or spinning)
         if stagnant_now and self._stagnant_steps + 1 >= env_cfg.max_stagnant_steps:
             step_result.info["truncated_stagnant"] = True
         if (
