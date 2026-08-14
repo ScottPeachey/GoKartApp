@@ -182,7 +182,7 @@ def train_policy(
         status="training",
         training_seed=config.seed,
         sim_version=__version__,
-        reward_preset="circuit_v2",
+        reward_preset="min_time_v1",
     )
     save_manifest(manifest, root=root)
 

@@ -22,7 +22,7 @@ class PolicyManifest:
     updated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     training_seed: int = 0
     sim_version: str = "0.1.0"
-    reward_preset: str = "circuit_v2"
+    reward_preset: str = "min_time_v1"
     ceiling_lap_s: float | None = None
     clean_lap_rate: float | None = None
     parent_policy_key: str | None = None
@@ -47,7 +47,7 @@ class PolicyManifest:
             updated_at=data.get("updated_at", datetime.now(UTC).isoformat()),
             training_seed=int(data.get("training_seed", 0)),
             sim_version=data.get("sim_version", "0.1.0"),
-            reward_preset=data.get("reward_preset", "circuit_v2"),
+            reward_preset=data.get("reward_preset", "min_time_v1"),
             ceiling_lap_s=data.get("ceiling_lap_s"),
             clean_lap_rate=data.get("clean_lap_rate"),
             parent_policy_key=data.get("parent_policy_key"),

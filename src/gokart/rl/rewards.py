@@ -1,28 +1,33 @@
-"""Circuit-driving reward: go forward along the track, stay on it."""
+"""Minimum-time circuit reward.
+
+The objective is the fastest lap the kart can do with its real limits.
+Time on track is costly, so a quicker lap is worth more than a slow one.
+On-track heading and lateral offset are free: the policy may use the full
+width, brake, and accelerate however the components allow.
+"""
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Any
 
 
 @dataclass(frozen=True)
 class RewardWeights:
-    progress: float = 1.0
-    alignment: float = 0.5
+    time: float = 1.0
+    progress: float = 0.4
     reverse: float = 1.2
     off_track: float = 2.0
     wall: float = 8.0
     stagnant_terminal: float = 4.0
-    lap: float = 20.0
+    lap: float = 50.0
 
 
 GOD_WEIGHTS = RewardWeights()
 ENDURANCE_WEIGHTS = RewardWeights(
-    progress=0.8,
-    alignment=0.35,
-    lap=30.0,
+    time=0.7,
+    progress=0.35,
+    lap=60.0,
 )
 
 
@@ -53,16 +58,16 @@ def compute_reward(
     reward = 0.0
     components: dict[str, float] = {}
 
-    speed = float(tick_values.get("speed_mps", 0.0))
-    max_speed = max(float(tick_values.get("max_speed_mps", 12.5)), 0.1)
-    heading_error_deg = abs(float(step_info.get("heading_error_deg", 0.0)))
-    heading_cos = math.cos(math.radians(min(heading_error_deg, 180.0)))
     delta_s = float(step_info.get("delta_track_s_m", 0.0))
     lateral = abs(float(step_info.get("lateral_offset_m", 0.0)))
     track_width = max(float(step_info.get("track_width_m", 10.0)), 1.0)
     off_track = lateral > track_width * 0.5
     safety_state = str(tick_values.get("safety_state", "DRIVING"))
     can_control = safety_state == "DRIVING"
+
+    time_cost = -weights.time * dt_s
+    reward += time_cost
+    components["time"] = time_cost
 
     if can_control:
         if delta_s > 0.0 and not off_track:
@@ -73,11 +78,6 @@ def compute_reward(
             reverse = -weights.reverse * min(abs(delta_s), 0.4)
             reward += reverse
             components["reverse"] = reverse
-
-        if speed > 0.05 and not off_track:
-            alignment = weights.alignment * (speed / max_speed) * heading_cos * dt_s
-            reward += alignment
-            components["alignment"] = alignment
 
     if off_track:
         off_penalty = -weights.off_track * dt_s

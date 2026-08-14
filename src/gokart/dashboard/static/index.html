@@ -224,9 +224,8 @@
         <div id="rl-train-panel" class="rl-train-panel">
           <h4>Train learned driver</h4>
           <p class="config-hint">
-            Training clones the built-in racing-line driver, then PPO fine-tunes it.
-            Click Reset to defaults before a new run so old reward settings are not reused.
-            Preview laps appear in session history while training runs.
+            Training starts from the racing-line driver, then searches for a faster lap:
+            speed, braking, and using the full track width. Reset to defaults before a new run.
           </p>
           <div class="row">
             <label>Reward preset
@@ -536,7 +535,7 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=81"></script>
+  <script src="/static/app.js?v=82"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>

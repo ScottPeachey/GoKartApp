@@ -60,7 +60,7 @@ def test_training_setup_from_dict_round_trip() -> None:
     schema = training_setup_schema()
     setup = training_setup_from_dict(schema["defaults"])
     assert setup.objective == "god"
-    assert setup.ppo.ent_coef == pytest.approx(0.01)
+    assert setup.ppo.ent_coef == pytest.approx(0.02)
     assert setup.warmup.demo_steps == 15_000
     assert "warmup" in schema["sections"]
     throttle_field = next(
@@ -94,11 +94,13 @@ def test_training_setup_from_dict_round_trip() -> None:
     assert custom.warmup.bc_epochs == 3
 
 
-def test_default_setup_is_circuit_v2() -> None:
+def test_default_setup_is_min_time() -> None:
     setup = default_training_setup()
     assert setup.env.max_stagnant_steps == 300
     assert setup.env.max_off_track_steps == 800
     assert setup.rewards.wall == pytest.approx(8.0)
+    assert setup.rewards.time == pytest.approx(1.0)
+    assert not hasattr(setup.rewards, "alignment")
     assert setup.warmup.demo_steps == 15_000
     assert setup.warmup.bc_epochs == 12
     assert ACTION_DIM == 2
@@ -145,7 +147,8 @@ def test_idle_on_track_is_not_rewarded() -> None:
             "terminated_off_track": False,
         },
     )
-    assert reward == pytest.approx(0.0)
+    assert reward < 0.0
+    assert components["time"] < 0.0
     assert "progress" not in components
     assert "alignment" not in components
 
@@ -241,7 +244,7 @@ def test_policy_key_includes_circuit_stack(hairpin_track) -> None:
     )
     assert a.policy_key == b.policy_key
     assert len(a.policy_key) == 16
-    assert a.stack == "circuit_v2"
+    assert a.stack == "circuit_v3"
     payload = a.to_dict()
     del payload["stack"]
     legacy = identity_from_dict(payload)
@@ -275,7 +278,8 @@ def test_forward_drive_beats_start_line_u_turn() -> None:
     assert forward > u_turn
     assert "progress" in forward_parts
     assert "reverse" in u_turn_parts
-    assert "alignment" in forward_parts
+    assert "alignment" not in forward_parts
+    assert "alignment" not in u_turn_parts
 
 
 def test_off_track_is_penalized_and_does_not_pay_progress() -> None:
@@ -323,8 +327,60 @@ def test_reward_pays_lap_bonus() -> None:
         },
         state=state,
     )
-    assert components["lap"] == pytest.approx(20.0)
-    assert reward > 20.0
+    assert components["lap"] == pytest.approx(50.0)
+    assert reward > 49.0
+
+
+def test_faster_completed_lap_beats_slower_one() -> None:
+    def _episode_reward(ticks: int, delta_s: float) -> float:
+        state = RewardState(last_lap_number=1.0)
+        total = 0.0
+        for index in range(ticks):
+            info = {
+                "delta_track_s_m": delta_s,
+                "lateral_offset_m": 1.5,
+                "heading_error_deg": 18.0,
+                "track_width_m": 10.0,
+                "terminated_off_track": False,
+                "lap_number": 2.0 if index == ticks - 1 else 1.0,
+            }
+            step_reward, state, _ = _reward(_TICK, info, state=state)
+            total += step_reward
+        return total
+
+    same_distance_m = 16.0
+    fast_ticks = 400
+    slow_ticks = 800
+    assert _episode_reward(fast_ticks, same_distance_m / fast_ticks) > _episode_reward(
+        slow_ticks, same_distance_m / slow_ticks
+    )
+
+
+def test_using_track_width_is_not_penalized() -> None:
+    center, _, center_parts = _reward(
+        _TICK,
+        {
+            "delta_track_s_m": 0.04,
+            "lateral_offset_m": 0.1,
+            "heading_error_deg": 4.0,
+            "track_width_m": 10.0,
+            "terminated_off_track": False,
+        },
+    )
+    apex, _, apex_parts = _reward(
+        _TICK,
+        {
+            "delta_track_s_m": 0.04,
+            "lateral_offset_m": 3.5,
+            "heading_error_deg": 22.0,
+            "track_width_m": 10.0,
+            "terminated_off_track": False,
+        },
+    )
+    assert center == pytest.approx(apex)
+    assert center_parts["progress"] == pytest.approx(apex_parts["progress"])
+    assert "alignment" not in center_parts
+    assert "alignment" not in apex_parts
 
 
 def test_observation_shape(hairpin_track) -> None:
@@ -575,8 +631,8 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
     assert path.exists()
     loaded = PolicyManifest.from_dict(__import__("json").loads(path.read_text(encoding="utf-8")))
     assert loaded.identity.policy_key == identity.policy_key
-    assert loaded.identity.stack == "circuit_v2"
-    assert loaded.reward_preset == "circuit_v2"
+    assert loaded.identity.stack == "circuit_v3"
+    assert loaded.reward_preset == "min_time_v1"
 
 
 def test_run_preview_episode_records_full_episode(hairpin_track) -> None:

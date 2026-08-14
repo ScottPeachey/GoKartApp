@@ -34,7 +34,7 @@ class PpoConfig:
     learning_rate: float = 3e-4
     n_steps: int = 2048
     batch_size: int = 64
-    ent_coef: float = 0.01
+    ent_coef: float = 0.02
     gamma: float = 0.999
 
 
@@ -105,8 +105,8 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
     "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
     "ppo.gamma": {"step": 0.001, "min": 0.9, "max": 0.9999},
+    "rewards.time": {"step": 0.05, "min": 0, "max": 10},
     "rewards.progress": {"step": 0.05, "min": 0, "max": 10},
-    "rewards.alignment": {"step": 0.05, "min": 0, "max": 10},
     "rewards.reverse": {"step": 0.05, "min": 0, "max": 10},
     "rewards.off_track": {"step": 0.1, "min": 0, "max": 50},
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
@@ -208,7 +208,7 @@ def training_setup_schema() -> dict[str, Any]:
                     "learning_rate": "Adam learning rate.",
                     "n_steps": "Ticks collected before one PPO update.",
                     "batch_size": "Minibatch size for PPO updates.",
-                    "ent_coef": "Entropy bonus after warmup. Keep small once the expert is cloned.",
+                    "ent_coef": "Entropy after warmup, so the policy can search faster lines.",
                     "gamma": "Discount factor. At 100 Hz use ~0.999.",
                 },
             ),
@@ -217,13 +217,13 @@ def training_setup_schema() -> dict[str, Any]:
                 "rewards",
                 "Reward weights",
                 {
-                    "progress": "Reward per metre of forward track progress.",
-                    "alignment": "Reward for speed while facing along the circuit.",
+                    "time": "Cost per second on track. Faster laps pay less of this.",
+                    "progress": "Small bonus for moving forward. Does not prefer the centerline.",
                     "reverse": "Penalty per metre of backward progress.",
                     "off_track": "Per-second penalty while off the circuit.",
                     "wall": "One-shot cost when off-track terminate ends the episode.",
                     "stagnant_terminal": "One-shot cost when the episode is cut for not moving.",
-                    "lap": "Bonus for completing a lap.",
+                    "lap": "Flat bonus for finishing a lap. Time cost makes a quicker lap better.",
                 },
             ),
         },
