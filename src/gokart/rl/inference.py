@@ -6,18 +6,28 @@ from pathlib import Path
 
 import numpy as np
 
-from gokart.rl.actions import decode_rl_action
+from gokart.rl.actions import apply_actuator_slew, decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import PolicyIdentity
 from gokart.rl.registry import load_manifest, model_path
+from gokart.rl.training_setup import ActionConfig, default_training_setup
 from gokart.track.model import Track
 
 
 class PolicyRunner:
     """Run a saved SB3 policy on observation vectors."""
 
-    def __init__(self, model) -> None:
+    def __init__(
+        self,
+        model,
+        *,
+        action_config: ActionConfig | None = None,
+        dt_s: float = 0.01,
+    ) -> None:
         self._model = model
+        self._action_config = action_config or default_training_setup().action
+        self._dt_s = dt_s
+        self._last_controls = (0.0, 0.0, 0.0)
 
     @classmethod
     def from_identity(cls, identity: PolicyIdentity, root: Path | None = None) -> PolicyRunner:
@@ -54,7 +64,15 @@ class PolicyRunner:
         deterministic: bool = True,
     ) -> tuple[float, float, float]:
         action, _ = self._model.predict(observation.reshape(1, -1), deterministic=deterministic)
-        return decode_rl_action(action, speed_mps=speed_mps)
+        desired = decode_rl_action(action, speed_mps=speed_mps, action_config=self._action_config)
+        applied = apply_actuator_slew(
+            desired,
+            self._last_controls,
+            dt_s=self._dt_s,
+            action_config=self._action_config,
+        )
+        self._last_controls = applied
+        return applied
 
     def predict_from_tick(
         self,

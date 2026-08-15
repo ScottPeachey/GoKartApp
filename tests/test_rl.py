@@ -103,6 +103,7 @@ def test_default_setup_is_min_time() -> None:
     assert not hasattr(setup.rewards, "alignment")
     assert setup.warmup.demo_steps == 15_000
     assert setup.warmup.bc_epochs == 12
+    assert setup.action.steer_slew_per_s == pytest.approx(2.5)
     assert ACTION_DIM == 2
     assert OBS_DIM == 16
 
@@ -209,6 +210,67 @@ def test_decode_rl_action_maps_accel_and_steer() -> None:
     hard_brake_throttle, hard_brake, _ = decode_rl_action(np.array([-0.9, 0.0], dtype=np.float32))
     assert hard_brake_throttle == 0.0
     assert hard_brake == pytest.approx(0.9)
+
+
+def test_actuator_slew_limits_step_changes() -> None:
+    from gokart.rl.actions import apply_actuator_slew
+    from gokart.rl.training_setup import ActionConfig
+
+    cfg = ActionConfig(
+        throttle_slew_up_per_s=3.0,
+        throttle_slew_down_per_s=15.0,
+        brake_slew_per_s=2.0,
+        steer_slew_per_s=2.5,
+    )
+    next_controls = apply_actuator_slew(
+        (1.0, 0.0, 1.0),
+        (0.0, 0.0, 0.0),
+        dt_s=0.01,
+        action_config=cfg,
+    )
+    assert next_controls[0] == pytest.approx(0.03)
+    assert next_controls[1] == pytest.approx(0.0)
+    assert next_controls[2] == pytest.approx(0.025)
+
+    lifted = apply_actuator_slew(
+        (0.0, 0.0, 0.0),
+        (1.0, 0.0, 0.0),
+        dt_s=0.01,
+        action_config=cfg,
+    )
+    assert lifted[0] == pytest.approx(0.85)
+
+    instant = apply_actuator_slew(
+        (1.0, 1.0, -1.0),
+        (0.0, 0.0, 0.0),
+        dt_s=0.01,
+        action_config=ActionConfig(
+            throttle_slew_up_per_s=0.0,
+            throttle_slew_down_per_s=0.0,
+            brake_slew_per_s=0.0,
+            steer_slew_per_s=0.0,
+        ),
+    )
+    assert instant == (1.0, 1.0, -1.0)
+
+
+def test_env_cannot_slam_full_steer_in_one_tick(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=400,
+    )
+    env.reset()
+    env.step(np.array([0.0, 1.0], dtype=np.float32))
+    throttle, brake, steering = env._last_policy_controls
+    assert abs(steering) < 0.05
+    assert throttle == pytest.approx(0.0)
+    assert brake == pytest.approx(0.0)
 
 
 def test_encode_expert_action_round_trips() -> None:

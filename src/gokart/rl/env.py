@@ -9,7 +9,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from gokart.rl.actions import ACTION_DIM, decode_rl_action
+from gokart.rl.actions import ACTION_DIM, apply_actuator_slew, decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.rewards import RewardState, compute_reward
 from gokart.rl.training_setup import EnvRuntimeConfig, RlTrainingSetup, default_training_setup
@@ -96,9 +96,15 @@ class TrackRacingEnv(gym.Env):
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         vehicle = self.session.state.vehicle_state
         speed_mps = float(vehicle.speed_mps) if vehicle else 0.0
-        action_tuple = decode_rl_action(
+        desired = decode_rl_action(
             action,
             speed_mps=speed_mps,
+            action_config=self.setup.action,
+        )
+        action_tuple = apply_actuator_slew(
+            desired,
+            self._last_policy_controls,
+            dt_s=self.session_config.dt_s,
             action_config=self.setup.action,
         )
         self._last_policy_controls = action_tuple
