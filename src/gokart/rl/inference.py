@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from gokart.rl.actions import apply_actuator_slew, decode_rl_action
+from gokart.rl.actions import realize_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.policy_key import PolicyIdentity
 from gokart.rl.registry import load_manifest, model_path
@@ -27,7 +27,7 @@ class PolicyRunner:
         self._model = model
         self._action_config = action_config or default_training_setup().action
         self._dt_s = dt_s
-        self._last_controls = (0.0, 0.0, 0.0)
+        self._last_command = (0.0, 0.0)
 
     @classmethod
     def from_identity(cls, identity: PolicyIdentity, root: Path | None = None) -> PolicyRunner:
@@ -64,14 +64,13 @@ class PolicyRunner:
         deterministic: bool = True,
     ) -> tuple[float, float, float]:
         action, _ = self._model.predict(observation.reshape(1, -1), deterministic=deterministic)
-        desired = decode_rl_action(action, speed_mps=speed_mps, action_config=self._action_config)
-        applied = apply_actuator_slew(
-            desired,
-            self._last_controls,
+        applied, self._last_command = realize_rl_action(
+            action,
+            speed_mps=speed_mps,
+            current_command=self._last_command,
             dt_s=self._dt_s,
             action_config=self._action_config,
         )
-        self._last_controls = applied
         return applied
 
     def predict_from_tick(

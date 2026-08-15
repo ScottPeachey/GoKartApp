@@ -12,10 +12,9 @@ from gokart.rl.rewards import ENDURANCE_WEIGHTS, GOD_WEIGHTS, RewardWeights
 class ActionConfig:
     throttle_breakaway: float = 0.2
     standing_start_speed_mps: float = 0.25
-    throttle_slew_up_per_s: float = 3.0
-    throttle_slew_down_per_s: float = 15.0
-    brake_slew_per_s: float = 2.0
+    accel_slew_per_s: float = 3.0
     steer_slew_per_s: float = 2.5
+    brake_deadzone: float = 0.3
 
 
 @dataclass(frozen=True)
@@ -98,10 +97,9 @@ def reward_preset_dict(objective: str) -> dict[str, float]:
 _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "action.throttle_breakaway": {"step": 0.05, "min": 0, "max": 1},
     "action.standing_start_speed_mps": {"step": 0.05, "min": 0, "max": 5},
-    "action.throttle_slew_up_per_s": {"step": 0.5, "min": 0, "max": 50},
-    "action.throttle_slew_down_per_s": {"step": 0.5, "min": 0, "max": 50},
-    "action.brake_slew_per_s": {"step": 0.5, "min": 0, "max": 50},
+    "action.accel_slew_per_s": {"step": 0.5, "min": 0, "max": 50},
     "action.steer_slew_per_s": {"step": 0.5, "min": 0, "max": 50},
+    "action.brake_deadzone": {"step": 0.05, "min": 0, "max": 1},
     "env.max_steps": {"step": 500, "min": 100, "max": 100_000},
     "env.stagnant_delta_s": {"step": 0.0005, "min": 0, "max": 1},
     "env.max_stagnant_steps": {"step": 50, "min": 50, "max": 10_000},
@@ -187,16 +185,14 @@ def training_setup_schema() -> dict[str, Any]:
                 {
                     "throttle_breakaway": "Minimum throttle when asking for gas from a standstill.",
                     "standing_start_speed_mps": "Below this speed, standing-start assist is on.",
-                    "throttle_slew_up_per_s": "Max throttle rise per second. 0 = instant.",
-                    "throttle_slew_down_per_s": "Max throttle lift per second. 0 = instant.",
-                    "brake_slew_per_s": "Max brake change per second. 0 = instant.",
-                    "steer_slew_per_s": "Max steer change per second. 0 = instant.",
+                    "accel_slew_per_s": "How fast the gas/brake command may change. 0 = instant.",
+                    "steer_slew_per_s": "How fast steering may change. 0 = instant.",
+                    "brake_deadzone": "Ignore weak brake commands so noise cannot stomp the pedal.",
                 },
                 {
-                    "throttle_slew_up_per_s": "Throttle rise /s",
-                    "throttle_slew_down_per_s": "Throttle lift /s",
-                    "brake_slew_per_s": "Brake rate /s",
+                    "accel_slew_per_s": "Accel command /s",
                     "steer_slew_per_s": "Steer rate /s",
+                    "brake_deadzone": "Brake deadzone",
                 },
             ),
             "env": _section(
