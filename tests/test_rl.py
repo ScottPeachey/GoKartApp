@@ -61,7 +61,7 @@ def test_training_setup_from_dict_round_trip() -> None:
     setup = training_setup_from_dict(schema["defaults"])
     assert setup.objective == "god"
     assert setup.ppo.ent_coef == pytest.approx(0.02)
-    assert setup.warmup.demo_steps == 15_000
+    assert setup.warmup.demo_steps == 2_000
     assert "warmup" in schema["sections"]
     throttle_field = next(
         field
@@ -101,10 +101,9 @@ def test_default_setup_is_min_time() -> None:
     assert setup.rewards.wall == pytest.approx(8.0)
     assert setup.rewards.time == pytest.approx(1.0)
     assert not hasattr(setup.rewards, "alignment")
-    assert setup.warmup.demo_steps == 15_000
+    assert setup.warmup.demo_steps == 2_000
     assert setup.warmup.bc_epochs == 12
-    assert setup.action.steer_slew_per_s == pytest.approx(2.5)
-    assert setup.action.brake_deadzone == pytest.approx(0.3)
+    assert setup.action.hold_ticks == 8
     assert ACTION_DIM == 2
     assert OBS_DIM == 16
 
@@ -189,18 +188,11 @@ def test_decode_rl_action_maps_accel_and_steer() -> None:
     assert assist_brake == 0.0
     assert assist_throttle == pytest.approx(0.2 + 0.8 * 0.2)
 
-    moving_coast, moving_coast_brake, _ = decode_rl_action(
+    moving_throttle, _, _ = decode_rl_action(
         np.array([0.2, 0.0], dtype=np.float32),
         speed_mps=2.0,
     )
-    assert moving_coast == 0.0
-    assert moving_coast_brake == 0.0
-
-    moving_throttle, _, _ = decode_rl_action(
-        np.array([0.5, 0.0], dtype=np.float32),
-        speed_mps=2.0,
-    )
-    assert moving_throttle == pytest.approx(0.5)
+    assert moving_throttle == pytest.approx(0.2)
 
     full_throttle, full_brake, _ = decode_rl_action(
         np.array([1.0, 0.0], dtype=np.float32), speed_mps=2.0
@@ -219,50 +211,8 @@ def test_decode_rl_action_maps_accel_and_steer() -> None:
     assert hard_brake_throttle == 0.0
     assert hard_brake == pytest.approx(0.9)
 
-    weak_brake_throttle, weak_brake, _ = decode_rl_action(
-        np.array([-0.1, 0.0], dtype=np.float32),
-        speed_mps=0.0,
-    )
-    assert weak_brake == 0.0
-    assert weak_brake_throttle > 0.0
 
-
-def test_command_slew_and_chatter_does_not_stomp_brake() -> None:
-    from gokart.rl.actions import realize_rl_action
-    from gokart.rl.training_setup import ActionConfig
-
-    cfg = ActionConfig(accel_slew_per_s=3.0, steer_slew_per_s=2.5, brake_deadzone=0.3)
-    command = (0.0, 0.0)
-    brakes: list[float] = []
-    throttles: list[float] = []
-    for index in range(40):
-        raw = np.array([1.0 if index % 2 == 0 else -1.0, 1.0], dtype=np.float32)
-        controls, command = realize_rl_action(
-            raw,
-            speed_mps=0.0,
-            current_command=command,
-            dt_s=0.01,
-            action_config=cfg,
-        )
-        throttles.append(controls[0])
-        brakes.append(controls[1])
-    assert max(brakes) == pytest.approx(0.0)
-    assert min(throttles) >= 0.2
-    assert command[1] == pytest.approx(1.0)
-
-    instant_controls, _ = realize_rl_action(
-        np.array([1.0, -1.0], dtype=np.float32),
-        speed_mps=5.0,
-        current_command=(0.0, 0.0),
-        dt_s=0.01,
-        action_config=ActionConfig(accel_slew_per_s=0.0, steer_slew_per_s=0.0, brake_deadzone=0.3),
-    )
-    assert instant_controls[0] == pytest.approx(1.0)
-    assert instant_controls[1] == pytest.approx(0.0)
-    assert instant_controls[2] == pytest.approx(-1.0)
-
-
-def test_env_cannot_slam_full_steer_in_one_tick(hairpin_track) -> None:
+def test_env_holds_each_decision_for_several_ticks(hairpin_track) -> None:
     env = make_env(
         vehicle_name="Scott Kart V1",
         vehicle_version="V1.0",
@@ -274,11 +224,12 @@ def test_env_cannot_slam_full_steer_in_one_tick(hairpin_track) -> None:
         max_steps=400,
     )
     env.reset()
+    steps_before = env._drive_steps
     env.step(np.array([0.0, 1.0], dtype=np.float32))
-    throttle, brake, steering = env._last_policy_controls
-    assert abs(steering) < 0.05
-    assert brake == pytest.approx(0.0)
-    assert throttle >= 0.2
+    assert env._drive_steps - steps_before == env.setup.action.hold_ticks
+    assert len(env.physics_tick_rows) == env.setup.action.hold_ticks
+    _throttle, _brake, steering = env._last_policy_controls
+    assert steering == pytest.approx(1.0)
 
 
 def test_encode_expert_action_round_trips() -> None:
@@ -605,7 +556,7 @@ def test_rl_env_reaches_driving_with_brake_heavy_policy(hairpin_track) -> None:
             driving_steps += 1
         if terminated or truncated:
             break
-    assert driving_steps > 50
+    assert driving_steps > 20
 
 
 def test_expert_dataset_moves_forward(hairpin_track) -> None:

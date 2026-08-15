@@ -56,6 +56,11 @@ class EpisodeRecordingEnv(gym.Wrapper):
         return observation, reward, terminated, truncated, info
 
     def _append_tick(self) -> None:
+        inner = self.env.unwrapped
+        rows = getattr(inner, "physics_tick_rows", None)
+        if rows:
+            self._episode_ticks.extend(rows)
+            return
         row = session_tick_row(self.env)
         if row is not None:
             self._episode_ticks.append(row)

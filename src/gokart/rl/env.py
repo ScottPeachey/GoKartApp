@@ -9,7 +9,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from gokart.rl.actions import ACTION_DIM, realize_rl_action
+from gokart.rl.actions import ACTION_DIM, decode_rl_action
 from gokart.rl.observations import OBS_DIM, build_observation
 from gokart.rl.rewards import RewardState, compute_reward
 from gokart.rl.training_setup import EnvRuntimeConfig, RlTrainingSetup, default_training_setup
@@ -51,7 +51,7 @@ class TrackRacingEnv(gym.Env):
         )
         self._drive_steps = 0
         self._last_policy_controls = (0.0, 0.0, 0.0)
-        self._last_command = (0.0, 0.0)
+        self.physics_tick_rows: list[dict[str, Any]] = []
 
         self.action_space = spaces.Box(
             low=np.full(ACTION_DIM, -1.0, dtype=np.float32),
@@ -81,7 +81,7 @@ class TrackRacingEnv(gym.Env):
         self._off_track_steps = 0
         self._drive_steps = 0
         self._last_policy_controls = (0.0, 0.0, 0.0)
-        self._last_command = (0.0, 0.0)
+        self.physics_tick_rows = []
         step_result = self.session.reset()
         boot_steps = 0
         while step_result.safety_state != SafetyState.DRIVING and boot_steps < BOOT_STEP_ALLOWANCE:
@@ -96,17 +96,31 @@ class TrackRacingEnv(gym.Env):
         return obs, {"safety_state": step_result.safety_state.value}
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        hold_ticks = max(1, int(self.setup.action.hold_ticks))
+        total_reward = 0.0
+        terminated = False
+        truncated = False
+        info: dict[str, Any] = {}
+        self.physics_tick_rows = []
+        for _ in range(hold_ticks):
+            reward, terminated, truncated, info = self._physics_tick(action)
+            total_reward += reward
+            if terminated or truncated:
+                break
+        return self._last_obs, total_reward, terminated, truncated, info
+
+    def _physics_tick(self, action: np.ndarray) -> tuple[float, bool, bool, dict[str, Any]]:
         vehicle = self.session.state.vehicle_state
         speed_mps = float(vehicle.speed_mps) if vehicle else 0.0
-        action_tuple, self._last_command = realize_rl_action(
+        action_tuple = decode_rl_action(
             action,
             speed_mps=speed_mps,
-            current_command=self._last_command,
-            dt_s=self.session_config.dt_s,
             action_config=self.setup.action,
         )
         self._last_policy_controls = action_tuple
         step_result = self.session.step(action=action_tuple)
+        if row := self.session.state.last_tick:
+            self.physics_tick_rows.append(row.to_row())
         env_cfg = self._env_cfg
         delta_s = float(step_result.info.get("delta_track_s_m", 0.0))
         driving = step_result.safety_state.value == "DRIVING"
@@ -156,13 +170,7 @@ class TrackRacingEnv(gym.Env):
             "safety_state": step_result.safety_state.value,
             "active_faults": step_result.tick.values.get("active_faults", ""),
         }
-        return (
-            obs,
-            reward,
-            step_result.terminated,
-            truncated,
-            info,
-        )
+        return reward, step_result.terminated, truncated, info
 
     def _obs_from_step(self, tick_values: dict[str, Any], step_info: dict[str, Any]) -> np.ndarray:
         throttle, brake, steering = self._last_policy_controls
