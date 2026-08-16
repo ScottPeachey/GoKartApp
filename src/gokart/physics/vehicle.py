@@ -23,7 +23,13 @@ from gokart.physics.drivetrain import (
     wheel_torque_to_traction_force,
 )
 from gokart.physics.motor import MotorInputs, MotorParams, MotorState, step_motor
-from gokart.physics.thermal import ThermalInputs, ThermalParams, ThermalState, step_thermal
+from gokart.physics.thermal import (
+    ThermalInputs,
+    ThermalParams,
+    ThermalState,
+    ram_air_cooling_scale,
+    step_thermal,
+)
 from gokart.physics.load_transfer import wheel_normal_loads_n
 from gokart.physics.steering import step_steering, steering_angle_rad
 from gokart.physics.tyre_thermal import (
@@ -513,18 +519,20 @@ class VehicleModel:
             dt,
         )
 
+        ram_air = ram_air_cooling_scale(new_speed)
         motor_thermal, motor_thermal_out = step_thermal(
             state.motor_thermal,
             ThermalInputs(heat_w=motor_out.heat_w),
             replace(self.motor_thermal_params, ambient_temp_c=env.ambient_temp_c),
             dt,
+            cooling_scale=ram_air,
         )
         battery_thermal, battery_thermal_out = step_thermal(
             state.battery_thermal,
             ThermalInputs(heat_w=battery_out.heat_w),
             replace(self.battery_thermal_params, ambient_temp_c=env.ambient_temp_c),
             dt,
-            cooling_scale=1.0 + min(new_speed, 14.0) * 0.1,
+            cooling_scale=ram_air,
         )
 
         new_state = VehicleState(

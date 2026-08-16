@@ -28,6 +28,11 @@ class ThermalOutputs:
     heat_loss_w: float
 
 
+def ram_air_cooling_scale(speed_mps: float, *, gain_per_mps: float = 0.1) -> float:
+    """Forced convection vs still air. Scale is 1 at rest and keeps rising with speed."""
+    return 1.0 + gain_per_mps * max(0.0, float(speed_mps))
+
+
 def step_thermal(
     state: ThermalState,
     inputs: ThermalInputs,
