@@ -828,7 +828,7 @@ def test_run_preview_episode_records_full_episode(hairpin_track) -> None:
     assert session_id == "preview-session"
     assert calls
     assert all(flag is False for flag in calls)
-    assert len(recorded) > 50
+    assert len(recorded) >= len(calls) * 4
     assert "speed_mps" in recorded[0]
 
 

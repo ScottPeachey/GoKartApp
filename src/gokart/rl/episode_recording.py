@@ -18,6 +18,16 @@ def session_tick_row(env: gym.Env) -> dict[str, Any] | None:
     return last_tick.to_row()
 
 
+def collect_step_tick_rows(env: gym.Env) -> list[dict[str, Any]]:
+    """Every physics tick from the last env.step, including action hold."""
+    inner = env.unwrapped
+    rows = getattr(inner, "physics_tick_rows", None)
+    if rows:
+        return list(rows)
+    row = session_tick_row(env)
+    return [row] if row is not None else []
+
+
 class EpisodeRecordingEnv(gym.Wrapper):
     """Buffer every sim tick and flush a full episode when it terminates."""
 
@@ -56,14 +66,9 @@ class EpisodeRecordingEnv(gym.Wrapper):
         return observation, reward, terminated, truncated, info
 
     def _append_tick(self) -> None:
-        inner = self.env.unwrapped
-        rows = getattr(inner, "physics_tick_rows", None)
+        rows = collect_step_tick_rows(self.env)
         if rows:
             self._episode_ticks.extend(rows)
-            return
-        row = session_tick_row(self.env)
-        if row is not None:
-            self._episode_ticks.append(row)
 
     def _finalize_episode(self) -> None:
         if not self._episode_ticks:

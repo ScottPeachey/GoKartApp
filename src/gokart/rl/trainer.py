@@ -13,7 +13,7 @@ from typing import Any
 from gokart import __version__
 from gokart.rl.demos import behavior_clone, collect_expert_dataset
 from gokart.rl.env import make_env
-from gokart.rl.episode_recording import EpisodeRecordingEnv, session_tick_row
+from gokart.rl.episode_recording import EpisodeRecordingEnv, collect_step_tick_rows, session_tick_row
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
 from gokart.rl.registry import PolicyManifest, model_path, save_manifest
@@ -106,8 +106,7 @@ def run_preview_episode(
         best = float(info.get("best_lap_time_s", 0.0) or 0.0)
         if best > 0:
             lap_best = best if lap_best is None else min(lap_best, best)
-        if row := session_tick_row(env):
-            ticks.append(row)
+        ticks.extend(collect_step_tick_rows(env))
     if hooks is not None and ticks:
         preview_session_id = hooks.record_episode(
             ticks=ticks,
