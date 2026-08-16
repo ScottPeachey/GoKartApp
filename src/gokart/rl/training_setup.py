@@ -114,6 +114,8 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
     "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 50},
     "rewards.lap": {"step": 1, "min": 0, "max": 200},
+    "rewards.thermal": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.thermal_fault": {"step": 1, "min": 0, "max": 50},
 }
 
 
@@ -230,6 +232,8 @@ def training_setup_schema() -> dict[str, Any]:
                     "wall": "One-shot cost when off-track terminate ends the episode.",
                     "stagnant_terminal": "One-shot cost when the episode is cut for not moving.",
                     "lap": "Flat bonus for finishing a lap. Time cost makes a quicker lap better.",
+                    "thermal": "Per-second cost as motor/controller temp goes from derate to trip.",
+                    "thermal_fault": "One-shot cost when overtemp ends the episode.",
                 },
             ),
         },

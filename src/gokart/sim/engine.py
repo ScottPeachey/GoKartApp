@@ -78,6 +78,14 @@ def _build_safety_config(
     config = vehicle_model.config
     battery = load_component("battery", config.battery.component_id, root=data_root_path)
     bms = load_component("bms", config.bms.component_id, root=data_root_path)
+    motor = load_component("motor", config.motor.component_id, root=data_root_path)
+    controller = load_component(
+        "motor_controller",
+        config.motor_controller.component_id,
+        root=data_root_path,
+    )
+    motor_fault_c = float(motor.max_temp_c or 120.0)
+    controller_fault_c = float(controller.max_temp_c or 85.0)
     return SafetyConfig(
         pack_voltage_max_v=battery.max_voltage_v,
         pack_voltage_min_v=battery.min_voltage_v,
@@ -90,6 +98,10 @@ def _build_safety_config(
         max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else 20.0,
         battery_temp_fault_c=bms.max_temp_c,
         battery_temp_derate_c=max(25.0, bms.max_temp_c - 10.0),
+        motor_temp_fault_c=motor_fault_c,
+        motor_temp_derate_c=max(25.0, motor_fault_c - 20.0),
+        controller_temp_fault_c=controller_fault_c,
+        controller_temp_derate_c=max(25.0, controller_fault_c - 10.0),
     )
 
 
@@ -605,6 +617,8 @@ def run_simulation(
                 "grip_rr_effective": physics_out.grip_rr_effective,
                 "motor_temp_c": physics_out.motor_temp_c,
                 "battery_temp_c": physics_out.battery_temp_c,
+                "controller_temp_derate_c": safety_config.controller_temp_derate_c,
+                "controller_temp_fault_c": safety_config.controller_temp_fault_c,
                 "traction_limited": float(control_out.traction_limited),
                 "filtered_throttle": control_out.filtered_throttle,
                 "drive_mode": control_params.mode.name,

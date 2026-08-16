@@ -154,6 +154,7 @@ const FAULT_HELP = {
   MOTOR_OVERTEMP: "Motor temperature too high — reduce throttle and let it cool.",
   MOTOR_OVERTEMP_DERATE: "Motor is hot — power is reduced until it cools.",
   CONTROLLER_OVERTEMP: "Controller temperature too high — reduce throttle.",
+  CONTROLLER_OVERTEMP_DERATE: "Controller is hot — power is reduced until it cools.",
   BATTERY_OVERTEMP: "Battery temperature too high — stop and let the pack cool.",
   PRECHARGE_TIMEOUT: "Precharge did not complete in time — try arming again with brake held.",
   CONTACTOR_WELDED: "Contactor welded — critical fault; use New session.",

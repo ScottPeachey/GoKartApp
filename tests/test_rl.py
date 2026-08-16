@@ -105,7 +105,7 @@ def test_default_setup_is_min_time() -> None:
     assert setup.warmup.bc_epochs == 12
     assert setup.action.hold_ticks == 8
     assert ACTION_DIM == 2
-    assert OBS_DIM == 16
+    assert OBS_DIM == 18
 
 
 def test_reward_penalizes_stagnant_terminal() -> None:
@@ -121,6 +121,63 @@ def test_reward_penalizes_stagnant_terminal() -> None:
     )
     assert components["stagnant_terminal"] < 0.0
     assert reward < 0.0
+
+
+def test_reward_penalizes_controller_heat() -> None:
+    cool_info = {
+        "delta_track_s_m": 0.04,
+        "lateral_offset_m": 0.0,
+        "heading_error_deg": 0.0,
+        "track_width_m": 10.0,
+    }
+    _, _, cool = _reward({**_TICK, "motor_temp_c": 40.0}, cool_info)
+    _, _, hot = _reward(
+        {
+            **_TICK,
+            "motor_temp_c": 85.0,
+            "controller_temp_derate_c": 75.0,
+            "controller_temp_fault_c": 85.0,
+        },
+        cool_info,
+    )
+    assert "thermal" not in cool
+    assert hot["thermal"] < 0.0
+
+
+def test_reward_penalizes_blocking_overtemp_once() -> None:
+    info = {
+        "delta_track_s_m": 0.0,
+        "lateral_offset_m": 0.0,
+        "heading_error_deg": 0.0,
+        "track_width_m": 10.0,
+    }
+    state = RewardState()
+    _, state, first = _reward(
+        {**_TICK, "active_faults": "CONTROLLER_OVERTEMP", "safety_state": "FAULT"},
+        info,
+        state,
+    )
+    _, _, second = _reward(
+        {**_TICK, "active_faults": "CONTROLLER_OVERTEMP", "safety_state": "FAULT"},
+        info,
+        state,
+    )
+    assert first["thermal_fault"] == pytest.approx(-6.0)
+    assert "thermal_fault" not in second
+
+
+def test_derate_fault_is_not_a_blocking_thermal_hit() -> None:
+    _, _, parts = _reward(
+        {**_TICK, "active_faults": "CONTROLLER_OVERTEMP_DERATE", "motor_temp_c": 76.0},
+        {
+            "delta_track_s_m": 0.04,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "track_width_m": 10.0,
+        },
+    )
+    assert "thermal_fault" not in parts
+    assert parts["thermal"] < 0.0
 
 
 def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
@@ -265,7 +322,7 @@ def test_policy_key_includes_circuit_stack(hairpin_track) -> None:
     )
     assert a.policy_key == b.policy_key
     assert len(a.policy_key) == 16
-    assert a.stack == "circuit_v3"
+    assert a.stack == "circuit_v4"
     payload = a.to_dict()
     del payload["stack"]
     legacy = identity_from_dict(payload)
@@ -439,6 +496,60 @@ def test_observation_shape(hairpin_track) -> None:
     assert obs[8] == pytest.approx(0.4)
     assert obs[9] == pytest.approx(0.0)
     assert obs[10] == pytest.approx(0.1)
+    assert obs[16] < 0.3
+
+
+def test_observation_includes_controller_temp(hairpin_track) -> None:
+    cool = build_observation(
+        tick_values={
+            "speed_mps": 8.0,
+            "heading_deg": 0.0,
+            "soc": 0.95,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 25.0,
+            "controller_temp_fault_c": 85.0,
+            "derating_factor": 1.0,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+        },
+        step_info={
+            "track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "off_track": 0.0,
+            "completed_laps": 0,
+        },
+        track=hairpin_track,
+    )
+    hot = build_observation(
+        tick_values={
+            "speed_mps": 8.0,
+            "heading_deg": 0.0,
+            "soc": 0.95,
+            "battery_temp_c": 30.0,
+            "motor_temp_c": 85.0,
+            "controller_temp_fault_c": 85.0,
+            "derating_factor": 0.5,
+            "throttle": 0.0,
+            "brake": 0.0,
+            "steering": 0.0,
+            "max_speed_mps": 12.5,
+        },
+        step_info={
+            "track_s_m": 0.0,
+            "lateral_offset_m": 0.0,
+            "heading_error_deg": 0.0,
+            "off_track": 0.0,
+            "completed_laps": 0,
+        },
+        track=hairpin_track,
+    )
+    assert cool[16] == pytest.approx(0.0)
+    assert hot[16] == pytest.approx(1.0)
+    assert cool[17] == pytest.approx(1.0)
+    assert hot[17] == pytest.approx(0.5)
 
 
 def test_env_reset_and_step(hairpin_track) -> None:
@@ -452,6 +563,8 @@ def test_env_reset_and_step(hairpin_track) -> None:
         target_laps=99,
         max_steps=500,
     )
+    assert env.session.safety_config.controller_temp_fault_c == pytest.approx(85.0)
+    assert env.session.safety_config.controller_temp_derate_c == pytest.approx(75.0)
     obs, info = env.reset()
     assert obs.shape == (OBS_DIM,)
     assert env.action_space.shape == (ACTION_DIM,)
@@ -652,7 +765,7 @@ def test_manifest_round_trip(tmp_path, hairpin_track) -> None:
     assert path.exists()
     loaded = PolicyManifest.from_dict(__import__("json").loads(path.read_text(encoding="utf-8")))
     assert loaded.identity.policy_key == identity.policy_key
-    assert loaded.identity.stack == "circuit_v3"
+    assert loaded.identity.stack == "circuit_v4"
     assert loaded.reward_preset == "min_time_v1"
 
 

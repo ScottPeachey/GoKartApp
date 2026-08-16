@@ -21,6 +21,8 @@ class RewardWeights:
     wall: float = 8.0
     stagnant_terminal: float = 4.0
     lap: float = 50.0
+    thermal: float = 0.5
+    thermal_fault: float = 6.0
 
 
 GOD_WEIGHTS = RewardWeights()
@@ -28,7 +30,11 @@ ENDURANCE_WEIGHTS = RewardWeights(
     time=0.7,
     progress=0.35,
     lap=60.0,
+    thermal=0.7,
+    thermal_fault=8.0,
 )
+
+_BLOCKING_THERMAL_FAULTS = frozenset({"CONTROLLER_OVERTEMP", "MOTOR_OVERTEMP"})
 
 
 @dataclass
@@ -36,6 +42,7 @@ class RewardState:
     last_lap_number: float = 0.0
     prev_lateral_m: float = 0.0
     lap_faults: set[str] = field(default_factory=set)
+    thermal_faulted: bool = False
 
 
 def reward_preset(objective: str) -> RewardWeights:
@@ -93,6 +100,37 @@ def compute_reward(
         stagnant = -weights.stagnant_terminal
         reward += stagnant
         components["stagnant_terminal"] = stagnant
+
+    temp_c = float(tick_values.get("motor_temp_c", 25.0))
+    derate_c = float(
+        tick_values.get(
+            "controller_temp_derate_c",
+            step_info.get("controller_temp_derate_c", 75.0),
+        )
+    )
+    fault_c = float(
+        tick_values.get(
+            "controller_temp_fault_c",
+            step_info.get("controller_temp_fault_c", 85.0),
+        )
+    )
+    if temp_c > derate_c and weights.thermal > 0.0:
+        span = max(fault_c - derate_c, 1.0)
+        frac = min(max((temp_c - derate_c) / span, 0.0), 1.0)
+        thermal = -weights.thermal * frac * dt_s
+        reward += thermal
+        components["thermal"] = thermal
+
+    faults = {
+        part.strip()
+        for part in str(tick_values.get("active_faults", "")).split(",")
+        if part.strip()
+    }
+    if faults & _BLOCKING_THERMAL_FAULTS and not state.thermal_faulted:
+        thermal_fault = -weights.thermal_fault
+        reward += thermal_fault
+        components["thermal_fault"] = thermal_fault
+        state.thermal_faulted = True
 
     lap_number = float(step_info.get("lap_number", 0.0))
     if lap_number > state.last_lap_number and state.last_lap_number > 0:

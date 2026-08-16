@@ -23,7 +23,7 @@ class PolicyIdentity:
     drive_mode: str
     driver_profile: str
     objective: SessionObjective
-    stack: str = "circuit_v3"
+    stack: str = "circuit_v4"
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
@@ -53,7 +53,7 @@ def build_policy_identity(
         drive_mode=drive_mode,
         driver_profile=driver_profile,
         objective=objective,
-        stack="circuit_v3",
+        stack="circuit_v4",
     )
 
 

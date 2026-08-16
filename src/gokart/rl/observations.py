@@ -12,7 +12,7 @@ from gokart.track.queries import interpolate_centerline_at_s
 
 CURVATURE_LOOKAHEAD_M = (10.0, 25.0, 45.0, 70.0, 100.0)
 HEADING_LOOKAHEAD_M = 25.0
-OBS_DIM = 16
+OBS_DIM = 18
 
 
 def build_observation(
@@ -39,6 +39,10 @@ def build_observation(
     curvature_samples = [
         _curvature_at_s(track, track_s + distance) for distance in CURVATURE_LOOKAHEAD_M
     ]
+    motor_temp_c = float(tick_values.get("motor_temp_c", 25.0))
+    controller_fault_c = float(tick_values.get("controller_temp_fault_c", 85.0))
+    thermal_frac = (motor_temp_c - 25.0) / max(controller_fault_c - 25.0, 1.0)
+    derating = float(tick_values.get("derating_factor", 1.0))
 
     obs = np.array(
         [
@@ -54,6 +58,8 @@ def build_observation(
             float(tick_values.get("brake", 0.0)),
             float(tick_values.get("steering", 0.0)),
             *curvature_samples,
+            float(np.clip(thermal_frac, 0.0, 1.5)),
+            float(np.clip(derating, 0.0, 1.0)),
         ],
         dtype=np.float32,
     )

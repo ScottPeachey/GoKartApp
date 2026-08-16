@@ -475,6 +475,8 @@ class SimulationSession:
                 "traction_force_n": physics_out.traction_force_n,
                 "motor_temp_c": physics_out.motor_temp_c,
                 "battery_temp_c": physics_out.battery_temp_c,
+                "controller_temp_derate_c": self.safety_config.controller_temp_derate_c,
+                "controller_temp_fault_c": self.safety_config.controller_temp_fault_c,
                 "traction_limited": float(control_out.traction_limited),
                 "filtered_throttle": control_out.filtered_throttle,
                 "drive_mode": self.control_params.mode.name,
@@ -539,6 +541,8 @@ class SimulationSession:
             "completed_laps": len(self.track_context.completed_laps),
             "battery_temp_derate_c": self.safety_config.battery_temp_derate_c,
             "battery_temp_fault_c": self.safety_config.battery_temp_fault_c,
+            "controller_temp_derate_c": self.safety_config.controller_temp_derate_c,
+            "controller_temp_fault_c": self.safety_config.controller_temp_fault_c,
         }
         return StepResult(
             tick=tick,
