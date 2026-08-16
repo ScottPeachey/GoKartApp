@@ -77,6 +77,7 @@ TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
     TelemetryChannel("grip_rl_effective", "1"),
     TelemetryChannel("grip_rr_effective", "1"),
     TelemetryChannel("motor_temp_c", "C"),
+    TelemetryChannel("controller_temp_c", "C"),
     TelemetryChannel("battery_temp_c", "C"),
     TelemetryChannel("traction_limited", "1"),
     TelemetryChannel("filtered_throttle", "1"),

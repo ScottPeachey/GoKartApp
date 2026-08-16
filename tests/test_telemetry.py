@@ -223,6 +223,7 @@ def test_websocket_streams_schema_conformant_json(temp_store: TelemetryStore) ->
 
     schema = client.get("/api/channels").json()
     assert schema == channel_schema()
+    assert any(channel["name"] == "controller_temp_c" for channel in schema)
 
     with client.websocket_connect("/ws/live") as websocket:
         bus.publish({"time_s": 0.0, "speed_mps": 5.0, "drive_mode": "Default"})

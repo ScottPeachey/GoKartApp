@@ -119,6 +119,7 @@ const CHANNEL_DISPLAY = {
   grip_rl_effective: { decimals: 2, deadband: 0.02 },
   grip_rr_effective: { decimals: 2, deadband: 0.02 },
   motor_temp_c: { decimals: 1, deadband: 0.3 },
+  controller_temp_c: { decimals: 1, deadband: 0.3 },
   battery_temp_c: { decimals: 1, deadband: 0.1 },
   traction_limited: { decimals: 0, deadband: 0.5 },
   filtered_throttle: { decimals: 2, deadband: 0.02 },
@@ -899,6 +900,7 @@ const CHANNEL_UI = {
   grip_rl_effective: { icon: "🛞", label: "RL grip" },
   grip_rr_effective: { icon: "🛞", label: "RR grip" },
   motor_temp_c: { icon: "🌡", label: "Motor temp" },
+  controller_temp_c: { icon: "🌡", label: "Controller temp" },
   battery_temp_c: { icon: "🌡", label: "Battery temp" },
   traction_limited: { icon: "🛞", label: "Traction limited" },
   filtered_throttle: { icon: "🎚", label: "Filtered throttle" },
@@ -1034,6 +1036,8 @@ function channelCardClass(name, value) {
   if (name === "safety_state" && String(value) === "DRIVING") return "channel-active";
   if (name === "torque_permitted" && Number(value) > 0) return "channel-active";
   if (name === "traction_limited" && Number(value) > 0) return "channel-warn";
+  if (name === "controller_temp_c" && Number(value) >= 85) return "channel-fault";
+  if (name === "controller_temp_c" && Number(value) >= 75) return "channel-warn";
   return "";
 }
 

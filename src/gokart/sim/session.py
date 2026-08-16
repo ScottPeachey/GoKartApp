@@ -474,6 +474,7 @@ class SimulationSession:
                 "power_w": physics_out.power_w,
                 "traction_force_n": physics_out.traction_force_n,
                 "motor_temp_c": physics_out.motor_temp_c,
+                "controller_temp_c": physics_out.motor_temp_c,
                 "battery_temp_c": physics_out.battery_temp_c,
                 "controller_temp_derate_c": self.safety_config.controller_temp_derate_c,
                 "controller_temp_fault_c": self.safety_config.controller_temp_fault_c,
