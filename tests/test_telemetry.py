@@ -263,3 +263,19 @@ def test_sim_run_with_recorder_integration(temp_store: TelemetryStore) -> None:
     assert session is not None
     assert session.sample_count > 0
     assert bus.poll(sub_id) is not None
+
+
+def test_bus_shutdown_unblocks_poll() -> None:
+    bus = TelemetryBus()
+    sub_id = bus.subscribe(maxsize=4)
+    bus.shutdown()
+    assert bus.is_shutdown
+    assert bus.poll(sub_id, timeout_s=0.5) is None
+
+
+def test_dashboard_client_shutdown_exits_cleanly(temp_store: TelemetryStore) -> None:
+    app = create_app(store=temp_store)
+    with TestClient(app) as client:
+        with client.websocket_connect("/ws/live"):
+            pass
+        assert client.get("/api/version").status_code == 200

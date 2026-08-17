@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
 
@@ -127,12 +128,22 @@ def create_app(
     telemetry_store = store or TelemetryStore()
     sim_controller = SimController(bus=telemetry_bus, store_path=telemetry_store.db_path)
     training_controller = TrainingController(bus=telemetry_bus, store=telemetry_store)
+    shutdown_event = asyncio.Event()
 
-    app = FastAPI(title="Go-Kart Dashboard", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        yield
+        shutdown_event.set()
+        telemetry_bus.shutdown()
+        sim_controller.reset()
+        training_controller.reset()
+
+    app = FastAPI(title="Go-Kart Dashboard", version="0.1.0", lifespan=lifespan)
     app.state.bus = telemetry_bus
     app.state.store = telemetry_store
     app.state.sim = sim_controller
     app.state.training = training_controller
+    app.state.shutdown_event = shutdown_event
 
     @app.get("/")
     def index() -> FileResponse:
@@ -631,8 +642,8 @@ def create_app(
         sent_schema = False
         last_metrics_seq = 0
         try:
-            while True:
-                sample = await asyncio.to_thread(telemetry_bus.poll, sub_id, timeout_s=0.05)
+            while not shutdown_event.is_set():
+                sample = telemetry_bus.poll(sub_id, timeout_s=0.0)
                 if sample is not None:
                     payload: dict[str, Any] = {
                         "type": "sample",
@@ -648,9 +659,10 @@ def create_app(
                 if metrics is not None:
                     last_metrics_seq = int(metrics.get("seq", last_metrics_seq))
                     await websocket.send_json({"type": "training_metrics", "data": metrics})
-                elif sample is None:
-                    await asyncio.sleep(0.01)
-        except WebSocketDisconnect:
+
+                if sample is None and metrics is None:
+                    await asyncio.sleep(0.02)
+        except (WebSocketDisconnect, asyncio.CancelledError):
             pass
         finally:
             telemetry_bus.unsubscribe(sub_id)

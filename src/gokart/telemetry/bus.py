@@ -24,6 +24,17 @@ class TelemetryBus:
         self._lock = threading.Lock()
         self._subscribers: dict[int, _Subscriber] = {}
         self._next_id = 1
+        self._shutdown = False
+
+    @property
+    def is_shutdown(self) -> bool:
+        with self._lock:
+            return self._shutdown
+
+    def shutdown(self) -> None:
+        """Signal subscribers to stop waiting so dashboard shutdown can finish."""
+        with self._lock:
+            self._shutdown = True
 
     def subscribe(self, *, name: str = "subscriber", maxsize: int = 256) -> int:
         with self._lock:
@@ -58,14 +69,27 @@ class TelemetryBus:
                     subscriber.dropped += 1
 
     def poll(self, subscriber_id: int, *, timeout_s: float = 0.0) -> dict[str, Any] | None:
+        if self.is_shutdown:
+            return None
         with self._lock:
             subscriber = self._subscribers.get(subscriber_id)
         if subscriber is None:
             return None
-        try:
-            return subscriber.q.get(timeout=timeout_s)
-        except queue.Empty:
-            return None
+        if timeout_s <= 0.0:
+            try:
+                return subscriber.q.get_nowait()
+            except queue.Empty:
+                return None
+        deadline = time.monotonic() + timeout_s
+        while not self.is_shutdown:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.0:
+                return None
+            try:
+                return subscriber.q.get(timeout=min(remaining, 0.05))
+            except queue.Empty:
+                continue
+        return None
 
     def dropped_count(self, subscriber_id: int) -> int:
         with self._lock:

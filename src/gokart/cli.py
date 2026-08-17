@@ -147,7 +147,13 @@ def cmd_dashboard(args: argparse.Namespace) -> int:
 
     app = create_app()
     print(f"Dashboard: http://{args.host}:{args.port}/")
-    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="info",
+        timeout_graceful_shutdown=2.0,
+    )
     return 0
 
 
