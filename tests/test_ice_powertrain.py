@@ -21,6 +21,9 @@ from gokart.physics.engine import (
 )
 from gokart.physics.vehicle import VehicleModel, VehicleStepInputs, load_validated_vehicle_model
 from gokart.physics.vehicle import Environment
+from gokart.safety.faults import SafetyConfig, SensorInputs, detect_faults
+from gokart.safety.types import FaultId
+from gokart.sim.engine import _build_safety_config, thermal_tick_values
 from gokart.sim.engine import run_simulation
 from gokart.sim.scenarios import DriverInputPoint, Scenario
 
@@ -189,3 +192,52 @@ def test_scott_kart_v1_ev_regression(data_root: Path) -> None:
     assert result.ok
     model = load_validated_vehicle_model("Scott Kart V1", "V1.0", data_root=data_root)
     assert not model.is_ice
+
+
+def test_ice_engine_overtemp_uses_engine_faults_only() -> None:
+    config = SafetyConfig(
+        ice_powertrain=True,
+        engine_temp_fault_c=120.0,
+        engine_temp_derate_c=100.0,
+    )
+    assert FaultId.ENGINE_OVERTEMP in detect_faults(
+        SensorInputs(engine_temp_c=125.0),
+        config,
+    )
+    assert FaultId.ENGINE_OVERTEMP_DERATE in detect_faults(
+        SensorInputs(engine_temp_c=105.0),
+        config,
+    )
+    faults = detect_faults(SensorInputs(engine_temp_c=125.0, motor_temp_c=200.0), config)
+    assert FaultId.MOTOR_OVERTEMP not in faults
+    assert FaultId.CONTROLLER_OVERTEMP not in faults
+
+
+def test_ice_safety_config_uses_engine_thresholds(data_root: Path) -> None:
+    model = load_validated_vehicle_model("Torini Clubmaxx 210", "V1.0", data_root=data_root)
+    limits = model.config.limits
+    safety = _build_safety_config(model, limits, data_root)
+    assert safety.ice_powertrain
+    assert safety.engine_temp_fault_c == pytest.approx(120.0)
+    assert safety.engine_temp_derate_c == pytest.approx(100.0)
+
+
+def test_ice_thermal_tick_values_exclude_controller_channels() -> None:
+    config = SafetyConfig(
+        ice_powertrain=True,
+        engine_temp_fault_c=120.0,
+        engine_temp_derate_c=100.0,
+    )
+    values = thermal_tick_values(
+        is_ice=True,
+        powertrain_type="ice",
+        safety_config=config,
+        motor_temp_c=88.0,
+        engine_temp_c=88.0,
+        battery_temp_c=30.0,
+    )
+    assert values["powertrain_type"] == "ice"
+    assert values["engine_temp_c"] == pytest.approx(88.0)
+    assert values["engine_temp_fault_c"] == pytest.approx(120.0)
+    assert "controller_temp_c" not in values
+    assert "motor_temp_c" not in values

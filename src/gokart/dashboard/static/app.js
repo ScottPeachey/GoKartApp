@@ -157,6 +157,8 @@ const FAULT_HELP = {
   OVERSPEED: "Speed exceeded the drive-mode limit — ease off the throttle.",
   MOTOR_OVERTEMP: "Motor temperature too high — reduce throttle and let it cool.",
   MOTOR_OVERTEMP_DERATE: "Motor is hot — power is reduced until it cools.",
+  ENGINE_OVERTEMP: "Engine temperature too high — reduce throttle and let it cool.",
+  ENGINE_OVERTEMP_DERATE: "Engine is hot — power is reduced until it cools.",
   CONTROLLER_OVERTEMP: "Controller temperature too high — reduce throttle.",
   CONTROLLER_OVERTEMP_DERATE: "Controller is hot — power is reduced until it cools.",
   BATTERY_OVERTEMP: "Battery temperature too high — stop and let the pack cool.",
@@ -1042,8 +1044,22 @@ function channelCardClass(name, value) {
   if (name === "safety_state" && String(value) === "DRIVING") return "channel-active";
   if (name === "torque_permitted" && Number(value) > 0) return "channel-active";
   if (name === "traction_limited" && Number(value) > 0) return "channel-warn";
-  if (name === "controller_temp_c" && Number(value) >= 85) return "channel-fault";
-  if (name === "controller_temp_c" && Number(value) >= 75) return "channel-warn";
+  const sample = state.lastSample || {};
+  const isIce = sample.powertrain_type === "ice";
+  if (name === "engine_temp_c" && isIce) {
+    const faultC = Number(sample.engine_temp_fault_c ?? 120);
+    const derateC = Number(sample.engine_temp_derate_c ?? 100);
+    if (Number(value) >= faultC) return "channel-fault";
+    if (Number(value) >= derateC) return "channel-warn";
+  }
+  if (name === "controller_temp_c" && !isIce && Number(value) >= 85) return "channel-fault";
+  if (name === "controller_temp_c" && !isIce && Number(value) >= 75) return "channel-warn";
+  if (name === "motor_temp_c" && !isIce) {
+    const faultC = Number(sample.motor_temp_fault_c ?? 120);
+    const derateC = Number(sample.motor_temp_derate_c ?? 100);
+    if (Number(value) >= faultC) return "channel-fault";
+    if (Number(value) >= derateC) return "channel-warn";
+  }
   return "";
 }
 

@@ -107,6 +107,18 @@ FAULT_REGISTRY: dict[FaultId, FaultDefinition] = {
         FaultSeverity.FAULT,
         False,
     ),
+    FaultId.ENGINE_OVERTEMP_DERATE: FaultDefinition(
+        FaultId.ENGINE_OVERTEMP_DERATE,
+        "Engine temperature high — power derated",
+        FaultSeverity.DERATE,
+        False,
+    ),
+    FaultId.ENGINE_OVERTEMP: FaultDefinition(
+        FaultId.ENGINE_OVERTEMP,
+        "Engine temperature above fault threshold",
+        FaultSeverity.FAULT,
+        False,
+    ),
     FaultId.CONTROLLER_OVERTEMP_DERATE: FaultDefinition(
         FaultId.CONTROLLER_OVERTEMP_DERATE,
         "Controller temperature high — power derated",
@@ -171,6 +183,8 @@ class SafetyConfig:
     cell_voltage_min_v: float = 2.8
     motor_temp_derate_c: float = 100.0
     motor_temp_fault_c: float = 120.0
+    engine_temp_derate_c: float = 100.0
+    engine_temp_fault_c: float = 120.0
     controller_temp_derate_c: float = 75.0
     controller_temp_fault_c: float = 85.0
     battery_temp_derate_c: float = 50.0
@@ -201,6 +215,7 @@ class SensorInputs:
     min_cell_voltage_v: float = 3.2
     max_cell_voltage_v: float = 3.3
     motor_temp_c: float = 25.0
+    engine_temp_c: float = 25.0
     controller_temp_c: float = 25.0
     battery_temp_c: float = 25.0
     wheel_speed_valid: bool = True
@@ -284,21 +299,21 @@ def detect_faults(
         elif inputs.battery_temp_c >= config.battery_temp_derate_c:
             active.add(FaultId.BATTERY_OVERTEMP_DERATE)
 
-    if inputs.motor_temp_c >= config.motor_temp_fault_c:
-        active.add(FaultId.MOTOR_OVERTEMP)
-    elif inputs.motor_temp_c >= config.motor_temp_derate_c:
-        active.add(FaultId.MOTOR_OVERTEMP_DERATE)
+    if config.ice_powertrain:
+        if inputs.engine_temp_c >= config.engine_temp_fault_c:
+            active.add(FaultId.ENGINE_OVERTEMP)
+        elif inputs.engine_temp_c >= config.engine_temp_derate_c:
+            active.add(FaultId.ENGINE_OVERTEMP_DERATE)
+    else:
+        if inputs.motor_temp_c >= config.motor_temp_fault_c:
+            active.add(FaultId.MOTOR_OVERTEMP)
+        elif inputs.motor_temp_c >= config.motor_temp_derate_c:
+            active.add(FaultId.MOTOR_OVERTEMP_DERATE)
 
-    if inputs.controller_temp_c >= config.controller_temp_fault_c:
-        active.add(FaultId.CONTROLLER_OVERTEMP)
-    elif inputs.controller_temp_c >= config.controller_temp_derate_c:
-        active.add(FaultId.CONTROLLER_OVERTEMP_DERATE)
-
-    if not config.ice_powertrain:
-        if inputs.battery_temp_c >= config.battery_temp_fault_c:
-            active.add(FaultId.BATTERY_OVERTEMP)
-        elif inputs.battery_temp_c >= config.battery_temp_derate_c:
-            active.add(FaultId.BATTERY_OVERTEMP_DERATE)
+        if inputs.controller_temp_c >= config.controller_temp_fault_c:
+            active.add(FaultId.CONTROLLER_OVERTEMP)
+        elif inputs.controller_temp_c >= config.controller_temp_derate_c:
+            active.add(FaultId.CONTROLLER_OVERTEMP_DERATE)
 
     over_limit = inputs.speed_mps > config.max_speed_mps + config.overspeed_margin_mps
     if detection_state is not None:

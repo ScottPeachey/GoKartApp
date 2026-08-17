@@ -43,6 +43,7 @@ from gokart.sim.engine import (
     _contactor_feedback,
     _resolve_sim_limits,
     _sync_injected_temps,
+    thermal_tick_values,
 )
 from gokart.sim.fault_injection import FaultInjector
 from gokart.sim.runtime import RuntimeControls
@@ -323,7 +324,7 @@ class SimulationSession:
             ice_powertrain=self.vehicle_model.is_ice,
         )
         sensors = self.injector.apply(time_s, sensors)
-        _sync_injected_temps(vehicle_state, sensors)
+        _sync_injected_temps(vehicle_state, sensors, ice_powertrain=self.vehicle_model.is_ice)
 
         if (
             step == 0
@@ -491,7 +492,6 @@ class SimulationSession:
                 },
                 "motor_rpm": physics_out.motor_rpm,
                 "engine_rpm": physics_out.engine_rpm,
-                "engine_temp_c": physics_out.engine_temp_c,
                 "clutch_locked": float(physics_out.clutch_locked),
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
@@ -500,11 +500,14 @@ class SimulationSession:
                 "soc": physics_out.soc,
                 "power_w": physics_out.power_w,
                 "traction_force_n": physics_out.traction_force_n,
-                "motor_temp_c": physics_out.motor_temp_c,
-                "controller_temp_c": physics_out.motor_temp_c,
-                "battery_temp_c": physics_out.battery_temp_c,
-                "controller_temp_derate_c": self.safety_config.controller_temp_derate_c,
-                "controller_temp_fault_c": self.safety_config.controller_temp_fault_c,
+                **thermal_tick_values(
+                    is_ice=self.vehicle_model.is_ice,
+                    powertrain_type=self.vehicle_model.powertrain_type,
+                    safety_config=self.safety_config,
+                    motor_temp_c=physics_out.motor_temp_c,
+                    engine_temp_c=physics_out.engine_temp_c,
+                    battery_temp_c=physics_out.battery_temp_c,
+                ),
                 "traction_limited": float(control_out.traction_limited),
                 "filtered_throttle": control_out.filtered_throttle,
                 "drive_mode": self.control_params.mode.name,
@@ -571,6 +574,9 @@ class SimulationSession:
             "battery_temp_fault_c": self.safety_config.battery_temp_fault_c,
             "controller_temp_derate_c": self.safety_config.controller_temp_derate_c,
             "controller_temp_fault_c": self.safety_config.controller_temp_fault_c,
+            "engine_temp_derate_c": self.safety_config.engine_temp_derate_c,
+            "engine_temp_fault_c": self.safety_config.engine_temp_fault_c,
+            "powertrain_type": self.vehicle_model.powertrain_type,
         }
         return StepResult(
             tick=tick,

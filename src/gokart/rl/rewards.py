@@ -34,7 +34,9 @@ ENDURANCE_WEIGHTS = RewardWeights(
     thermal_fault=8.0,
 )
 
-_BLOCKING_THERMAL_FAULTS = frozenset({"CONTROLLER_OVERTEMP", "MOTOR_OVERTEMP"})
+_BLOCKING_THERMAL_FAULTS = frozenset(
+    {"CONTROLLER_OVERTEMP", "MOTOR_OVERTEMP", "ENGINE_OVERTEMP"}
+)
 
 
 @dataclass
@@ -101,19 +103,35 @@ def compute_reward(
         reward += stagnant
         components["stagnant_terminal"] = stagnant
 
-    temp_c = float(tick_values.get("motor_temp_c", 25.0))
-    derate_c = float(
-        tick_values.get(
-            "controller_temp_derate_c",
-            step_info.get("controller_temp_derate_c", 75.0),
+    is_ice = str(tick_values.get("powertrain_type", "ev")) == "ice"
+    if is_ice:
+        temp_c = float(tick_values.get("engine_temp_c", 25.0))
+        derate_c = float(
+            tick_values.get(
+                "engine_temp_derate_c",
+                step_info.get("engine_temp_derate_c", 100.0),
+            )
         )
-    )
-    fault_c = float(
-        tick_values.get(
-            "controller_temp_fault_c",
-            step_info.get("controller_temp_fault_c", 85.0),
+        fault_c = float(
+            tick_values.get(
+                "engine_temp_fault_c",
+                step_info.get("engine_temp_fault_c", 120.0),
+            )
         )
-    )
+    else:
+        temp_c = float(tick_values.get("motor_temp_c", 25.0))
+        derate_c = float(
+            tick_values.get(
+                "controller_temp_derate_c",
+                step_info.get("controller_temp_derate_c", 75.0),
+            )
+        )
+        fault_c = float(
+            tick_values.get(
+                "controller_temp_fault_c",
+                step_info.get("controller_temp_fault_c", 85.0),
+            )
+        )
     if temp_c > derate_c and weights.thermal > 0.0:
         span = max(fault_c - derate_c, 1.0)
         frac = min(max((temp_c - derate_c) / span, 0.0), 1.0)

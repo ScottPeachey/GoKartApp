@@ -89,10 +89,8 @@ def _build_safety_config(
             precharge_timeout_s=0.0,
             self_test_duration_s=0.1,
             max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else 20.0,
-            motor_temp_fault_c=engine_fault_c,
-            motor_temp_derate_c=max(25.0, engine_fault_c - 20.0),
-            controller_temp_fault_c=engine_fault_c,
-            controller_temp_derate_c=max(25.0, engine_fault_c - 10.0),
+            engine_temp_fault_c=engine_fault_c,
+            engine_temp_derate_c=max(25.0, engine_fault_c - 20.0),
         )
 
     assert config.battery is not None
@@ -202,8 +200,7 @@ def _build_sensor_inputs(
             pack_voltage_v=vehicle_state.pack_voltage_v,
             min_cell_voltage_v=3.2,
             max_cell_voltage_v=3.3,
-            motor_temp_c=vehicle_state.motor_thermal.temperature_c,
-            controller_temp_c=vehicle_state.motor_thermal.temperature_c,
+            engine_temp_c=vehicle_state.motor_thermal.temperature_c,
             battery_temp_c=vehicle_state.battery_thermal.temperature_c,
             contactor_feedback_closed=contactor_closed,
             precharge_feedback_ok=True,
@@ -238,11 +235,53 @@ def _build_sensor_inputs(
     )
 
 
-def _sync_injected_temps(vehicle_state: VehicleState, sensors: SensorInputs) -> None:
+def _sync_injected_temps(
+    vehicle_state: VehicleState,
+    sensors: SensorInputs,
+    *,
+    ice_powertrain: bool = False,
+) -> None:
     assert vehicle_state.motor_thermal is not None
     assert vehicle_state.battery_thermal is not None
-    vehicle_state.motor_thermal.temperature_c = sensors.motor_temp_c
+    if ice_powertrain:
+        vehicle_state.motor_thermal.temperature_c = sensors.engine_temp_c
+    else:
+        vehicle_state.motor_thermal.temperature_c = sensors.motor_temp_c
     vehicle_state.battery_thermal.temperature_c = sensors.battery_temp_c
+
+
+def thermal_tick_values(
+    *,
+    is_ice: bool,
+    powertrain_type: str,
+    safety_config: SafetyConfig,
+    motor_temp_c: float,
+    engine_temp_c: float,
+    battery_temp_c: float,
+) -> dict[str, float | str]:
+    """Publish powertrain-specific thermal channels and fault thresholds."""
+    values: dict[str, float | str] = {
+        "powertrain_type": powertrain_type,
+        "battery_temp_c": battery_temp_c,
+    }
+    if is_ice:
+        values.update(
+            {
+                "engine_temp_c": engine_temp_c,
+                "engine_temp_derate_c": safety_config.engine_temp_derate_c,
+                "engine_temp_fault_c": safety_config.engine_temp_fault_c,
+            }
+        )
+    else:
+        values.update(
+            {
+                "motor_temp_c": motor_temp_c,
+                "controller_temp_c": motor_temp_c,
+                "controller_temp_derate_c": safety_config.controller_temp_derate_c,
+                "controller_temp_fault_c": safety_config.controller_temp_fault_c,
+            }
+        )
+    return values
 
 
 def run_simulation(
@@ -488,7 +527,7 @@ def run_simulation(
             ice_powertrain=vehicle_model.is_ice,
         )
         sensors = injector.apply(time_s, sensors)
-        _sync_injected_temps(vehicle_state, sensors)
+        _sync_injected_temps(vehicle_state, sensors, ice_powertrain=vehicle_model.is_ice)
 
         if (
             step == 0
@@ -662,7 +701,6 @@ def run_simulation(
                 },
                 "motor_rpm": physics_out.motor_rpm,
                 "engine_rpm": physics_out.engine_rpm,
-                "engine_temp_c": physics_out.engine_temp_c,
                 "clutch_locked": float(physics_out.clutch_locked),
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
@@ -703,11 +741,14 @@ def run_simulation(
                 "grip_fr_effective": physics_out.grip_fr_effective,
                 "grip_rl_effective": physics_out.grip_rl_effective,
                 "grip_rr_effective": physics_out.grip_rr_effective,
-                "motor_temp_c": physics_out.motor_temp_c,
-                "controller_temp_c": physics_out.motor_temp_c,
-                "battery_temp_c": physics_out.battery_temp_c,
-                "controller_temp_derate_c": safety_config.controller_temp_derate_c,
-                "controller_temp_fault_c": safety_config.controller_temp_fault_c,
+                **thermal_tick_values(
+                    is_ice=vehicle_model.is_ice,
+                    powertrain_type=vehicle_model.powertrain_type,
+                    safety_config=safety_config,
+                    motor_temp_c=physics_out.motor_temp_c,
+                    engine_temp_c=physics_out.engine_temp_c,
+                    battery_temp_c=physics_out.battery_temp_c,
+                ),
                 "traction_limited": float(control_out.traction_limited),
                 "filtered_throttle": control_out.filtered_throttle,
                 "drive_mode": control_params.mode.name,
