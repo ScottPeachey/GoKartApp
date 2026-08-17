@@ -41,6 +41,7 @@ const state = {
   channelCustomiseOpen: false,
   historySessionListKey: "",
   historyDeleteSelection: new Set(),
+  playedSessionIds: new Set(),
   historyViewSessionId: "",
   historySamplesFingerprint: "",
   historyMarkerFingerprint: "",
@@ -78,6 +79,7 @@ const state = {
 };
 
 const SESSION_LIST_LIMIT = 5000;
+const PLAYED_SESSIONS_STORAGE_KEY = "gokart.playedSessionIds";
 
 async function fetchSessions() {
   return api(`/api/sessions?limit=${SESSION_LIST_LIMIT}`);
@@ -1386,10 +1388,45 @@ function sortSessionsForDisplay(sessions) {
   return [...sessions].sort(compareSessionStartedAt);
 }
 
+function loadPlayedSessionIds() {
+  try {
+    const raw = localStorage.getItem(PLAYED_SESSIONS_STORAGE_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : []);
+  } catch (_error) {
+    return new Set();
+  }
+}
+
+function markSessionPlayed(sessionId) {
+  if (!sessionId || state.playedSessionIds.has(sessionId)) return;
+  state.playedSessionIds.add(sessionId);
+  localStorage.setItem(
+    PLAYED_SESSIONS_STORAGE_KEY,
+    JSON.stringify([...state.playedSessionIds].sort()),
+  );
+  document
+    .querySelector(`.session-list-item[data-session-id="${sessionId}"] .session-list-label`)
+    ?.classList.remove("unplayed");
+}
+
+function syncSessionListLabelStyle(labelBtn, sessionId) {
+  if (!labelBtn) return;
+  labelBtn.classList.toggle("unplayed", !state.playedSessionIds.has(sessionId));
+}
+
+function scrollSessionListToBottom(listEl) {
+  if (!listEl) return;
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
 function updateSessionSelect(sessions, select, previousSessionId) {
   const listKey = sessions.map((s) => `${s.session_id}:${s.sample_count}:${s.episode_reward ?? ""}`).join("|");
   const listEl = document.getElementById("session-list");
   const displayNumbers = buildSessionDisplayNumbers(sessions);
+  const previousSessionIds = new Set(
+    [...(select?.options || [])].map((option) => option.value).filter(Boolean),
+  );
   if (listKey === state.historySessionListKey && select.options.length === sessions.length) {
     for (const session of sessions) {
       const option = select.querySelector(`option[value="${session.session_id}"]`);
@@ -1404,10 +1441,13 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       if (labelBtn && labelBtn.textContent !== label) {
         labelBtn.textContent = label;
       }
+      syncSessionListLabelStyle(labelBtn, session.session_id);
     }
     return;
   }
 
+  const hadSessions = previousSessionIds.size > 0;
+  const newSessionsAdded = sessions.some((session) => !previousSessionIds.has(session.session_id));
   state.historySessionListKey = listKey;
   select.innerHTML = "";
   if (listEl) listEl.innerHTML = "";
@@ -1443,6 +1483,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       labelBtn.type = "button";
       labelBtn.className = "session-list-label";
       labelBtn.textContent = sessionOptionLabel(session, displayNumbers.get(session.session_id));
+      syncSessionListLabelStyle(labelBtn, session.session_id);
       labelBtn.addEventListener("click", () => {
         void selectReplaySession(session.session_id, { autoPlay: state.historyReplayPlaying });
       });
@@ -1461,6 +1502,9 @@ function updateSessionSelect(sessions, select, previousSessionId) {
   syncSessionListActiveRow();
   syncSessionDeleteControls();
   syncSessionListCount(sessions.length);
+  if (listEl && hadSessions && newSessionsAdded) {
+    requestAnimationFrame(() => scrollSessionListToBottom(listEl));
+  }
 }
 
 function syncSessionListCount(visibleCount) {
@@ -2007,6 +2051,7 @@ function getAdjacentSessionId(delta) {
 
 async function selectReplaySession(sessionId, { autoPlay = false } = {}) {
   if (!sessionId) return;
+  markSessionPlayed(sessionId);
   const select = document.getElementById("session-select");
   if (!select) return;
   if (state.trainingRunning || state.simRunning) {
@@ -4172,6 +4217,7 @@ function setupControls() {
 
 async function init() {
   state.hiddenChannels = loadHiddenChannels();
+  state.playedSessionIds = loadPlayedSessionIds();
   setupTabs();
   setupControls();
   setupChannelCustomise();
