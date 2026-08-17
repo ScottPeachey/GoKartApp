@@ -66,6 +66,13 @@ def test_clutch_transmits_torque_when_locked() -> None:
     assert out.transmitted_torque_nm == pytest.approx(15.0)
 
 
+def test_clutch_transmits_full_torque_when_engaged_at_speed() -> None:
+    params = ClutchParams(engagement_rpm=2200.0, lock_rpm=2800.0, max_torque_nm=25.0)
+    out = step_clutch(15.0, 5600.0, params, coupled_rpm=2400.0)
+    assert not out.locked
+    assert out.transmitted_torque_nm == pytest.approx(15.0)
+
+
 def test_clutch_slips_at_launch_not_axle_locked() -> None:
     params = ClutchParams(engagement_rpm=2200.0, lock_rpm=2800.0, max_torque_nm=25.0)
     out = step_clutch(15.0, 3200.0, params, coupled_rpm=0.0)

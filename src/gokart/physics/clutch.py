@@ -83,6 +83,10 @@ def transmitted_drive_torque_nm(
     if is_axle_locked(engine_rpm, coupled_rpm, params):
         return min(engine_torque_nm, capacity)
 
+    # Shoes fully out — friction capacity is the limit, not slip speed.
+    if engage_frac >= 1.0:
+        return min(engine_torque_nm, capacity)
+
     slip_torque = min(capacity, slip * SLIP_TORQUE_NM_PER_RPM * engage_frac)
     return min(engine_torque_nm, max(slip_torque, capacity * 0.08))
 

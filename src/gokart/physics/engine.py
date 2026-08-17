@@ -10,7 +10,10 @@ from gokart.physics.drivetrain import DrivetrainParams, motor_rpm_from_speed
 from gokart.physics.motor import _interpolate_map
 from gokart.units import rpm_to_rads
 
-# Engine free-revs under net crank torque while slipping; couples when locked.
+# Fraction of combustion waste counted toward CHT (exhaust carries the rest).
+CHT_HEAT_FRACTION = 0.42
+# Small share of clutch-slip dissipation that warms the engine block.
+CLUTCH_SLIP_HEAT_TO_ENGINE = 0.12
 RPM_ACCEL_PER_NM_S = 55.0
 COUPLE_RATE_PER_S = 18.0
 COAST_RATE_PER_S = 6.0
@@ -91,6 +94,19 @@ def available_engine_torque_nm(
     return _wide_open_torque_nm(params, rpm) * throttle_clamped
 
 
+def _peak_power_rpm(params: EngineParams) -> float:
+    if params.torque_map:
+        best_rpm = params.idle_rpm
+        best_power = 0.0
+        for point in params.torque_map:
+            power = point.torque_nm * rpm_to_rads(point.rpm)
+            if power > best_power:
+                best_power = power
+                best_rpm = point.rpm
+        return best_rpm
+    return params.redline_rpm * 0.92
+
+
 def _advance_engine_rpm(
     *,
     engine_rpm: float,
@@ -99,6 +115,7 @@ def _advance_engine_rpm(
     transmitted_torque_nm: float,
     commanded_torque_nm: float,
     clutch_locked: bool,
+    clutch_engagement_fraction: float,
     engine_params: EngineParams,
     dt: float,
 ) -> float:
@@ -109,11 +126,20 @@ def _advance_engine_rpm(
     if throttle <= 0.02:
         return engine_rpm + (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * COAST_RATE_PER_S)
 
-    # Crank torque balance while the clutch slips: drive torque minus what leaves via friction.
+    # Engaged clutch under load — hold the engine in its power band while it slips.
+    if clutch_engagement_fraction >= 1.0 and throttle > 0.5:
+        power_rpm = _peak_power_rpm(engine_params)
+        target_rpm = max(
+            coupled_rpm + 250.0,
+            engine_params.idle_rpm + throttle * (power_rpm - engine_params.idle_rpm),
+        )
+        target_rpm = min(target_rpm, engine_params.redline_rpm - 50.0)
+        return engine_rpm + (target_rpm - engine_rpm) * min(1.0, dt * 14.0)
+
+    # Shoes still moving out — crank accelerates against clutch load.
     net_nm = commanded_torque_nm - max(0.0, transmitted_torque_nm)
     new_rpm = engine_rpm + net_nm * RPM_ACCEL_PER_NM_S * dt
 
-    # Rev limiter bounce — fuel cut pulls rpm back into the power band.
     if new_rpm >= engine_params.redline_rpm:
         new_rpm = engine_params.redline_rpm - REV_LIMITER_DROP_RPM
 
@@ -154,6 +180,7 @@ def step_ice_powertrain(
         transmitted_torque_nm=clutch_out.transmitted_torque_nm,
         commanded_torque_nm=max(commanded_torque, 1e-6),
         clutch_locked=clutch_out.locked,
+        clutch_engagement_fraction=clutch_out.engagement_fraction,
         engine_params=engine_params,
         dt=dt,
     )
@@ -179,8 +206,15 @@ def step_ice_powertrain(
         efficiency = engine_params.default_efficiency
 
     omega = rpm_to_rads(engine_rpm)
-    slip_heat_scale = 1.0 + min(clutch_out.slip_rpm / max(clutch_params.lock_rpm, 1.0), 2.0) * 0.15
-    heat = max(0.0, abs(commanded_torque * omega) * (1.0 - efficiency) * slip_heat_scale)
+    combustion_heat = max(
+        0.0,
+        abs(commanded_torque * omega) * (1.0 - efficiency) * CHT_HEAT_FRACTION,
+    )
+    slip_power_w = max(
+        0.0,
+        clutch_out.slip_rpm * (2.0 * 3.141592653589793 / 60.0) * clutch_out.transmitted_torque_nm,
+    )
+    heat = combustion_heat + slip_power_w * CLUTCH_SLIP_HEAT_TO_ENGINE
 
     wheel_torque = clutch_out.transmitted_torque_nm * drivetrain_params.gear_ratio
     wheel_torque *= drivetrain_params.total_efficiency

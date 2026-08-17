@@ -33,6 +33,11 @@ def ram_air_cooling_scale(speed_mps: float, *, gain_per_mps: float = 0.1) -> flo
     return 1.0 + gain_per_mps * max(0.0, float(speed_mps))
 
 
+def engine_ram_air_cooling_scale(speed_mps: float) -> float:
+    """Air-cooled ICE block — airflow through shroud/fins rises quickly with road speed."""
+    return 1.0 + 0.18 * max(0.0, float(speed_mps))
+
+
 def step_thermal(
     state: ThermalState,
     inputs: ThermalInputs,

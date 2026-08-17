@@ -38,7 +38,7 @@
     "max_motor_rpm": 6100.0,
     "max_power_w": 7400.0,
     "max_regen_current_a": 0.0,
-    "max_speed_mps": 14.0
+    "max_speed_mps": 19.0
   },
   "max_vehicle_mass_kg": 155.0,
   "name": "Torini Clubmaxx 210",

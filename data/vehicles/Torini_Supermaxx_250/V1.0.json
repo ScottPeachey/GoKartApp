@@ -38,7 +38,7 @@
     "max_motor_rpm": 7200.0,
     "max_power_w": 11200.0,
     "max_regen_current_a": 0.0,
-    "max_speed_mps": 16.5
+    "max_speed_mps": 21.0
   },
   "max_vehicle_mass_kg": 155.0,
   "name": "Torini Supermaxx 250",

@@ -37,6 +37,7 @@ from gokart.physics.thermal import (
     ThermalParams,
     ThermalState,
     ram_air_cooling_scale,
+    engine_ram_air_cooling_scale,
     step_thermal,
 )
 from gokart.physics.load_transfer import wheel_normal_loads_n
@@ -294,6 +295,17 @@ class VehicleModel:
         mass = config.dry_mass_kg + config.battery_mass_kg + config.driver_mass_kg
         drivetrain = DrivetrainParams.from_config(config.drivetrain, config.wheel_radius_m)
 
+        if config.powertrain_type == "ice":
+            motor_thermal_params = ThermalParams(
+                thermal_capacity_j_per_k=15_000.0,
+                thermal_resistance_k_per_w=0.11,
+            )
+        else:
+            motor_thermal_params = ThermalParams(
+                thermal_capacity_j_per_k=500.0,
+                thermal_resistance_k_per_w=0.5,
+            )
+
         return cls(
             config=config,
             mass_kg=mass,
@@ -310,10 +322,7 @@ class VehicleModel:
             drag_coefficient=config.drag_coefficient,
             frontal_area_m2=config.frontal_area_m2,
             rolling_resistance_coefficient=config.rolling_resistance_coefficient,
-            motor_thermal_params=ThermalParams(
-                thermal_capacity_j_per_k=500.0,
-                thermal_resistance_k_per_w=0.5,
-            ),
+            motor_thermal_params=motor_thermal_params,
             battery_thermal_params=ThermalParams(
                 thermal_capacity_j_per_k=8000.0,
                 thermal_resistance_k_per_w=0.28,
@@ -859,7 +868,7 @@ class VehicleModel:
             dt=dt,
         )
 
-        ram_air = ram_air_cooling_scale(new_speed)
+        ram_air = engine_ram_air_cooling_scale(new_speed)
         motor_thermal, motor_thermal_out = step_thermal(
             state.motor_thermal,
             ThermalInputs(heat_w=ice_out.heat_w),
