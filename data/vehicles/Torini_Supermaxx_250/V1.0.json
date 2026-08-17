@@ -1,0 +1,59 @@
+{
+  "battery_mass_kg": 0.0,
+  "brake": {
+    "component_id": "v1_hydraulic_disc",
+    "content_hash": "84380667c046360f8527ee1e38efacf3d4431e4e682e96a7b6c114e1d9ceb184"
+  },
+  "cg_height_m": 0.28,
+  "cg_longitudinal_m": 0.52,
+  "clutch": {
+    "component_id": "noram_tc_gel19219",
+    "content_hash": "afd04531a2aae4c2185f4e6ee465803cf30bc0e6bdebbb84f97545b0f9866224"
+  },
+  "drag_coefficient": 0.85,
+  "driver_mass_kg": 80.0,
+  "drivetrain": {
+    "axle_efficiency": 0.98,
+    "axle_sprocket_teeth": 32,
+    "chain_efficiency": 0.97,
+    "motor_sprocket_teeth": 19
+  },
+  "dry_mass_kg": 75.0,
+  "engine": {
+    "component_id": "torini_tx250",
+    "content_hash": "67dbd8ed55c2f171a4dfa17fbacdab9ddfb0ca1d84bbf9272df1e579ab6503c1"
+  },
+  "front_track_m": 0.9,
+  "front_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "f7f3efdee416c2e20d60d9503ece43987440d37df889ae4e2ee4851e2bfd44c5"
+  },
+  "frontal_area_m2": 0.65,
+  "limits": {
+    "max_accel_mps2": 9.0,
+    "max_battery_current_a": 150.0,
+    "max_decel_mps2": 10.0,
+    "max_gradient_rad": 0.2,
+    "max_motor_current_a": 150.0,
+    "max_motor_rpm": 7200.0,
+    "max_power_w": 11200.0,
+    "max_regen_current_a": 0.0,
+    "max_speed_mps": 16.5
+  },
+  "max_vehicle_mass_kg": 155.0,
+  "name": "Torini Supermaxx 250",
+  "powertrain_type": "ice",
+  "rear_track_m": 0.95,
+  "rear_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "f7f3efdee416c2e20d60d9503ece43987440d37df889ae4e2ee4851e2bfd44c5"
+  },
+  "rolling_resistance_coefficient": 0.015,
+  "version": "V1.0",
+  "wheel": {
+    "component_id": "v1_wheel_10in",
+    "content_hash": "a2777c1925ed757e3ad21cba1c61b728d6fd375ca68c6668b2510bd18a62595b"
+  },
+  "wheel_radius_m": 0.127,
+  "wheelbase_m": 1.0
+}

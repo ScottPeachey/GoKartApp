@@ -29,6 +29,7 @@ class ControlInputs:
     grip_coefficient: float
     gradient_rad: float
     rear_traction_limit_n: float | None = None
+    engine_available_torque_nm: float | None = None
 
 
 @dataclass
@@ -45,6 +46,7 @@ class ControlParams:
     gear_ratio: float
     drivetrain_efficiency: float
     motor_efficiency: float = 0.9
+    powertrain_type: str = "ev"
 
 
 @dataclass(frozen=True)
@@ -124,7 +126,14 @@ def control_step(
             ControlState(filtered_throttle=0.0, traction_scale=1.0),
         )
 
-    motor_torque = shaped * params.motor_peak_torque_nm
+    if params.powertrain_type == "ice":
+        peak = inputs.engine_available_torque_nm
+        if peak is not None and peak > 0:
+            motor_torque = shaped * peak
+        else:
+            motor_torque = shaped * params.motor_peak_torque_nm
+    else:
+        motor_torque = shaped * params.motor_peak_torque_nm
 
     if params.mode.traction_limiter != "off" and inputs.speed_mps >= 0:
         from gokart.physics.tyres import max_traction_force_n
@@ -165,13 +174,27 @@ def control_step(
                     motor_torque *= taper
 
     motor_torque = min(motor_torque, params.motor_peak_torque_nm)
-    if limits.max_power_w > 0 and inputs.pack_voltage_v > 1.0:
+    if limits.max_power_w > 0:
         from gokart.units import rpm_to_rads
 
         omega = rpm_to_rads(max(inputs.motor_rpm, 1.0))
         if omega > 0:
             power_limited_torque = limits.max_power_w / omega
             motor_torque = min(motor_torque, power_limited_torque)
+
+    if params.powertrain_type == "ice":
+        mechanical_brake = max(brake, governor_brake)
+        new_state = ControlState(filtered_throttle=filtered, traction_scale=traction_scale)
+        return (
+            ControlOutputs(
+                motor_torque_request_nm=motor_torque,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=mechanical_brake,
+                filtered_throttle=filtered,
+                traction_limited=traction_limited,
+            ),
+            new_state,
+        )
 
     est_current = _estimate_motor_current(
         motor_torque, inputs.motor_rpm, inputs.pack_voltage_v, params.motor_efficiency

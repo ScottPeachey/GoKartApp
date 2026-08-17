@@ -65,9 +65,14 @@ def _expert_policy_action(env: TrackRacingEnv, driver: RuleBasedDriver) -> np.nd
     if vehicle is None:
         return np.zeros(int(env.action_space.shape[0]), dtype=np.float32)
     battery_soc = vehicle.battery.soc if vehicle.battery else 1.0
-    battery_temp = (
-        vehicle.battery_thermal.temperature_c if vehicle.battery_thermal is not None else 25.0
-    )
+    if env.session.vehicle_model.is_ice:
+        battery_temp = (
+            vehicle.motor_thermal.temperature_c if vehicle.motor_thermal is not None else 25.0
+        )
+    else:
+        battery_temp = (
+            vehicle.battery_thermal.temperature_c if vehicle.battery_thermal is not None else 25.0
+        )
     expert = driver.step(
         x=vehicle.position_x_m,
         y=vehicle.position_y_m,

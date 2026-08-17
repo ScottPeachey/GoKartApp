@@ -156,10 +156,13 @@ class SimulationSession:
         self.safety_config = _build_safety_config(
             self.vehicle_model, self.base_limits, self.root
         )
-        battery = load_component(
-            "battery", self.vehicle_model.config.battery.component_id, root=self.root
-        )
-        self.series_cells = battery.series_cells
+        self.series_cells = 1
+        if not self.vehicle_model.is_ice:
+            assert self.vehicle_model.config.battery is not None
+            battery = load_component(
+                "battery", self.vehicle_model.config.battery.component_id, root=self.root
+            )
+            self.series_cells = battery.series_cells
         self.track_context = TrackSimulationContext(config.track)
         self.auto_driver: RuleBasedDriver | None = None
         if config.control_source == ControlSource.AUTO:
@@ -176,10 +179,11 @@ class SimulationSession:
             )
         self.control_params = ControlParams(
             mode=self.mode,
-            motor_peak_torque_nm=self.vehicle_model.motor_params.peak_torque_nm,
+            motor_peak_torque_nm=self.vehicle_model.peak_torque_nm,
             wheel_radius_m=self.vehicle_model.config.wheel_radius_m,
             gear_ratio=self.vehicle_model.drivetrain_params.gear_ratio,
             drivetrain_efficiency=self.vehicle_model.drivetrain_params.total_efficiency,
+            powertrain_type=self.vehicle_model.powertrain_type,
         )
         self.injector = FaultInjector.from_scenario_data(self.scenario.injections)
         self.state = _SessionState()
@@ -300,7 +304,13 @@ class SimulationSession:
         detect_brake = 1.0 if synthetic_brake_hold else brake
 
         motor_rpm = motor_rpm_from_speed(self.vehicle_model.drivetrain_params, vehicle_state.speed_mps)
-        closed, _open_fb = _contactor_feedback(safety_state, safety_outputs.contactor_command)
+        if self.vehicle_model.is_ice and vehicle_state.engine is not None:
+            motor_rpm = vehicle_state.engine.rpm
+        closed, _open_fb = _contactor_feedback(
+            safety_state,
+            safety_outputs.contactor_command,
+            ice_powertrain=self.vehicle_model.is_ice,
+        )
         sensors = _build_sensor_inputs(
             throttle=detect_throttle,
             brake=detect_brake,
@@ -310,6 +320,7 @@ class SimulationSession:
             contactor_closed=closed,
             series_cells=self.series_cells,
             battery_params=self.vehicle_model.battery_params,
+            ice_powertrain=self.vehicle_model.is_ice,
         )
         sensors = self.injector.apply(time_s, sensors)
         _sync_injected_temps(vehicle_state, sensors)
@@ -375,6 +386,14 @@ class SimulationSession:
         )
         ctx.limits = limits
 
+        engine_available = None
+        if self.vehicle_model.is_ice:
+            engine_available = self.vehicle_model.available_drive_torque_nm(
+                motor_rpm,
+                throttle if safety_outputs.torque_permitted else 0.0,
+                vehicle_state.pack_voltage_v,
+            )
+
         control_out, control_state = control_step(
             ControlInputs(
                 throttle=throttle,
@@ -391,6 +410,7 @@ class SimulationSession:
                     gradient_rad=env.gradient_rad,
                     surface_mu_scale=env.surface_mu_scale,
                 ),
+                engine_available_torque_nm=engine_available,
             ),
             limits,
             safety_outputs,
@@ -400,7 +420,10 @@ class SimulationSession:
         )
         ctx.control_state = control_state
 
-        if safety_outputs.contactor_command != ContactorCommand.CLOSE:
+        if (
+            not self.vehicle_model.is_ice
+            and safety_outputs.contactor_command != ContactorCommand.CLOSE
+        ):
             control_out = type(control_out)(
                 motor_torque_request_nm=0.0,
                 regen_torque_request_nm=0.0,
@@ -418,6 +441,7 @@ class SimulationSession:
                 environment=env,
                 steering=steering,
                 max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else None,
+                throttle=control_out.filtered_throttle,
             ),
             dt_s,
         )
@@ -466,6 +490,9 @@ class SimulationSession:
                     if k not in {"elevation_m", "path_heading_rad"}
                 },
                 "motor_rpm": physics_out.motor_rpm,
+                "engine_rpm": physics_out.engine_rpm,
+                "engine_temp_c": physics_out.engine_temp_c,
+                "clutch_locked": float(physics_out.clutch_locked),
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
                 "battery_current_a": physics_out.battery_current_a,

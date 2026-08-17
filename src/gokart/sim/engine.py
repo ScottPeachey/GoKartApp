@@ -11,7 +11,11 @@ from typing import TYPE_CHECKING, Any
 from gokart.config.schemas.modes import DriveMode, DriverProfile
 from gokart.config.schemas.vehicle import VehicleConfig
 from gokart.config.store import data_root, load_component, load_drive_mode, load_driver_profile
-from gokart.config.validation import hardware_limits_from_components, validate_vehicle_config
+from gokart.config.validation import (
+    hardware_limits_from_components,
+    hardware_limits_from_engine,
+    validate_vehicle_config,
+)
 from gokart.control.pipeline import (
     ControlInputs,
     ControlParams,
@@ -76,6 +80,25 @@ def _build_safety_config(
     data_root_path: Path,
 ) -> SafetyConfig:
     config = vehicle_model.config
+    if vehicle_model.is_ice:
+        assert config.engine is not None
+        engine = load_component("engine", config.engine.component_id, root=data_root_path)
+        engine_fault_c = float(engine.max_temp_c or 120.0)
+        return SafetyConfig(
+            ice_powertrain=True,
+            precharge_timeout_s=0.0,
+            self_test_duration_s=0.1,
+            max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else 20.0,
+            motor_temp_fault_c=engine_fault_c,
+            motor_temp_derate_c=max(25.0, engine_fault_c - 20.0),
+            controller_temp_fault_c=engine_fault_c,
+            controller_temp_derate_c=max(25.0, engine_fault_c - 10.0),
+        )
+
+    assert config.battery is not None
+    assert config.bms is not None
+    assert config.motor is not None
+    assert config.motor_controller is not None
     battery = load_component("battery", config.battery.component_id, root=data_root_path)
     bms = load_component("bms", config.bms.component_id, root=data_root_path)
     motor = load_component("motor", config.motor.component_id, root=data_root_path)
@@ -114,6 +137,17 @@ def _resolve_sim_limits(
     derating=None,
 ):
     config = vehicle_model.config
+    if vehicle_model.is_ice:
+        assert config.engine is not None and config.clutch is not None
+        engine = load_component("engine", config.engine.component_id, root=data_root_path)
+        clutch = load_component("clutch", config.clutch.component_id, root=data_root_path)
+        hardware = hardware_limits_from_engine(engine, clutch)
+        return resolve_limits(hardware, config.limits, mode.limits, profile.limits, derating)
+
+    assert config.motor is not None
+    assert config.motor_controller is not None
+    assert config.battery is not None
+    assert config.bms is not None
     motor = load_component("motor", config.motor.component_id, root=data_root_path)
     controller = load_component(
         "motor_controller",
@@ -126,7 +160,14 @@ def _resolve_sim_limits(
     return resolve_limits(hardware, config.limits, mode.limits, profile.limits, derating)
 
 
-def _contactor_feedback(safety_state: SafetyState, command: ContactorCommand) -> tuple[bool, bool]:
+def _contactor_feedback(
+    safety_state: SafetyState,
+    command: ContactorCommand,
+    *,
+    ice_powertrain: bool = False,
+) -> tuple[bool, bool]:
+    if ice_powertrain and safety_state in {SafetyState.ARMED, SafetyState.DRIVING}:
+        return True, False
     if command == ContactorCommand.CLOSE and safety_state in {
         SafetyState.ARMED,
         SafetyState.DRIVING,
@@ -145,9 +186,29 @@ def _build_sensor_inputs(
     contactor_closed: bool,
     series_cells: int,
     battery_params,
+    ice_powertrain: bool = False,
 ) -> SensorInputs:
     assert vehicle_state.motor_thermal is not None
     assert vehicle_state.battery_thermal is not None
+    if ice_powertrain:
+        return SensorInputs(
+            throttle_adc=_adc_from_pedal(throttle),
+            brake_adc=_adc_from_pedal(brake),
+            throttle=throttle,
+            brake=brake,
+            speed_mps=vehicle_state.speed_mps,
+            motor_rpm=motor_rpm,
+            implied_speed_mps=vehicle_state.speed_mps,
+            pack_voltage_v=vehicle_state.pack_voltage_v,
+            min_cell_voltage_v=3.2,
+            max_cell_voltage_v=3.3,
+            motor_temp_c=vehicle_state.motor_thermal.temperature_c,
+            controller_temp_c=vehicle_state.motor_thermal.temperature_c,
+            battery_temp_c=vehicle_state.battery_thermal.temperature_c,
+            contactor_feedback_closed=contactor_closed,
+            precharge_feedback_ok=True,
+        )
+
     assert vehicle_state.battery is not None
     from gokart.physics.battery import _interp_curve
 
@@ -240,8 +301,11 @@ def run_simulation(
 
     base_limits = _resolve_sim_limits(vehicle_model, mode, profile, root)
     safety_config = _build_safety_config(vehicle_model, base_limits, root)
-    battery = load_component("battery", vehicle_model.config.battery.component_id, root=root)
-    series_cells = battery.series_cells
+    series_cells = 1
+    if not vehicle_model.is_ice:
+        assert vehicle_model.config.battery is not None
+        battery = load_component("battery", vehicle_model.config.battery.component_id, root=root)
+        series_cells = battery.series_cells
     control_state = ControlState()
     vehicle_state = vehicle_model.initial_state()
     vehicle_state.speed_mps = initial_speed_mps
@@ -271,10 +335,11 @@ def run_simulation(
 
     control_params = ControlParams(
         mode=mode,
-        motor_peak_torque_nm=vehicle_model.motor_params.peak_torque_nm,
+        motor_peak_torque_nm=vehicle_model.peak_torque_nm,
         wheel_radius_m=vehicle_model.config.wheel_radius_m,
         gear_ratio=vehicle_model.drivetrain_params.gear_ratio,
         drivetrain_efficiency=vehicle_model.drivetrain_params.total_efficiency,
+        powertrain_type=vehicle_model.powertrain_type,
     )
 
     clock = SimClock(speedup=speedup)
@@ -404,7 +469,13 @@ def run_simulation(
         detect_brake = 1.0 if synthetic_brake_hold else brake
 
         motor_rpm = motor_rpm_from_speed(vehicle_model.drivetrain_params, vehicle_state.speed_mps)
-        closed, _open_fb = _contactor_feedback(safety_state, safety_outputs.contactor_command)
+        if vehicle_model.is_ice and vehicle_state.engine is not None:
+            motor_rpm = vehicle_state.engine.rpm
+        closed, _open_fb = _contactor_feedback(
+            safety_state,
+            safety_outputs.contactor_command,
+            ice_powertrain=vehicle_model.is_ice,
+        )
         sensors = _build_sensor_inputs(
             throttle=detect_throttle,
             brake=detect_brake,
@@ -414,6 +485,7 @@ def run_simulation(
             contactor_closed=closed,
             series_cells=series_cells,
             battery_params=vehicle_model.battery_params,
+            ice_powertrain=vehicle_model.is_ice,
         )
         sensors = injector.apply(time_s, sensors)
         _sync_injected_temps(vehicle_state, sensors)
@@ -472,7 +544,7 @@ def run_simulation(
                     mode = load_drive_mode(new_mode, root=root)
                     control_params = ControlParams(
                         mode=mode,
-                        motor_peak_torque_nm=vehicle_model.motor_params.peak_torque_nm,
+                        motor_peak_torque_nm=vehicle_model.peak_torque_nm,
                         wheel_radius_m=vehicle_model.config.wheel_radius_m,
                         gear_ratio=vehicle_model.drivetrain_params.gear_ratio,
                         drivetrain_efficiency=vehicle_model.drivetrain_params.total_efficiency,
@@ -484,6 +556,14 @@ def run_simulation(
         limits = _resolve_sim_limits(
             vehicle_model, control_params.mode, profile, root, derating=safety_outputs.derating
         )
+
+        engine_available = None
+        if vehicle_model.is_ice:
+            engine_available = vehicle_model.available_drive_torque_nm(
+                motor_rpm,
+                throttle if safety_outputs.torque_permitted else 0.0,
+                vehicle_state.pack_voltage_v,
+            )
 
         control_out, control_state = control_step(
             ControlInputs(
@@ -501,6 +581,7 @@ def run_simulation(
                     gradient_rad=env.gradient_rad,
                     surface_mu_scale=env.surface_mu_scale,
                 ),
+                engine_available_torque_nm=engine_available,
             ),
             limits,
             safety_outputs,
@@ -509,7 +590,10 @@ def run_simulation(
             dt_s,
         )
 
-        if safety_outputs.contactor_command != ContactorCommand.CLOSE:
+        if (
+            not vehicle_model.is_ice
+            and safety_outputs.contactor_command != ContactorCommand.CLOSE
+        ):
             control_out = type(control_out)(
                 motor_torque_request_nm=0.0,
                 regen_torque_request_nm=0.0,
@@ -527,6 +611,7 @@ def run_simulation(
                 environment=env,
                 steering=steering,
                 max_speed_mps=limits.max_speed_mps if limits.max_speed_mps > 0 else None,
+                throttle=control_out.filtered_throttle,
             ),
             dt_s,
         )
@@ -576,6 +661,9 @@ def run_simulation(
                     if k not in {"elevation_m", "path_heading_rad"}
                 },
                 "motor_rpm": physics_out.motor_rpm,
+                "engine_rpm": physics_out.engine_rpm,
+                "engine_temp_c": physics_out.engine_temp_c,
+                "clutch_locked": float(physics_out.clutch_locked),
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
                 "battery_current_a": physics_out.battery_current_a,

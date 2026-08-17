@@ -39,7 +39,9 @@ def build_observation(
     curvature_samples = [
         _curvature_at_s(track, track_s + distance) for distance in CURVATURE_LOOKAHEAD_M
     ]
-    motor_temp_c = float(tick_values.get("motor_temp_c", 25.0))
+    motor_temp_c = float(
+        tick_values.get("engine_temp_c", tick_values.get("motor_temp_c", 25.0))
+    )
     controller_fault_c = float(tick_values.get("controller_temp_fault_c", 85.0))
     thermal_frac = (motor_temp_c - 25.0) / max(controller_fault_c - 25.0, 1.0)
     derating = float(tick_values.get("derating_factor", 1.0))

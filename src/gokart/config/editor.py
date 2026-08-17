@@ -37,10 +37,12 @@ class VehicleSlot:
 
 
 VEHICLE_SLOTS: tuple[VehicleSlot, ...] = (
-    VehicleSlot("motor", "Motor", "motor", "motor"),
-    VehicleSlot("motor_controller", "Motor controller", "motor_controller", "motor_controller"),
-    VehicleSlot("battery", "Battery pack", "battery", "battery"),
-    VehicleSlot("bms", "BMS", "bms", "bms"),
+    VehicleSlot("motor", "Motor", "motor", "motor", required=False),
+    VehicleSlot("motor_controller", "Motor controller", "motor_controller", "motor_controller", required=False),
+    VehicleSlot("battery", "Battery pack", "battery", "battery", required=False),
+    VehicleSlot("bms", "BMS", "bms", "bms", required=False),
+    VehicleSlot("engine", "Engine", "engine", "engine", required=False),
+    VehicleSlot("clutch", "Clutch", "clutch", "clutch", required=False),
     VehicleSlot("front_tyre", "Front tyre", "front_tyre", "tyre", required=False),
     VehicleSlot("rear_tyre", "Rear tyre", "rear_tyre", "tyre", required=False),
     VehicleSlot("wheel", "Wheel", "wheel", "wheel", required=False),
@@ -59,8 +61,8 @@ COMPONENT_TYPE_LABELS: dict[str, str] = {
     "wheel": "Wheel",
     "brake": "Brake",
     "dcdc": "DC-DC converter",
-    "contactor": "Contactor",
-    "sensor": "Sensor",
+    "engine": "Engine",
+    "clutch": "Clutch",
 }
 
 

@@ -185,6 +185,7 @@ class SafetyConfig:
     wheel_speed_disagreement_ratio: float = 0.25
     mode_change_max_speed_mps: float = 0.0
     derate_factor: float = 0.5
+    ice_powertrain: bool = False
 
 
 @dataclass
@@ -251,31 +252,37 @@ def detect_faults(
     if not inputs.wheel_speed_valid:
         active.add(FaultId.WHEEL_SPEED_FAULT)
 
-    if inputs.speed_mps > 1.0 and inputs.implied_speed_mps > 0.1:
-        ratio = abs(inputs.speed_mps - inputs.implied_speed_mps) / max(inputs.speed_mps, 0.1)
-        if ratio > config.wheel_speed_disagreement_ratio:
-            active.add(FaultId.SENSOR_DISAGREEMENT)
+    if not config.ice_powertrain:
+        if inputs.speed_mps > 1.0 and inputs.implied_speed_mps > 0.1:
+            ratio = abs(inputs.speed_mps - inputs.implied_speed_mps) / max(inputs.speed_mps, 0.1)
+            if ratio > config.wheel_speed_disagreement_ratio:
+                active.add(FaultId.SENSOR_DISAGREEMENT)
 
-    can_dead = (
-        inputs.can_silence_s >= config.can_timeout_s
-        or not inputs.can_vesc_alive
-        or not inputs.can_bms_alive
-    )
-    if can_dead:
-        active.add(FaultId.CAN_TIMEOUT)
-    if inputs.vesc_fault_active:
-        active.add(FaultId.VESC_FAULT)
-    if inputs.bms_fault_active:
-        active.add(FaultId.BMS_FAULT)
+        can_dead = (
+            inputs.can_silence_s >= config.can_timeout_s
+            or not inputs.can_vesc_alive
+            or not inputs.can_bms_alive
+        )
+        if can_dead:
+            active.add(FaultId.CAN_TIMEOUT)
+        if inputs.vesc_fault_active:
+            active.add(FaultId.VESC_FAULT)
+        if inputs.bms_fault_active:
+            active.add(FaultId.BMS_FAULT)
 
-    if inputs.pack_voltage_v > config.pack_voltage_max_v:
-        active.add(FaultId.PACK_OVERVOLTAGE)
-    if inputs.pack_voltage_v < config.pack_voltage_min_v:
-        active.add(FaultId.PACK_UNDERVOLTAGE)
-    if inputs.max_cell_voltage_v > config.cell_voltage_max_v:
-        active.add(FaultId.CELL_OVERVOLTAGE)
-    if inputs.min_cell_voltage_v < config.cell_voltage_min_v:
-        active.add(FaultId.CELL_UNDERVOLTAGE)
+        if inputs.pack_voltage_v > config.pack_voltage_max_v:
+            active.add(FaultId.PACK_OVERVOLTAGE)
+        if inputs.pack_voltage_v < config.pack_voltage_min_v:
+            active.add(FaultId.PACK_UNDERVOLTAGE)
+        if inputs.max_cell_voltage_v > config.cell_voltage_max_v:
+            active.add(FaultId.CELL_OVERVOLTAGE)
+        if inputs.min_cell_voltage_v < config.cell_voltage_min_v:
+            active.add(FaultId.CELL_UNDERVOLTAGE)
+
+        if inputs.battery_temp_c >= config.battery_temp_fault_c:
+            active.add(FaultId.BATTERY_OVERTEMP)
+        elif inputs.battery_temp_c >= config.battery_temp_derate_c:
+            active.add(FaultId.BATTERY_OVERTEMP_DERATE)
 
     if inputs.motor_temp_c >= config.motor_temp_fault_c:
         active.add(FaultId.MOTOR_OVERTEMP)
@@ -287,10 +294,11 @@ def detect_faults(
     elif inputs.controller_temp_c >= config.controller_temp_derate_c:
         active.add(FaultId.CONTROLLER_OVERTEMP_DERATE)
 
-    if inputs.battery_temp_c >= config.battery_temp_fault_c:
-        active.add(FaultId.BATTERY_OVERTEMP)
-    elif inputs.battery_temp_c >= config.battery_temp_derate_c:
-        active.add(FaultId.BATTERY_OVERTEMP_DERATE)
+    if not config.ice_powertrain:
+        if inputs.battery_temp_c >= config.battery_temp_fault_c:
+            active.add(FaultId.BATTERY_OVERTEMP)
+        elif inputs.battery_temp_c >= config.battery_temp_derate_c:
+            active.add(FaultId.BATTERY_OVERTEMP_DERATE)
 
     over_limit = inputs.speed_mps > config.max_speed_mps + config.overspeed_margin_mps
     if detection_state is not None:

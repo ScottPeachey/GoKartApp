@@ -210,6 +210,43 @@ class Sensor(ComponentBase):
     hardware_limits: HardwareLimits = Field(default_factory=HardwareLimits)
 
 
+class Engine(ComponentBase):
+    component_type: Literal["engine"] = "engine"
+    displacement_cc: float = Field(gt=0)
+    idle_rpm: float = Field(gt=0)
+    redline_rpm: float = Field(gt=0)
+    peak_torque_nm: float = Field(gt=0)
+    peak_power_w: float = Field(gt=0)
+    max_rpm: float = Field(gt=0)
+    engine_braking_nm: float = Field(default=8.0, ge=0)
+    mass_kg: float | None = Field(default=None, gt=0)
+    max_temp_c: float = Field(default=120.0)
+    torque_map: list[TorqueMapPoint] = Field(default_factory=list)
+    hardware_limits: HardwareLimits
+
+    @model_validator(mode="after")
+    def validate_engine(self) -> Engine:
+        if self.redline_rpm > self.max_rpm:
+            raise ValueError("redline_rpm must be <= max_rpm")
+        if self.peak_torque_nm <= 0:
+            raise ValueError("peak_torque_nm must be > 0")
+        return self
+
+
+class Clutch(ComponentBase):
+    component_type: Literal["clutch"] = "clutch"
+    engagement_rpm: float = Field(gt=0)
+    lock_rpm: float = Field(gt=0)
+    max_torque_nm: float = Field(gt=0)
+    hardware_limits: HardwareLimits = Field(default_factory=HardwareLimits)
+
+    @model_validator(mode="after")
+    def validate_clutch(self) -> Clutch:
+        if self.lock_rpm < self.engagement_rpm:
+            raise ValueError("lock_rpm must be >= engagement_rpm")
+        return self
+
+
 ComponentRecord = (
     Motor
     | MotorController
@@ -221,6 +258,8 @@ ComponentRecord = (
     | DcDcConverter
     | Contactor
     | Sensor
+    | Engine
+    | Clutch
 )
 
 COMPONENT_TYPE_MAP: dict[str, type[ComponentBase]] = {
@@ -234,4 +273,6 @@ COMPONENT_TYPE_MAP: dict[str, type[ComponentBase]] = {
     "dcdc": DcDcConverter,
     "contactor": Contactor,
     "sensor": Sensor,
+    "engine": Engine,
+    "clutch": Clutch,
 }

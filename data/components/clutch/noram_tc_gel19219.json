@@ -1,0 +1,29 @@
+{
+  "component_type": "clutch",
+  "datasheet_path": "http://www.torini.com.au/documents/official/TC210_clutch_homologation.pdf",
+  "date_added": "2026-08-17",
+  "engagement_rpm": 2200.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": null,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": null,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "noram_tc_gel19219",
+  "lock_rpm": 2800.0,
+  "manufacturer": "Noram",
+  "max_torque_nm": 25.0,
+  "model": "TC-GEL19219",
+  "notes": "Red springs 2200 rpm engage, white 2700 rpm — default red",
+  "part_number": "TC-GEL19219",
+  "price": null,
+  "source": "KA clutch homologation bulletin"
+}

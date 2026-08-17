@@ -9,9 +9,11 @@ from typing import Any
 from gokart.config.schemas import (
     BatteryPack,
     Bms,
+    Clutch,
     ComponentBase,
     DriveMode,
     DriverProfile,
+    Engine,
     HardwareLimits,
     LimitLayer,
     Motor,
@@ -180,6 +182,26 @@ def hardware_limits_from_components(
     return aggregate_hardware_limits(motor_limits, controller_limits, battery_limits, bms_limits)
 
 
+def hardware_limits_from_engine(engine: Engine, clutch: Clutch) -> HardwareLimits:
+    engine_limits = engine.hardware_limits.model_copy(
+        update={
+            "max_motor_rpm": engine.hardware_limits.max_motor_rpm or engine.max_rpm,
+            "max_power_w": engine.hardware_limits.max_power_w or engine.peak_power_w,
+            "max_temp_c": engine.hardware_limits.max_temp_c or engine.max_temp_c,
+            "max_motor_current_a": engine.hardware_limits.max_motor_current_a or 150.0,
+            "max_battery_current_a": engine.hardware_limits.max_battery_current_a or 150.0,
+            "max_regen_current_a": engine.hardware_limits.max_regen_current_a or 0.0,
+        }
+    )
+    clutch_limits = clutch.hardware_limits.model_copy(
+        update={
+            "max_power_w": clutch.hardware_limits.max_power_w
+            or engine.peak_power_w,
+        }
+    )
+    return aggregate_hardware_limits(engine_limits, clutch_limits)
+
+
 def validate_intra_component(component: ComponentBase) -> ValidationResult:
     """Layer 2: intra-component sanity (pydantic handles most; extra checks here)."""
     result = ValidationResult(ok=True)
@@ -192,6 +214,16 @@ def validate_intra_component(component: ComponentBase) -> ValidationResult:
                     limiting_layer="motor",
                     limiting_value=component.max_rpm,
                     message=f"Torque map RPM {point.rpm} exceeds motor max_rpm {component.max_rpm}",
+                )
+    if isinstance(component, Engine) and component.torque_map:
+        for point in component.torque_map:
+            if point.rpm > component.max_rpm:
+                result.add(
+                    field_name="torque_map.rpm",
+                    constraint="map rpm <= engine.max_rpm",
+                    limiting_layer="engine",
+                    limiting_value=component.max_rpm,
+                    message=f"Torque map RPM {point.rpm} exceeds engine max_rpm {component.max_rpm}",
                 )
     return result
 
@@ -263,6 +295,56 @@ def validate_cross_component(
     return result
 
 
+def validate_cross_component_ice(
+    vehicle: VehicleConfig,
+    engine: Engine,
+    clutch: Clutch,
+) -> ValidationResult:
+    """Layer 3: cross-component compatibility for ICE vehicles."""
+    result = ValidationResult(ok=True)
+    gear_ratio = vehicle.drivetrain.axle_sprocket_teeth / vehicle.drivetrain.motor_sprocket_teeth
+    kinematic_max_speed_mps = (
+        engine.max_rpm * vehicle.wheel_radius_m * 2.0 * math.pi / (60.0 * gear_ratio)
+    )
+    vehicle_max = vehicle.limits.max_speed_mps
+    if vehicle_max is not None and vehicle_max > kinematic_max_speed_mps * 1.05:
+        result.add(
+            field_name="limits.max_speed_mps",
+            constraint="vehicle max speed <= kinematic max from engine RPM and gearing",
+            limiting_layer="engine+drivetrain",
+            limiting_value=round(kinematic_max_speed_mps, 3),
+            message=(
+                f"Vehicle max speed {vehicle.limits.max_speed_mps} m/s exceeds kinematic "
+                f"limit {kinematic_max_speed_mps:.2f} m/s from engine RPM and gearing"
+            ),
+        )
+
+    if vehicle.limits.max_motor_rpm is not None and vehicle.limits.max_motor_rpm > engine.max_rpm:
+        result.add(
+            field_name="limits.max_motor_rpm",
+            constraint="vehicle max_motor_rpm <= engine.max_rpm",
+            limiting_layer="engine",
+            limiting_value=engine.max_rpm,
+            message=(
+                f"Vehicle max_motor_rpm {vehicle.limits.max_motor_rpm} exceeds "
+                f"engine max_rpm {engine.max_rpm}"
+            ),
+        )
+
+    if clutch.max_torque_nm < engine.peak_torque_nm * 0.5:
+        result.add(
+            field_name="clutch.max_torque_nm",
+            constraint="clutch should handle a meaningful fraction of engine peak torque",
+            limiting_layer="clutch",
+            limiting_value=clutch.max_torque_nm,
+            message=(
+                f"Clutch max torque {clutch.max_torque_nm} Nm is low relative to engine "
+                f"peak {engine.peak_torque_nm} Nm"
+            ),
+        )
+    return result
+
+
 def validate_limit_hierarchy(
     *,
     hardware: HardwareLimits,
@@ -308,14 +390,30 @@ def validate_vehicle_config(
     """Run all validation layers for a vehicle configuration."""
     result = ValidationResult(ok=True)
 
-    refs = [
-        ("motor", vehicle.motor, "motor"),
-        ("motor_controller", vehicle.motor_controller, "motor_controller"),
-        ("battery", vehicle.battery, "battery"),
-        ("bms", vehicle.bms, "bms"),
-    ]
+    if vehicle.powertrain_type == "ice":
+        refs = [
+            ("engine", vehicle.engine, "engine"),
+            ("clutch", vehicle.clutch, "clutch"),
+        ]
+    else:
+        refs = [
+            ("motor", vehicle.motor, "motor"),
+            ("motor_controller", vehicle.motor_controller, "motor_controller"),
+            ("battery", vehicle.battery, "battery"),
+            ("bms", vehicle.bms, "bms"),
+        ]
+
     components: dict[str, ComponentBase] = {}
     for label, ref, component_type in refs:
+        if ref is None:
+            result.add(
+                field_name=f"{label}.component_id",
+                constraint=f"{label} ref required",
+                limiting_layer="vehicle",
+                limiting_value=None,
+                message=f"Missing required {label} reference for {vehicle.powertrain_type} vehicle",
+            )
+            continue
         try:
             component = load_component(component_type, ref.component_id, root=data_root)
         except ConfigStoreError as exc:
@@ -344,22 +442,31 @@ def validate_vehicle_config(
             result.violations.extend(intra.violations)
             result.ok = False
 
-    if len(components) < 4:
+    required_count = 2 if vehicle.powertrain_type == "ice" else 4
+    if len(components) < required_count:
         return result
 
-    motor = components["motor"]
-    controller = components["motor_controller"]
-    battery = components["battery"]
-    bms = components["bms"]
-    assert isinstance(motor, Motor)
-    assert isinstance(controller, MotorController)
-    assert isinstance(battery, BatteryPack)
-    assert isinstance(bms, Bms)
-
-    hardware = hardware_limits_from_components(motor, controller, battery, bms)
+    if vehicle.powertrain_type == "ice":
+        engine = components["engine"]
+        clutch = components["clutch"]
+        assert isinstance(engine, Engine)
+        assert isinstance(clutch, Clutch)
+        hardware = hardware_limits_from_engine(engine, clutch)
+        cross = validate_cross_component_ice(vehicle, engine, clutch)
+    else:
+        motor = components["motor"]
+        controller = components["motor_controller"]
+        battery = components["battery"]
+        bms = components["bms"]
+        assert isinstance(motor, Motor)
+        assert isinstance(controller, MotorController)
+        assert isinstance(battery, BatteryPack)
+        assert isinstance(bms, Bms)
+        hardware = hardware_limits_from_components(motor, controller, battery, bms)
+        cross = validate_cross_component(vehicle, motor, controller, battery, bms)
 
     for sub_result in (
-        validate_cross_component(vehicle, motor, controller, battery, bms),
+        cross,
         validate_limit_hierarchy(hardware=hardware, vehicle=vehicle, mode=mode, profile=profile),
     ):
         if not sub_result.ok:

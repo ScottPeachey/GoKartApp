@@ -1,0 +1,43 @@
+{
+  "component_type": "engine",
+  "datasheet_path": "http://www.torini.com.au/index.php?dispatch=products.view&product_id=43",
+  "date_added": "2026-08-17",
+  "displacement_cc": 212.0,
+  "engine_braking_nm": 12.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": 7200.0,
+    "max_power_w": 11200.0,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": 120.0,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "torini_tx250",
+  "idle_rpm": 1800.0,
+  "manufacturer": "Torini",
+  "mass_kg": 19.08,
+  "max_rpm": 7200.0,
+  "max_temp_c": 120.0,
+  "model": "Supermaxx TX250",
+  "notes": "15 hp / 11.2 kW @ 6600 rpm, 18 Nm @ 4600 rpm — 212 cc block",
+  "part_number": "TX250",
+  "peak_power_w": 11200.0,
+  "peak_torque_nm": 18.0,
+  "price": null,
+  "redline_rpm": 7200.0,
+  "source": "Torini Supermaxx kit listing",
+  "torque_map": [
+    {"rpm": 1800.0, "torque_nm": 5.0, "efficiency": 0.25},
+    {"rpm": 3000.0, "torque_nm": 12.0, "efficiency": 0.35},
+    {"rpm": 4600.0, "torque_nm": 18.0, "efficiency": 0.42},
+    {"rpm": 5600.0, "torque_nm": 16.5, "efficiency": 0.4},
+    {"rpm": 6600.0, "torque_nm": 16.2, "efficiency": 0.38},
+    {"rpm": 7200.0, "torque_nm": 0.0, "efficiency": 0.2}
+  ]
+}

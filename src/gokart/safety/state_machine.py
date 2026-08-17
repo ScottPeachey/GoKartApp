@@ -245,8 +245,10 @@ def safety_step(
             )
 
         timers.precharge_elapsed_s += dt
+        if config.ice_powertrain:
+            timers.precharge_elapsed_s = config.precharge_timeout_s
         if timers.precharge_elapsed_s < config.precharge_timeout_s:
-            if not inputs.precharge_feedback_ok:
+            if not inputs.precharge_feedback_ok and not config.ice_powertrain:
                 active_faults.add(FaultId.PRECHARGE_FAILURE)
                 latched.add(FaultId.PRECHARGE_FAILURE)
                 state = SafetyState.SAFE_SHUTDOWN

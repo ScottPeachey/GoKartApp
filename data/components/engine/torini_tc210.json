@@ -1,0 +1,43 @@
+{
+  "component_type": "engine",
+  "datasheet_path": "http://torini.com.au/documents/spec/TC210_clubmaxx-senior.pdf",
+  "date_added": "2026-08-17",
+  "displacement_cc": 212.0,
+  "engine_braking_nm": 10.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": 6100.0,
+    "max_power_w": 7400.0,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": 120.0,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "torini_tc210",
+  "idle_rpm": 1800.0,
+  "manufacturer": "Torini",
+  "mass_kg": 16.94,
+  "max_rpm": 6100.0,
+  "max_temp_c": 120.0,
+  "model": "Clubmaxx TC210",
+  "notes": "KA 4SS senior — 10 hp / 7.4 kW @ 5600 rpm, 15 Nm @ 3400 rpm",
+  "part_number": "TC210",
+  "peak_power_w": 7400.0,
+  "peak_torque_nm": 15.0,
+  "price": null,
+  "redline_rpm": 6100.0,
+  "source": "Torini Clubmaxx senior kit spec",
+  "torque_map": [
+    {"rpm": 1800.0, "torque_nm": 4.0, "efficiency": 0.25},
+    {"rpm": 2500.0, "torque_nm": 10.0, "efficiency": 0.35},
+    {"rpm": 3400.0, "torque_nm": 15.0, "efficiency": 0.42},
+    {"rpm": 4500.0, "torque_nm": 14.0, "efficiency": 0.4},
+    {"rpm": 5600.0, "torque_nm": 12.6, "efficiency": 0.38},
+    {"rpm": 6100.0, "torque_nm": 0.0, "efficiency": 0.2}
+  ]
+}
