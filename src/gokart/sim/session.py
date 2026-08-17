@@ -43,6 +43,7 @@ from gokart.sim.engine import (
     _contactor_feedback,
     _resolve_sim_limits,
     _sync_injected_temps,
+    axle_physics_tick_values,
     thermal_tick_values,
 )
 from gokart.sim.fault_injection import FaultInjector
@@ -499,7 +500,7 @@ class SimulationSession:
                 "pack_voltage_v": physics_out.pack_voltage_v,
                 "soc": physics_out.soc,
                 "power_w": physics_out.power_w,
-                "traction_force_n": physics_out.traction_force_n,
+                **axle_physics_tick_values(physics_out),
                 **thermal_tick_values(
                     is_ice=self.vehicle_model.is_ice,
                     powertrain_type=self.vehicle_model.powertrain_type,

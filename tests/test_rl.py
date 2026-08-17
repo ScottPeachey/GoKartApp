@@ -579,6 +579,28 @@ def test_env_reset_and_step(hairpin_track) -> None:
     assert np.isfinite(total_reward)
 
 
+def test_session_tick_includes_wheel_physics(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+        target_laps=99,
+        max_steps=500,
+    )
+    env.reset()
+    for _ in range(80):
+        env.step(np.array([1.0, 0.0, 0.0], dtype=np.float32))
+    row = env.session.state.last_tick.to_row()
+    assert row is not None
+    assert row["normal_fl_n"] > 1.0
+    assert row["grip_fl_effective"] > 0.0
+    assert "tyre_wear_fl" in row
+    assert row["front_normal_n"] > 1.0
+
+
 def test_env_reset_starts_driving_without_boot_brake(hairpin_track) -> None:
     env = make_env(
         vehicle_name="Scott Kart V1",
