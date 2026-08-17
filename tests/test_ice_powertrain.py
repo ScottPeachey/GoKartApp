@@ -140,6 +140,53 @@ def test_ice_launch_accelerates_smoothly(data_root: Path) -> None:
     assert max(speeds) > 2.0
 
 
+def test_ice_rpm_stable_at_full_throttle_with_steering(data_root: Path) -> None:
+    """Engine RPM should stay in the power band, not hunt with steering inputs."""
+    import math
+
+    model = load_validated_vehicle_model("Torini Clubmaxx 210", "V1.0", data_root=data_root)
+    state = model.initial_state()
+    dt = 0.01
+    for _ in range(2500):
+        state, _ = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+            ),
+            dt,
+        )
+
+    rpms: list[float] = []
+    for step in range(1500):
+        steer = 0.85 * math.sin(step * 0.12)
+        state, out = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+                steering=steer,
+            ),
+            dt,
+        )
+        rpms.append(out.engine_rpm)
+
+    rpm_swings = sum(
+        1
+        for left, right in zip(rpms[1:], rpms[:-1], strict=False)
+        if abs(right - left) > 120.0
+    )
+    assert rpm_swings == 0, f"engine rpm swung {rpm_swings} times under full throttle + steering"
+    assert min(rpms) > 4500.0
+    assert max(rpms) < 5800.0
+
+
 def test_torini_vehicles_validate(data_root: Path) -> None:
     for name in ("Torini Clubmaxx 210", "Torini Supermaxx 250"):
         vehicle = load_vehicle(name, "V1.0", root=data_root)

@@ -15,6 +15,7 @@ CHT_HEAT_FRACTION = 0.42
 # Small share of clutch-slip dissipation that warms the engine block.
 CLUTCH_SLIP_HEAT_TO_ENGINE = 0.12
 RPM_ACCEL_PER_NM_S = 55.0
+ENGAGE_PULL_RATE_PER_S = 10.0
 COUPLE_RATE_PER_S = 18.0
 COAST_RATE_PER_S = 6.0
 REV_LIMITER_DROP_RPM = 350.0
@@ -126,19 +127,21 @@ def _advance_engine_rpm(
     if throttle <= 0.02:
         return engine_rpm + (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * COAST_RATE_PER_S)
 
-    # Engaged clutch under load — hold the engine in its power band while it slips.
-    if clutch_engagement_fraction >= 1.0 and throttle > 0.5:
-        power_rpm = _peak_power_rpm(engine_params)
-        target_rpm = max(
-            coupled_rpm + 250.0,
-            engine_params.idle_rpm + throttle * (power_rpm - engine_params.idle_rpm),
-        )
-        target_rpm = min(target_rpm, engine_params.redline_rpm - 50.0)
-        return engine_rpm + (target_rpm - engine_rpm) * min(1.0, dt * 14.0)
+    power_rpm = _peak_power_rpm(engine_params)
+    throttle_target = engine_params.idle_rpm + throttle * (power_rpm - engine_params.idle_rpm)
+    throttle_target = min(throttle_target, engine_params.redline_rpm - 50.0)
 
-    # Shoes still moving out — crank accelerates against clutch load.
-    net_nm = commanded_torque_nm - max(0.0, transmitted_torque_nm)
-    new_rpm = engine_rpm + net_nm * RPM_ACCEL_PER_NM_S * dt
+    if clutch_engagement_fraction <= 0.0:
+        return engine_rpm + (throttle_target - engine_rpm) * min(1.0, dt * ENGAGE_PULL_RATE_PER_S)
+
+    # Blend toward the throttle target as shoes engage; crank load resists over-revving.
+    engage_pull = (
+        (throttle_target - engine_rpm)
+        * clutch_engagement_fraction
+        * ENGAGE_PULL_RATE_PER_S
+    )
+    crank_accel = (commanded_torque_nm - max(0.0, transmitted_torque_nm)) * RPM_ACCEL_PER_NM_S
+    new_rpm = engine_rpm + (engage_pull + crank_accel) * dt
 
     if new_rpm >= engine_params.redline_rpm:
         new_rpm = engine_params.redline_rpm - REV_LIMITER_DROP_RPM
