@@ -5,10 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from gokart.config.schemas.components import Engine, TorqueMapPoint
-from gokart.physics.clutch import ClutchOutputs, ClutchParams, step_clutch
+from gokart.physics.clutch import ClutchParams, step_clutch
 from gokart.physics.drivetrain import DrivetrainParams, motor_rpm_from_speed
 from gokart.physics.motor import _interpolate_map
 from gokart.units import rpm_to_rads
+
+# Engine free-revs under net crank torque while slipping; couples when locked.
+RPM_ACCEL_PER_NM_S = 55.0
+COUPLE_RATE_PER_S = 18.0
+COAST_RATE_PER_S = 6.0
+REV_LIMITER_DROP_RPM = 350.0
 
 
 @dataclass(frozen=True)
@@ -85,6 +91,36 @@ def available_engine_torque_nm(
     return _wide_open_torque_nm(params, rpm) * throttle_clamped
 
 
+def _advance_engine_rpm(
+    *,
+    engine_rpm: float,
+    coupled_rpm: float,
+    throttle: float,
+    transmitted_torque_nm: float,
+    commanded_torque_nm: float,
+    clutch_locked: bool,
+    engine_params: EngineParams,
+    dt: float,
+) -> float:
+    if clutch_locked:
+        target_rpm = max(coupled_rpm, engine_params.idle_rpm)
+        return engine_rpm + (target_rpm - engine_rpm) * min(1.0, dt * COUPLE_RATE_PER_S)
+
+    if throttle <= 0.02:
+        return engine_rpm + (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * COAST_RATE_PER_S)
+
+    # Crank torque balance while the clutch slips: drive torque minus what leaves via friction.
+    net_nm = commanded_torque_nm - max(0.0, transmitted_torque_nm)
+    new_rpm = engine_rpm + net_nm * RPM_ACCEL_PER_NM_S * dt
+
+    # Rev limiter bounce — fuel cut pulls rpm back into the power band.
+    if new_rpm >= engine_params.redline_rpm:
+        new_rpm = engine_params.redline_rpm - REV_LIMITER_DROP_RPM
+
+    idle_floor = engine_params.idle_rpm * 0.5
+    return max(idle_floor, min(new_rpm, engine_params.max_rpm))
+
+
 def step_ice_powertrain(
     state: EngineState,
     inputs: EngineInputs,
@@ -93,7 +129,7 @@ def step_ice_powertrain(
     drivetrain_params: DrivetrainParams,
     dt: float,
 ) -> tuple[EngineState, IcePowertrainOutputs]:
-    """Advance engine RPM with centrifugal clutch and return wheel torque."""
+    """Advance engine RPM with centrifugal clutch slip and return wheel torque."""
     throttle = max(0.0, min(1.0, inputs.throttle))
     coupled_rpm = motor_rpm_from_speed(drivetrain_params, inputs.speed_mps)
     engine_rpm = max(state.rpm, engine_params.idle_rpm * 0.5)
@@ -104,23 +140,38 @@ def step_ice_powertrain(
     else:
         commanded_torque = max(commanded_torque, inputs.torque_request_nm)
 
-    clutch_out = step_clutch(commanded_torque, engine_rpm, clutch_params)
+    clutch_out = step_clutch(
+        commanded_torque,
+        engine_rpm,
+        clutch_params,
+        coupled_rpm=coupled_rpm,
+    )
 
-    if clutch_out.locked:
-        engine_rpm = max(coupled_rpm, engine_params.idle_rpm)
-    else:
-        target_rpm = engine_params.idle_rpm + throttle * (
-            engine_params.redline_rpm - engine_params.idle_rpm
-        )
-        if throttle > 0.02:
-            engine_rpm += (target_rpm - engine_rpm) * min(1.0, dt * 12.0)
-        else:
-            engine_rpm += (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * 6.0)
+    engine_rpm = _advance_engine_rpm(
+        engine_rpm=engine_rpm,
+        coupled_rpm=coupled_rpm,
+        throttle=throttle,
+        transmitted_torque_nm=clutch_out.transmitted_torque_nm,
+        commanded_torque_nm=max(commanded_torque, 1e-6),
+        clutch_locked=clutch_out.locked,
+        engine_params=engine_params,
+        dt=dt,
+    )
 
     engine_rpm = max(0.0, min(engine_rpm, engine_params.max_rpm))
-    if engine_rpm >= engine_params.redline_rpm:
-        commanded_torque = 0.0
-        clutch_out = step_clutch(0.0, engine_rpm, clutch_params)
+
+    commanded_torque = available_engine_torque_nm(engine_params, engine_rpm, throttle)
+    if inputs.torque_request_nm >= 0:
+        commanded_torque = min(commanded_torque, inputs.torque_request_nm)
+    else:
+        commanded_torque = max(commanded_torque, inputs.torque_request_nm)
+
+    clutch_out = step_clutch(
+        commanded_torque,
+        engine_rpm,
+        clutch_params,
+        coupled_rpm=coupled_rpm,
+    )
 
     if engine_params.torque_map and engine_rpm > 0:
         _, efficiency = _interpolate_map(engine_rpm, engine_params.torque_map)
@@ -128,8 +179,8 @@ def step_ice_powertrain(
         efficiency = engine_params.default_efficiency
 
     omega = rpm_to_rads(engine_rpm)
-    mechanical_power = clutch_out.transmitted_torque_nm * omega
-    heat = max(0.0, abs(commanded_torque * omega) * (1.0 - efficiency))
+    slip_heat_scale = 1.0 + min(clutch_out.slip_rpm / max(clutch_params.lock_rpm, 1.0), 2.0) * 0.15
+    heat = max(0.0, abs(commanded_torque * omega) * (1.0 - efficiency) * slip_heat_scale)
 
     wheel_torque = clutch_out.transmitted_torque_nm * drivetrain_params.gear_ratio
     wheel_torque *= drivetrain_params.total_efficiency

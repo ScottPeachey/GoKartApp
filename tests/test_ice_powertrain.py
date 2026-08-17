@@ -58,9 +58,17 @@ def test_clutch_engagement_fraction() -> None:
 
 def test_clutch_transmits_torque_when_locked() -> None:
     params = ClutchParams(engagement_rpm=2200.0, lock_rpm=2800.0, max_torque_nm=25.0)
-    out = step_clutch(15.0, 3000.0, params)
+    out = step_clutch(15.0, 3000.0, params, coupled_rpm=2920.0)
     assert out.locked
     assert out.transmitted_torque_nm == pytest.approx(15.0)
+
+
+def test_clutch_slips_at_launch_not_axle_locked() -> None:
+    params = ClutchParams(engagement_rpm=2200.0, lock_rpm=2800.0, max_torque_nm=25.0)
+    out = step_clutch(15.0, 3200.0, params, coupled_rpm=0.0)
+    assert not out.locked
+    assert out.transmitted_torque_nm == pytest.approx(15.0)
+    assert out.slip_rpm == pytest.approx(3200.0)
 
 
 def test_clutch_unlocked_below_engagement() -> None:
@@ -88,6 +96,38 @@ def test_ice_powertrain_revs_and_moves(data_root: Path) -> None:
         )
     assert out.position_m > 1.0
     assert out.engine_rpm >= 1800.0
+
+
+def test_ice_launch_accelerates_smoothly(data_root: Path) -> None:
+    """No rev-limiter cycle: engine rpm should not oscillate wildly at launch."""
+    model = load_validated_vehicle_model("Torini Clubmaxx 210", "V1.0", data_root=data_root)
+    state = model.initial_state()
+    dt = 0.01
+    rpms: list[float] = []
+    speeds: list[float] = []
+    for _ in range(800):
+        state, out = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+            ),
+            dt,
+        )
+        rpms.append(out.engine_rpm)
+        speeds.append(out.speed_mps)
+
+    rpm_swings = sum(
+        1
+        for left, right in zip(rpms[1:], rpms[:-1], strict=False)
+        if (right - left) > 400.0 and left > 2500.0
+    )
+    assert rpm_swings < 5, f"engine rpm oscillated {rpm_swings} times during launch"
+    assert speeds[-1] > speeds[0] + 0.5
+    assert max(speeds) > 2.0
 
 
 def test_torini_vehicles_validate(data_root: Path) -> None:
