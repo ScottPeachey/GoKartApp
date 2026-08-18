@@ -102,9 +102,12 @@ def test_default_setup_is_min_time() -> None:
     assert setup.rewards.stagnant_terminal == pytest.approx(8.0)
     assert setup.rewards.off_track_wander == pytest.approx(10.0)
     assert setup.rewards.early_exit == pytest.approx(1.0)
-    assert setup.rewards.lap == pytest.approx(60.0)
-    assert setup.rewards.time == pytest.approx(1.0)
-    assert setup.rewards.progress == pytest.approx(0.5)
+    assert setup.rewards.lap == pytest.approx(100.0)
+    assert setup.rewards.time == pytest.approx(0.25)
+    assert setup.rewards.progress == pytest.approx(3.0)
+    assert setup.rewards.speed == pytest.approx(1.0)
+    assert setup.rewards.slow == pytest.approx(2.5)
+    assert setup.env.stagnant_delta_s == pytest.approx(0.02)
     assert not hasattr(setup.rewards, "alignment")
     assert setup.warmup.demo_steps == 2_000
     assert setup.warmup.bc_epochs == 12
@@ -410,8 +413,8 @@ def test_reward_pays_lap_bonus() -> None:
         },
         state=state,
     )
-    assert components["lap"] == pytest.approx(60.0)
-    assert reward > 59.0
+    assert components["lap"] == pytest.approx(100.0)
+    assert reward > 99.0
 
 
 def test_faster_completed_lap_beats_slower_one() -> None:
@@ -482,9 +485,44 @@ def test_early_exit_penalises_failed_short_episode_more_than_full_idle() -> None
         terminal_info={"truncated_off_track_wander": True},
     )
 
-    assert full_idle == pytest.approx(-120.0)
     assert stagnant_exit < full_idle
     assert wander_exit < full_idle
+
+
+def test_crawl_episode_loses_to_fast_progress() -> None:
+    dt_s = 0.01
+    max_steps = 4_000
+    weights = reward_preset("god")
+
+    def _episode_total(*, steps: int, speed_mps: float, steering: float = 0.0) -> float:
+        total = 0.0
+        state = RewardState()
+        tick = {**_TICK, "safety_state": "DRIVING", "speed_mps": speed_mps, "steering": steering}
+        delta_s = speed_mps * dt_s
+        for step in range(1, steps + 1):
+            info = {
+                "delta_track_s_m": delta_s,
+                "lateral_offset_m": 0.0,
+                "heading_error_deg": 0.0,
+                "track_width_m": 10.0,
+                "drive_step_index": step,
+                "max_drive_steps": max_steps,
+                **({"truncated_max_steps": True} if step == steps else {}),
+            }
+            step_reward, state, _ = compute_reward(
+                tick_values=tick,
+                step_info=info,
+                weights=weights,
+                dt_s=dt_s,
+                state=state,
+                objective="god",
+            )
+            total += step_reward
+        return total
+
+    crawl = _episode_total(steps=max_steps, speed_mps=0.3, steering=1.0)
+    racing = _episode_total(steps=800, speed_mps=8.0, steering=0.1)
+    assert racing > crawl
 
 
 def test_using_track_width_is_not_penalized() -> None:

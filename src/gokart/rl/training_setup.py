@@ -19,7 +19,7 @@ class ActionConfig:
 class EnvRuntimeConfig:
     max_steps: int = 12_000
     terminate_on_off_track: bool = True
-    stagnant_delta_s: float = 0.001
+    stagnant_delta_s: float = 0.02
     max_stagnant_steps: int = 300
     max_off_track_steps: int = 800
 
@@ -108,7 +108,10 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
     "ppo.gamma": {"step": 0.001, "min": 0.9, "max": 0.9999},
     "rewards.time": {"step": 0.05, "min": 0, "max": 10},
-    "rewards.progress": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.progress": {"step": 0.1, "min": 0, "max": 20},
+    "rewards.speed": {"step": 0.05, "min": 0, "max": 10},
+    "rewards.slow": {"step": 0.1, "min": 0, "max": 20},
+    "rewards.steering": {"step": 0.05, "min": 0, "max": 5},
     "rewards.reverse": {"step": 0.05, "min": 0, "max": 10},
     "rewards.off_track": {"step": 0.1, "min": 0, "max": 50},
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
@@ -198,7 +201,7 @@ def training_setup_schema() -> dict[str, Any]:
                 {
                     "max_steps": "Max ticks in one episode (0.01 s each). 12,000 = 120 seconds.",
                     "terminate_on_off_track": "End the episode when the kart leaves the track.",
-                    "stagnant_delta_s": "Forward progress below this counts as not moving.",
+                    "stagnant_delta_s": "Forward progress below this counts as not moving (m/tick).",
                     "max_stagnant_steps": "End the episode after this many ticks with no progress.",
                     "max_off_track_steps": (
                         "If off-track terminate is off, cut after these ticks."
@@ -227,8 +230,11 @@ def training_setup_schema() -> dict[str, Any]:
                 "rewards",
                 "Reward weights",
                 {
-                    "time": "Cost per second on track. Faster laps pay less of this.",
-                    "progress": "Small bonus for moving forward. Does not prefer the centerline.",
+                    "time": "Small per-second cost while the episode runs.",
+                    "progress": "Bonus per metre of forward track progress.",
+                    "speed": "Bonus for along-track speed (m/s) when moving forward.",
+                    "slow": "Penalty per second below racing speed while on circuit.",
+                    "steering": "Penalty for large steering inputs while on circuit.",
                     "reverse": "Penalty per metre of backward progress.",
                     "off_track": "Per-second penalty while off the circuit.",
                     "wall": "One-shot cost when off-track terminate ends the episode.",

@@ -1,9 +1,9 @@
 """Minimum-time circuit reward.
 
 The objective is the fastest lap the kart can do with its real limits.
-Time on track is costly, so a quicker lap is worth more than a slow one.
-On-track heading and lateral offset are free: the policy may use the full
-width, brake, and accelerate however the components allow.
+Forward speed and lap progress are rewarded; idling, crawling, and saturated
+steering while on circuit are penalised so the policy cannot farm time by
+barely moving.
 """
 
 from __future__ import annotations
@@ -11,31 +11,40 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+MIN_RACING_SPEED_MPS = 2.5
+MAX_ALONG_SPEED_MPS = 15.0
+
 
 @dataclass(frozen=True)
 class RewardWeights:
-    time: float = 1.0
-    progress: float = 0.5
+    time: float = 0.25
+    progress: float = 3.0
+    speed: float = 1.0
+    slow: float = 2.5
+    steering: float = 0.2
     reverse: float = 1.2
     off_track: float = 2.0
     wall: float = 12.0
     stagnant_terminal: float = 8.0
     off_track_wander: float = 10.0
     early_exit: float = 1.0
-    lap: float = 60.0
+    lap: float = 100.0
     thermal: float = 0.5
     thermal_fault: float = 6.0
 
 
 GOD_WEIGHTS = RewardWeights()
 ENDURANCE_WEIGHTS = RewardWeights(
-    time=0.7,
-    progress=0.4,
+    time=0.2,
+    progress=2.5,
+    speed=0.8,
+    slow=2.0,
+    steering=0.15,
     wall=10.0,
     stagnant_terminal=6.0,
     off_track_wander=8.0,
     early_exit=0.7,
-    lap=70.0,
+    lap=120.0,
     thermal=0.7,
     thermal_fault=8.0,
 )
@@ -110,20 +119,37 @@ def compute_reward(
     off_track = lateral > track_width * 0.5
     safety_state = str(tick_values.get("safety_state", "DRIVING"))
     can_control = safety_state == "DRIVING"
+    speed_mps = max(float(tick_values.get("speed_mps", 0.0)), 0.0)
+    steering = abs(float(tick_values.get("steering", 0.0)))
 
     time_cost = -weights.time * dt_s
     reward += time_cost
     components["time"] = time_cost
 
-    if can_control:
-        if delta_s > 0.0 and not off_track:
+    if can_control and not off_track:
+        if delta_s > 0.0:
             progress = weights.progress * min(delta_s, 0.4)
             reward += progress
             components["progress"] = progress
+            if weights.speed > 0.0 and dt_s > 0.0:
+                along_speed = min(delta_s / dt_s, MAX_ALONG_SPEED_MPS)
+                speed_bonus = weights.speed * along_speed * dt_s
+                reward += speed_bonus
+                components["speed"] = speed_bonus
         elif delta_s < 0.0:
             reverse = -weights.reverse * min(abs(delta_s), 0.4)
             reward += reverse
             components["reverse"] = reverse
+
+        if weights.slow > 0.0 and speed_mps < MIN_RACING_SPEED_MPS:
+            slow_penalty = -weights.slow * (MIN_RACING_SPEED_MPS - speed_mps) * dt_s
+            reward += slow_penalty
+            components["slow"] = slow_penalty
+
+        if weights.steering > 0.0 and steering > 0.05:
+            steer_penalty = -weights.steering * steering * steering * dt_s
+            reward += steer_penalty
+            components["steering"] = steer_penalty
 
     if off_track:
         off_penalty = -weights.off_track * dt_s

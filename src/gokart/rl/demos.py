@@ -11,6 +11,8 @@ from gokart.driver.agent import DriverConfig, RuleBasedDriver
 from gokart.rl.actions import encode_expert_action
 from gokart.rl.env import TrackRacingEnv
 
+MIN_DEMO_SPEED_MPS = 1.5
+
 
 def make_expert_driver(env: TrackRacingEnv) -> RuleBasedDriver:
     session = env.session
@@ -45,17 +47,28 @@ def collect_expert_dataset(
     obs, _ = env.reset()
     driver.reset_progress()
     stop = should_stop or (lambda: False)
+    attempts = 0
+    max_attempts = max(steps * 8, steps)
 
-    for _ in range(steps):
+    while len(observations) < steps and attempts < max_attempts:
         if stop():
             break
+        attempts += 1
         action = _expert_policy_action(env, driver)
-        observations.append(np.asarray(obs, dtype=np.float32))
-        actions.append(action)
+        vehicle = env.session.state.vehicle_state
+        speed_mps = float(vehicle.speed_mps) if vehicle is not None else 0.0
+        if speed_mps >= MIN_DEMO_SPEED_MPS:
+            observations.append(np.asarray(obs, dtype=np.float32))
+            actions.append(action)
         obs, _reward, terminated, truncated, _info = env.step(action)
         if terminated or truncated:
             obs, _ = env.reset()
             driver.reset_progress()
+
+    if not observations:
+        empty_obs = np.zeros((0, int(env.observation_space.shape[0])), dtype=np.float32)
+        empty_act = np.zeros((0, int(env.action_space.shape[0])), dtype=np.float32)
+        return empty_obs, empty_act
 
     return np.stack(observations), np.stack(actions)
 
