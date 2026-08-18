@@ -113,6 +113,8 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "rewards.off_track": {"step": 0.1, "min": 0, "max": 50},
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
     "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 50},
+    "rewards.off_track_wander": {"step": 1, "min": 0, "max": 50},
+    "rewards.early_exit": {"step": 0.05, "min": 0, "max": 10},
     "rewards.lap": {"step": 1, "min": 0, "max": 200},
     "rewards.thermal": {"step": 0.05, "min": 0, "max": 10},
     "rewards.thermal_fault": {"step": 1, "min": 0, "max": 50},
@@ -231,6 +233,13 @@ def training_setup_schema() -> dict[str, Any]:
                     "off_track": "Per-second penalty while off the circuit.",
                     "wall": "One-shot cost when off-track terminate ends the episode.",
                     "stagnant_terminal": "One-shot cost when the episode is cut for not moving.",
+                    "off_track_wander": (
+                        "One-shot cost when the episode is cut after wandering off track."
+                    ),
+                    "early_exit": (
+                        "Per second of unused episode time charged when a failed exit ends early. "
+                        "Stops reward hacking by bailing out early."
+                    ),
                     "lap": "Flat bonus for finishing a lap. Time cost makes a quicker lap better.",
                     "thermal": "Per-second cost as motor/controller temp goes from derate to trip.",
                     "thermal_fault": "One-shot cost when overtemp ends the episode.",

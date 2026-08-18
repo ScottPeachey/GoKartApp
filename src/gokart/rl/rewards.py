@@ -15,12 +15,14 @@ from typing import Any
 @dataclass(frozen=True)
 class RewardWeights:
     time: float = 1.0
-    progress: float = 0.4
+    progress: float = 0.5
     reverse: float = 1.2
     off_track: float = 2.0
-    wall: float = 8.0
-    stagnant_terminal: float = 4.0
-    lap: float = 50.0
+    wall: float = 12.0
+    stagnant_terminal: float = 8.0
+    off_track_wander: float = 10.0
+    early_exit: float = 1.0
+    lap: float = 60.0
     thermal: float = 0.5
     thermal_fault: float = 6.0
 
@@ -28,8 +30,12 @@ class RewardWeights:
 GOD_WEIGHTS = RewardWeights()
 ENDURANCE_WEIGHTS = RewardWeights(
     time=0.7,
-    progress=0.35,
-    lap=60.0,
+    progress=0.4,
+    wall=10.0,
+    stagnant_terminal=6.0,
+    off_track_wander=8.0,
+    early_exit=0.7,
+    lap=70.0,
     thermal=0.7,
     thermal_fault=8.0,
 )
@@ -51,6 +57,37 @@ def reward_preset(objective: str) -> RewardWeights:
     if objective == "endurance":
         return ENDURANCE_WEIGHTS
     return GOD_WEIGHTS
+
+
+def _failure_exit_penalties(
+    *,
+    step_info: dict[str, Any],
+    weights: RewardWeights,
+    dt_s: float,
+) -> dict[str, float]:
+    """Penalise failed early endings so they cannot beat a full slow episode."""
+    if step_info.get("truncated_max_steps"):
+        return {}
+
+    failed = bool(step_info.get("terminated_off_track")) or bool(
+        step_info.get("truncated_stagnant")
+    ) or bool(step_info.get("truncated_off_track_wander"))
+    if not failed:
+        return {}
+
+    components: dict[str, float] = {}
+    max_steps = int(step_info.get("max_drive_steps", 0))
+    step_index = int(step_info.get("drive_step_index", 0))
+    if weights.early_exit > 0.0 and max_steps > 0 and step_index > 0:
+        remaining_s = max(0.0, (max_steps - step_index) * dt_s)
+        if remaining_s > 0.0:
+            early_exit = -weights.early_exit * remaining_s
+            components["early_exit"] = early_exit
+
+    if bool(step_info.get("truncated_off_track_wander")) and weights.off_track_wander > 0.0:
+        components["off_track_wander"] = -weights.off_track_wander
+
+    return components
 
 
 def compute_reward(
@@ -103,6 +140,14 @@ def compute_reward(
         reward += stagnant
         components["stagnant_terminal"] = stagnant
 
+    for name, value in _failure_exit_penalties(
+        step_info=step_info,
+        weights=weights,
+        dt_s=dt_s,
+    ).items():
+        reward += value
+        components[name] = value
+
     is_ice = str(tick_values.get("powertrain_type", "ev")) == "ice"
     if is_ice:
         temp_c = float(tick_values.get("engine_temp_c", 25.0))
@@ -151,7 +196,7 @@ def compute_reward(
         state.thermal_faulted = True
 
     lap_number = float(step_info.get("lap_number", 0.0))
-    if lap_number > state.last_lap_number and state.last_lap_number > 0:
+    if lap_number > state.last_lap_number and state.last_lap_number >= 1.0:
         reward += weights.lap
         components["lap"] = weights.lap
     state.last_lap_number = lap_number

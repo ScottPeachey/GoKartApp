@@ -138,6 +138,10 @@ class TrackRacingEnv(gym.Env):
             and self._off_track_steps + 1 >= env_cfg.max_off_track_steps
         ):
             step_result.info["truncated_off_track_wander"] = True
+        step_result.info["drive_step_index"] = self._drive_steps + 1
+        step_result.info["max_drive_steps"] = self._max_drive_steps
+        if self._max_drive_steps > 0 and self._drive_steps + 1 >= self._max_drive_steps:
+            step_result.info["truncated_max_steps"] = True
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
             step_info=step_result.info,

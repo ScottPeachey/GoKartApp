@@ -98,8 +98,13 @@ def test_default_setup_is_min_time() -> None:
     setup = default_training_setup()
     assert setup.env.max_stagnant_steps == 300
     assert setup.env.max_off_track_steps == 800
-    assert setup.rewards.wall == pytest.approx(8.0)
+    assert setup.rewards.wall == pytest.approx(12.0)
+    assert setup.rewards.stagnant_terminal == pytest.approx(8.0)
+    assert setup.rewards.off_track_wander == pytest.approx(10.0)
+    assert setup.rewards.early_exit == pytest.approx(1.0)
+    assert setup.rewards.lap == pytest.approx(60.0)
     assert setup.rewards.time == pytest.approx(1.0)
+    assert setup.rewards.progress == pytest.approx(0.5)
     assert not hasattr(setup.rewards, "alignment")
     assert setup.warmup.demo_steps == 2_000
     assert setup.warmup.bc_epochs == 12
@@ -190,7 +195,7 @@ def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
     }
     _, _, slow_parts = _reward({**_TICK, "speed_mps": 1.0}, info)
     _, _, fast_parts = _reward({**_TICK, "speed_mps": 12.5}, info)
-    assert slow_parts["wall_hit"] == pytest.approx(-8.0)
+    assert slow_parts["wall_hit"] == pytest.approx(-12.0)
     assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
 
 
@@ -405,8 +410,8 @@ def test_reward_pays_lap_bonus() -> None:
         },
         state=state,
     )
-    assert components["lap"] == pytest.approx(50.0)
-    assert reward > 49.0
+    assert components["lap"] == pytest.approx(60.0)
+    assert reward > 59.0
 
 
 def test_faster_completed_lap_beats_slower_one() -> None:
@@ -432,6 +437,54 @@ def test_faster_completed_lap_beats_slower_one() -> None:
     assert _episode_reward(fast_ticks, same_distance_m / fast_ticks) > _episode_reward(
         slow_ticks, same_distance_m / slow_ticks
     )
+
+
+def test_early_exit_penalises_failed_short_episode_more_than_full_idle() -> None:
+    dt_s = 0.01
+    max_steps = 12_000
+    weights = reward_preset("god")
+
+    def _episode_total(*, steps: int, terminal_info: dict) -> float:
+        total = 0.0
+        state = RewardState()
+        tick = {**_TICK, "safety_state": "DRIVING"}
+        for step in range(1, steps + 1):
+            info = {
+                "delta_track_s_m": 0.0,
+                "lateral_offset_m": 0.0,
+                "heading_error_deg": 0.0,
+                "track_width_m": 10.0,
+                "drive_step_index": step,
+                "max_drive_steps": max_steps,
+                **(terminal_info if step == steps else {}),
+            }
+            step_reward, state, _ = compute_reward(
+                tick_values=tick,
+                step_info=info,
+                weights=weights,
+                dt_s=dt_s,
+                state=state,
+                objective="god",
+            )
+            total += step_reward
+        return total
+
+    full_idle = _episode_total(
+        steps=max_steps,
+        terminal_info={"truncated_max_steps": True},
+    )
+    stagnant_exit = _episode_total(
+        steps=300,
+        terminal_info={"truncated_stagnant": True},
+    )
+    wander_exit = _episode_total(
+        steps=2_000,
+        terminal_info={"truncated_off_track_wander": True},
+    )
+
+    assert full_idle == pytest.approx(-120.0)
+    assert stagnant_exit < full_idle
+    assert wander_exit < full_idle
 
 
 def test_using_track_width_is_not_penalized() -> None:
