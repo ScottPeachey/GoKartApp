@@ -14,6 +14,8 @@ from gokart.rl.policy_key import build_policy_identity, identity_from_dict
 from gokart.rl.registry import PolicyManifest, save_manifest
 from gokart.rl.rewards import RewardState, compute_reward, reward_preset
 from gokart.rl.training_setup import (
+    EnvRuntimeConfig,
+    RlTrainingSetup,
     WarmupConfig,
     default_training_setup,
     training_setup_from_dict,
@@ -60,7 +62,7 @@ def test_training_setup_from_dict_round_trip() -> None:
     schema = training_setup_schema()
     setup = training_setup_from_dict(schema["defaults"])
     assert setup.objective == "god"
-    assert setup.ppo.ent_coef == pytest.approx(0.02)
+    assert setup.ppo.ent_coef == pytest.approx(0.008)
     assert setup.warmup.demo_steps == 2_000
     assert "warmup" in schema["sections"]
     throttle_field = next(
@@ -75,7 +77,7 @@ def test_training_setup_from_dict_round_trip() -> None:
         if field["key"] == "terminate_on_off_track"
     )
     assert off_track_field["type"] == "bool"
-    assert off_track_field["default"] is True
+    assert off_track_field["default"] is False
     custom = training_setup_from_dict(
         {
             "objective": "custom",
@@ -96,22 +98,23 @@ def test_training_setup_from_dict_round_trip() -> None:
 
 def test_default_setup_is_min_time() -> None:
     setup = default_training_setup()
-    assert setup.env.max_stagnant_steps == 300
-    assert setup.env.max_off_track_steps == 800
-    assert setup.rewards.wall == pytest.approx(12.0)
-    assert setup.rewards.stagnant_terminal == pytest.approx(8.0)
-    assert setup.rewards.off_track_wander == pytest.approx(10.0)
-    assert setup.rewards.early_exit == pytest.approx(1.0)
-    assert setup.rewards.lap == pytest.approx(100.0)
-    assert setup.rewards.time == pytest.approx(0.25)
-    assert setup.rewards.progress == pytest.approx(3.0)
-    assert setup.rewards.speed == pytest.approx(1.0)
-    assert setup.rewards.slow == pytest.approx(2.5)
-    assert setup.env.stagnant_delta_s == pytest.approx(0.02)
+    assert setup.env.max_stagnant_steps == 250
+    assert setup.env.max_off_track_steps == 250
+    assert setup.env.terminate_on_off_track is False
+    assert setup.env.stagnant_delta_s == pytest.approx(0.01)
+    assert setup.rewards.wall == pytest.approx(15.0)
+    assert setup.rewards.stagnant_terminal == pytest.approx(5.0)
+    assert setup.rewards.off_track_wander == pytest.approx(8.0)
+    assert setup.rewards.lap == pytest.approx(80.0)
+    assert setup.rewards.time == pytest.approx(0.05)
+    assert setup.rewards.progress == pytest.approx(1.0)
+    assert not hasattr(setup.rewards, "early_exit")
+    assert not hasattr(setup.rewards, "slow")
     assert not hasattr(setup.rewards, "alignment")
     assert setup.warmup.demo_steps == 2_000
     assert setup.warmup.bc_epochs == 12
     assert setup.action.hold_ticks == 8
+    assert setup.ppo.ent_coef == pytest.approx(0.008)
     assert ACTION_DIM == 2
     assert OBS_DIM == 18
 
@@ -198,7 +201,7 @@ def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
     }
     _, _, slow_parts = _reward({**_TICK, "speed_mps": 1.0}, info)
     _, _, fast_parts = _reward({**_TICK, "speed_mps": 12.5}, info)
-    assert slow_parts["wall_hit"] == pytest.approx(-12.0)
+    assert slow_parts["wall_hit"] == pytest.approx(-15.0)
     assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
 
 
@@ -413,8 +416,8 @@ def test_reward_pays_lap_bonus() -> None:
         },
         state=state,
     )
-    assert components["lap"] == pytest.approx(100.0)
-    assert reward > 99.0
+    assert components["lap"] == pytest.approx(80.0)
+    assert reward > 79.0
 
 
 def test_faster_completed_lap_beats_slower_one() -> None:
@@ -442,18 +445,19 @@ def test_faster_completed_lap_beats_slower_one() -> None:
     )
 
 
-def test_early_exit_penalises_failed_short_episode_more_than_full_idle() -> None:
+def test_failed_short_episodes_are_not_identical_to_each_other() -> None:
+    """Crashes must not all score the leftover-horizon penalty."""
     dt_s = 0.01
-    max_steps = 12_000
+    max_steps = 40_000
     weights = reward_preset("god")
 
-    def _episode_total(*, steps: int, terminal_info: dict) -> float:
+    def _episode_total(*, steps: int, delta_s: float, terminal_info: dict) -> float:
         total = 0.0
         state = RewardState()
-        tick = {**_TICK, "safety_state": "DRIVING"}
+        tick = {**_TICK, "safety_state": "DRIVING", "speed_mps": max(delta_s / dt_s, 0.0)}
         for step in range(1, steps + 1):
             info = {
-                "delta_track_s_m": 0.0,
+                "delta_track_s_m": delta_s,
                 "lateral_offset_m": 0.0,
                 "heading_error_deg": 0.0,
                 "track_width_m": 10.0,
@@ -472,21 +476,23 @@ def test_early_exit_penalises_failed_short_episode_more_than_full_idle() -> None
             total += step_reward
         return total
 
-    full_idle = _episode_total(
-        steps=max_steps,
-        terminal_info={"truncated_max_steps": True},
-    )
-    stagnant_exit = _episode_total(
-        steps=300,
+    instant_stall = _episode_total(
+        steps=400,
+        delta_s=0.0,
         terminal_info={"truncated_stagnant": True},
     )
-    wander_exit = _episode_total(
-        steps=2_000,
-        terminal_info={"truncated_off_track_wander": True},
+    drove_then_stall = _episode_total(
+        steps=4_000,
+        delta_s=0.08,
+        terminal_info={"truncated_stagnant": True},
     )
-
-    assert stagnant_exit < full_idle
-    assert wander_exit < full_idle
+    racing = _episode_total(
+        steps=6_000,
+        delta_s=0.10,
+        terminal_info={"truncated_max_steps": True},
+    )
+    assert drove_then_stall > instant_stall + 50
+    assert racing > drove_then_stall + 50
 
 
 def test_crawl_episode_loses_to_fast_progress() -> None:
@@ -745,6 +751,7 @@ def test_rl_env_terminates_when_off_track(hairpin_track) -> None:
         objective="god",
         target_laps=3,
         max_steps=500,
+        setup=RlTrainingSetup(env=EnvRuntimeConfig(terminate_on_off_track=True)),
     )
     env.reset()
     off_track = False

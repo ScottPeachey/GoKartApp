@@ -6,14 +6,18 @@ import copy
 import json
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from gokart import __version__
 from gokart.rl.demos import behavior_clone, collect_expert_dataset
 from gokart.rl.env import make_env
-from gokart.rl.episode_recording import EpisodeRecordingEnv, collect_step_tick_rows, session_tick_row
+from gokart.rl.episode_recording import (
+    EpisodeRecordingEnv,
+    collect_step_tick_rows,
+    session_tick_row,
+)
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
 from gokart.rl.registry import PolicyManifest, model_path, save_manifest
@@ -237,6 +241,7 @@ def train_policy(
         batch_size=ppo.batch_size,
         ent_coef=ppo.ent_coef,
         gamma=ppo.gamma,
+        policy_kwargs={"log_std_init": -1.0},
     )
 
     _warm_start_from_expert(
@@ -489,8 +494,17 @@ def _warm_start_from_expert(
         drive_mode=config.drive_mode,
         driver_profile=config.driver_profile,
         objective=config.objective,
-        target_laps=config.target_laps,
-        setup=setup,
+        target_laps=99,
+        setup=replace(
+            setup,
+            env=replace(
+                setup.env,
+                terminate_on_off_track=False,
+                max_off_track_steps=max(int(setup.env.max_off_track_steps), 1_500),
+                max_stagnant_steps=max(int(setup.env.max_stagnant_steps), 800),
+                max_steps=max(int(setup.env.max_steps), 20_000),
+            ),
+        ),
     )
     try:
         observations, actions = collect_expert_dataset(
@@ -506,6 +520,16 @@ def _warm_start_from_expert(
     if hasattr(model.policy, "set_training_mode"):
         model.policy.set_training_mode(True)
     behavior_clone(model, observations, actions, epochs=warmup.bc_epochs)
+    _shrink_policy_noise(model)
+
+
+def _shrink_policy_noise(model: Any, *, log_std: float = -1.2) -> None:
+    """Keep cloned means, but stop sampling full-lock steering/brake."""
+    policy = getattr(model, "policy", None)
+    log_std_param = getattr(policy, "log_std", None)
+    if log_std_param is None:
+        return
+    log_std_param.data.fill_(log_std)
 
 
 def evaluate_policy(

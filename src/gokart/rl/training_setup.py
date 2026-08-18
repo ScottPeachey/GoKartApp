@@ -17,11 +17,11 @@ class ActionConfig:
 
 @dataclass(frozen=True)
 class EnvRuntimeConfig:
-    max_steps: int = 12_000
-    terminate_on_off_track: bool = True
-    stagnant_delta_s: float = 0.02
-    max_stagnant_steps: int = 300
-    max_off_track_steps: int = 800
+    max_steps: int = 15_000
+    terminate_on_off_track: bool = False
+    stagnant_delta_s: float = 0.01
+    max_stagnant_steps: int = 250
+    max_off_track_steps: int = 250
 
 
 @dataclass(frozen=True)
@@ -35,8 +35,8 @@ class PpoConfig:
     learning_rate: float = 3e-4
     n_steps: int = 2048
     batch_size: int = 64
-    ent_coef: float = 0.02
-    gamma: float = 0.999
+    ent_coef: float = 0.008
+    gamma: float = 0.995
 
 
 @dataclass(frozen=True)
@@ -107,17 +107,13 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "ppo.batch_size": {"step": 32, "min": 32, "max": 2048},
     "ppo.ent_coef": {"step": 0.005, "min": 0, "max": 1},
     "ppo.gamma": {"step": 0.001, "min": 0.9, "max": 0.9999},
-    "rewards.time": {"step": 0.05, "min": 0, "max": 10},
     "rewards.progress": {"step": 0.1, "min": 0, "max": 20},
-    "rewards.speed": {"step": 0.05, "min": 0, "max": 10},
-    "rewards.slow": {"step": 0.1, "min": 0, "max": 20},
-    "rewards.steering": {"step": 0.05, "min": 0, "max": 5},
+    "rewards.time": {"step": 0.01, "min": 0, "max": 10},
     "rewards.reverse": {"step": 0.05, "min": 0, "max": 10},
     "rewards.off_track": {"step": 0.1, "min": 0, "max": 50},
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
     "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 50},
     "rewards.off_track_wander": {"step": 1, "min": 0, "max": 50},
-    "rewards.early_exit": {"step": 0.05, "min": 0, "max": 10},
     "rewards.lap": {"step": 1, "min": 0, "max": 200},
     "rewards.thermal": {"step": 0.05, "min": 0, "max": 10},
     "rewards.thermal_fault": {"step": 1, "min": 0, "max": 50},
@@ -199,12 +195,12 @@ def training_setup_schema() -> dict[str, Any]:
                 "env",
                 "Episode / environment",
                 {
-                    "max_steps": "Max ticks in one episode (0.01 s each). 12,000 = 120 seconds.",
+                    "max_steps": "Max ticks in one episode (0.01 s each). 15,000 = 150 seconds.",
                     "terminate_on_off_track": "End the episode when the kart leaves the track.",
-                    "stagnant_delta_s": "Forward progress below this counts as not moving (m/tick).",
-                    "max_stagnant_steps": "End the episode after this many ticks with no progress.",
+                    "stagnant_delta_s": "Forward metres per tick below this count as not moving.",
+                    "max_stagnant_steps": "Cut the episode after this many idle ticks (2.5 s).",
                     "max_off_track_steps": (
-                        "If off-track terminate is off, cut after these ticks."
+                        "If off-track terminate is off, cut after these ticks. 250 = 2.5 s."
                     ),
                 },
                 {
@@ -221,8 +217,8 @@ def training_setup_schema() -> dict[str, Any]:
                     "learning_rate": "Adam learning rate.",
                     "n_steps": "Ticks collected before one PPO update.",
                     "batch_size": "Minibatch size for PPO updates.",
-                    "ent_coef": "Entropy after warmup, so the policy can search faster lines.",
-                    "gamma": "Discount factor. At 100 Hz use ~0.999.",
+                    "ent_coef": "Entropy bonus. Keep low so steering does not saturate randomly.",
+                    "gamma": "Discount factor. 0.995 with 80 ms action holds looks ~8 s ahead.",
                 },
             ),
             "rewards": _section(
@@ -230,23 +226,16 @@ def training_setup_schema() -> dict[str, Any]:
                 "rewards",
                 "Reward weights",
                 {
-                    "time": "Small per-second cost while the episode runs.",
-                    "progress": "Bonus per metre of forward track progress.",
-                    "speed": "Bonus for along-track speed (m/s) when moving forward.",
-                    "slow": "Penalty per second below racing speed while on circuit.",
-                    "steering": "Penalty for large steering inputs while on circuit.",
+                    "progress": "Bonus per metre of forward track. This is the main racing signal.",
+                    "time": "Tiny per-second cost so a faster lap of equal distance scores more.",
                     "reverse": "Penalty per metre of backward progress.",
                     "off_track": "Per-second penalty while off the circuit.",
                     "wall": "One-shot cost when off-track terminate ends the episode.",
-                    "stagnant_terminal": "One-shot cost when the episode is cut for not moving.",
+                    "stagnant_terminal": "Small one-shot cost when cut for not moving.",
                     "off_track_wander": (
                         "One-shot cost when the episode is cut after wandering off track."
                     ),
-                    "early_exit": (
-                        "Per second of unused episode time charged when a failed exit ends early. "
-                        "Stops reward hacking by bailing out early."
-                    ),
-                    "lap": "Flat bonus for finishing a lap. Time cost makes a quicker lap better.",
+                    "lap": "Flat bonus for finishing a lap.",
                     "thermal": "Per-second cost as motor/controller temp goes from derate to trip.",
                     "thermal_fault": "One-shot cost when overtemp ends the episode.",
                 },

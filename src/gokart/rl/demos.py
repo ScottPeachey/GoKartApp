@@ -11,7 +11,8 @@ from gokart.driver.agent import DriverConfig, RuleBasedDriver
 from gokart.rl.actions import encode_expert_action
 from gokart.rl.env import TrackRacingEnv
 
-MIN_DEMO_SPEED_MPS = 1.5
+MIN_DEMO_SPEED_MPS = 2.0
+DEMO_AGGRESSION = 0.7
 
 
 def make_expert_driver(env: TrackRacingEnv) -> RuleBasedDriver:
@@ -22,7 +23,7 @@ def make_expert_driver(env: TrackRacingEnv) -> RuleBasedDriver:
             grip_coefficient=session.vehicle_model.grip_coefficient,
             max_speed_mps=session.base_limits.max_speed_mps,
             wheelbase_m=session.vehicle_model.config.wheelbase_m,
-            aggression=session.config.aggression,
+            aggression=min(session.config.aggression, DEMO_AGGRESSION),
             battery_temp_derate_c=session.safety_config.battery_temp_derate_c,
             battery_temp_fault_c=session.safety_config.battery_temp_fault_c,
         ),

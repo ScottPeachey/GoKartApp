@@ -3422,7 +3422,7 @@ function syncTrainingControlsState() {
   }
 }
 
-const RL_SETUP_STORAGE_KEY = "gokart.rlTrainingSetup";
+const RL_SETUP_STORAGE_KEY = "gokart.rlTrainingSetup.v2";
 let rlTrainingSchema = null;
 
 function rlFieldId(section, key) {
@@ -3535,6 +3535,14 @@ function persistRlTrainingSetup() {
   }
 }
 
+function mergeRlTrainingSetup(defaults, saved) {
+  const merged = { ...defaults, ...saved };
+  for (const section of ["action", "env", "warmup", "ppo", "rewards"]) {
+    merged[section] = { ...(defaults[section] || {}), ...(saved?.[section] || {}) };
+  }
+  return merged;
+}
+
 function applyRewardPresetToForm(presetId) {
   if (!rlTrainingSchema?.reward_presets?.[presetId]) return;
   const rewards = rlTrainingSchema.reward_presets[presetId];
@@ -3554,7 +3562,10 @@ async function initRlTrainingConfig() {
   let setup = rlTrainingSchema.defaults;
   try {
     const saved = localStorage.getItem(RL_SETUP_STORAGE_KEY);
-    if (saved) setup = { ...setup, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      setup = mergeRlTrainingSetup(rlTrainingSchema.defaults, parsed);
+    }
   } catch (_error) {
     /* ignore bad saved config */
   }
