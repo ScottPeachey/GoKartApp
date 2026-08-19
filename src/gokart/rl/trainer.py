@@ -33,7 +33,7 @@ class TrainingConfig:
     drive_mode: str = "default"
     driver_profile: str = "owner"
     objective: str = "god"
-    target_laps: int = 3
+    target_laps: int = 1
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
     record_training_episodes: bool = True

@@ -200,7 +200,7 @@ def make_env(
     drive_mode: str,
     driver_profile: str,
     objective: str = "god",
-    target_laps: int = 3,
+    target_laps: int | None = None,
     max_steps: int | None = None,
     setup: RlTrainingSetup | None = None,
 ) -> TrackRacingEnv:
@@ -209,6 +209,7 @@ def make_env(
         resolved_setup = replace(resolved_setup, objective=objective)
     env_cfg = resolved_setup.env
     drive_steps = max_steps if max_steps is not None else env_cfg.max_steps
+    laps = env_cfg.target_laps if target_laps is None else target_laps
     config = SessionConfig(
         vehicle_name=vehicle_name,
         vehicle_version=vehicle_version,
@@ -216,7 +217,7 @@ def make_env(
         mode_name=drive_mode,
         profile_name=driver_profile,
         control_source=ControlSource.RL,
-        target_laps=target_laps,
+        target_laps=laps,
         auto_boot=True,
         max_steps=drive_steps + BOOT_STEP_ALLOWANCE,
         terminate_on_off_track=env_cfg.terminate_on_off_track,

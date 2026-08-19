@@ -3630,7 +3630,7 @@ async function startRlTraining() {
       ...driveSettings,
       track_id: trackId,
       objective,
-      target_laps: Number(document.getElementById("auto-laps")?.value || 3),
+      target_laps: Number(setup.env?.target_laps || 1),
       total_timesteps: totalSteps,
       preview_freq: previewFreq,
       seed,

@@ -100,6 +100,7 @@ def test_default_setup_is_min_time() -> None:
     setup = default_training_setup()
     assert setup.env.max_stagnant_steps == 250
     assert setup.env.max_off_track_steps == 250
+    assert setup.env.target_laps == 1
     assert setup.env.terminate_on_off_track is False
     assert setup.env.stagnant_delta_s == pytest.approx(0.01)
     assert setup.rewards.wall == pytest.approx(15.0)
@@ -117,6 +118,31 @@ def test_default_setup_is_min_time() -> None:
     assert setup.ppo.ent_coef == pytest.approx(0.008)
     assert ACTION_DIM == 2
     assert OBS_DIM == 18
+
+
+def test_make_env_uses_one_lap_by_default(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+    )
+    assert env.session_config.target_laps == 1
+    env.close()
+
+
+def test_make_env_honours_setup_target_laps(hairpin_track) -> None:
+    env = make_env(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        track=hairpin_track,
+        drive_mode="default",
+        driver_profile="owner",
+        setup=RlTrainingSetup(env=EnvRuntimeConfig(target_laps=2)),
+    )
+    assert env.session_config.target_laps == 2
+    env.close()
 
 
 def test_reward_penalizes_stagnant_terminal() -> None:

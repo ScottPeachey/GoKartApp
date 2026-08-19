@@ -18,6 +18,7 @@ class ActionConfig:
 @dataclass(frozen=True)
 class EnvRuntimeConfig:
     max_steps: int = 15_000
+    target_laps: int = 1
     terminate_on_off_track: bool = False
     stagnant_delta_s: float = 0.01
     max_stagnant_steps: int = 250
@@ -97,6 +98,7 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "action.standing_start_speed_mps": {"step": 0.05, "min": 0, "max": 5},
     "action.hold_ticks": {"step": 1, "min": 1, "max": 20},
     "env.max_steps": {"step": 500, "min": 100, "max": 100_000},
+    "env.target_laps": {"step": 1, "min": 1, "max": 50},
     "env.stagnant_delta_s": {"step": 0.0005, "min": 0, "max": 1},
     "env.max_stagnant_steps": {"step": 50, "min": 50, "max": 10_000},
     "env.max_off_track_steps": {"step": 50, "min": 0, "max": 20_000},
@@ -196,6 +198,10 @@ def training_setup_schema() -> dict[str, Any]:
                 "Episode / environment",
                 {
                     "max_steps": "Max ticks in one episode (0.01 s each). 15,000 = 150 seconds.",
+                    "target_laps": (
+                        "Stop after this many valid laps. 1 ends at the first real "
+                        "finish-line crossing, not the start-line pass at spawn."
+                    ),
                     "terminate_on_off_track": "End the episode when the kart leaves the track.",
                     "stagnant_delta_s": "Forward metres per tick below this count as not moving.",
                     "max_stagnant_steps": "Cut the episode after this many idle ticks (2.5 s).",
@@ -205,6 +211,7 @@ def training_setup_schema() -> dict[str, Any]:
                 },
                 {
                     "max_steps": "Max ticks per episode",
+                    "target_laps": "Laps before episode ends",
                     "max_stagnant_steps": "Idle ticks before cut",
                     "max_off_track_steps": "Off-track ticks before cut",
                 },

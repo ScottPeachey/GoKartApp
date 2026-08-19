@@ -25,7 +25,7 @@ class TrainingRunRequest:
     drive_mode: str = "default"
     driver_profile: str = "owner"
     objective: str = "god"
-    target_laps: int = 3
+    target_laps: int = 1
     total_timesteps: int = 50_000
     preview_freq: int = 10_000
     seed: int = 0
@@ -160,7 +160,7 @@ class TrainingController:
             drive_mode=request.drive_mode,
             driver_profile=request.driver_profile,
             objective=setup.objective,
-            target_laps=request.target_laps,
+            target_laps=setup.env.target_laps,
             total_timesteps=request.total_timesteps,
             preview_freq=request.preview_freq,
             eval_freq=request.preview_freq,
