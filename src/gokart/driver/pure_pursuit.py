@@ -84,9 +84,10 @@ def pure_pursuit_step(
 
     max_steer_rad = math.radians(MAX_STEER_ANGLE_DEG)
     steering = max(-1.0, min(1.0, steer_rad / max_steer_rad))
+    limited_steer = max(-max_steer_rad, min(max_steer_rad, steer_rad))
 
     corner_cap = cornering_speed_limit_mps(
-        steer_rad,
+        limited_steer,
         wheelbase_m,
         grip_coefficient,
     )

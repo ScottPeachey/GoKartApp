@@ -269,6 +269,11 @@ def max_lateral_accel_mps2(
     return grip_coefficient * GRAVITY_MPS2 * math.cos(gradient_rad)
 
 
+# Bicycle-model tan(steer) is only defined below 90°. Off-line driver
+# corrections can request more than that; clamp before taking sqrt.
+_MAX_BICYCLE_STEER_RAD = math.radians(80.0)
+
+
 def cornering_speed_limit_mps(
     steer_rad: float,
     wheelbase_m: float,
@@ -276,12 +281,18 @@ def cornering_speed_limit_mps(
     gradient_rad: float = 0.0,
 ) -> float | None:
     """Maximum speed before lateral grip is exceeded for a given steer angle."""
-    if wheelbase_m <= 0.0 or abs(steer_rad) < 1e-6:
+    if wheelbase_m <= 0.0:
+        return None
+    steer_mag = min(abs(steer_rad), _MAX_BICYCLE_STEER_RAD)
+    if steer_mag < 1e-6:
         return None
     max_lat = max_lateral_accel_mps2(grip_coefficient, gradient_rad)
     if max_lat <= 0.0:
         return 0.0
-    return math.sqrt(max_lat * wheelbase_m / math.tan(abs(steer_rad)))
+    denom = math.tan(steer_mag)
+    if denom <= 1e-9:
+        return None
+    return math.sqrt(max(0.0, max_lat * wheelbase_m / denom))
 
 
 def apply_cornering_speed_bleed(

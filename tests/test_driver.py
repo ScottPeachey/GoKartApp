@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from gokart.driver.agent import DriverConfig, RuleBasedDriver
+from gokart.driver.pure_pursuit import pure_pursuit_step
 from gokart.driver.racing_line import build_racing_line, point_at_s
 from gokart.driver.speed_profile import build_speed_profile
 from gokart.driver.track_progress import advance_track_progress
@@ -64,6 +65,34 @@ def test_pure_pursuit_outputs_are_bounded(hairpin_track) -> None:
     )
     assert 0.0 <= outputs.throttle <= 1.0
     assert 0.0 <= outputs.brake <= 1.0
+    assert -1.0 <= outputs.steering <= 1.0
+    assert outputs.target_speed_mps >= 0.0
+
+
+def test_pure_pursuit_survives_large_lateral_offset(hairpin_track) -> None:
+    line = build_racing_line(hairpin_track)
+    profile = build_speed_profile(
+        line,
+        grip_coefficient=1.1,
+        max_speed_mps=27.0,
+        aggression=0.7,
+    )
+    start = point_at_s(line, 0.0, hairpin_track.length_m)
+    outputs = pure_pursuit_step(
+        x=start.x + 40.0,
+        y=start.y - 40.0,
+        heading_rad=math.pi,
+        speed_mps=20.0,
+        s_m=0.0,
+        lateral_m=55.0,
+        line=line,
+        profile=profile,
+        track_length_m=hairpin_track.length_m,
+        wheelbase_m=1.04,
+        max_speed_mps=27.0,
+        grip_coefficient=1.1,
+        aggression=0.7,
+    )
     assert -1.0 <= outputs.steering <= 1.0
     assert outputs.target_speed_mps >= 0.0
 

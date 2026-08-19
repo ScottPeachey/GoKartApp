@@ -71,3 +71,11 @@ def test_cornering_speed_limit_matches_bicycle_model() -> None:
     assert limit is not None
     lat_accel = limit * limit * math.tan(steer) / wheelbase
     assert lat_accel == pytest.approx(grip * 9.80665, rel=1e-3)
+
+
+def test_cornering_speed_limit_survives_oversteered_driver() -> None:
+    """Unclamped pursuit steer can exceed 90°, which used to raise math domain error."""
+    for steer in (math.radians(90.1), math.radians(120.0), math.pi, -math.pi):
+        limit = cornering_speed_limit_mps(steer, wheelbase_m=1.04, grip_coefficient=1.1)
+        assert limit is not None
+        assert limit >= 0.0
