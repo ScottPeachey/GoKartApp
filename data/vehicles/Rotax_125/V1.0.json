@@ -1,0 +1,59 @@
+{
+  "battery_mass_kg": 0.0,
+  "brake": {
+    "component_id": "v1_hydraulic_disc",
+    "content_hash": "84380667c046360f8527ee1e38efacf3d4431e4e682e96a7b6c114e1d9ceb184"
+  },
+  "cg_height_m": 0.28,
+  "cg_longitudinal_m": 0.52,
+  "clutch": {
+    "component_id": "rotax_max_centrifugal",
+    "content_hash": "f89dd44051bcb20bde3b56657f71db8ea6cdcb6c06ab8c64e5ecbd08eaffb93d"
+  },
+  "drag_coefficient": 0.85,
+  "driver_mass_kg": 80.0,
+  "drivetrain": {
+    "axle_efficiency": 0.98,
+    "axle_sprocket_teeth": 71,
+    "chain_efficiency": 0.97,
+    "motor_sprocket_teeth": 11
+  },
+  "dry_mass_kg": 80.0,
+  "engine": {
+    "component_id": "rotax_125_max_evo_r235",
+    "content_hash": "bcc27d58cc8eeff351de8e09deefe685a3b95f44d03f56a21d0edb7c9c4fec76"
+  },
+  "front_track_m": 0.9,
+  "front_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "9bbee4621cbb132e68017d5572d01cf2508704d3b3dc7647a2f8746d8ba10006"
+  },
+  "frontal_area_m2": 0.65,
+  "limits": {
+    "max_accel_mps2": 10.0,
+    "max_battery_current_a": 150.0,
+    "max_decel_mps2": 10.0,
+    "max_gradient_rad": 0.2,
+    "max_motor_current_a": 150.0,
+    "max_motor_rpm": 13500.0,
+    "max_power_w": 22000.0,
+    "max_regen_current_a": 0.0,
+    "max_speed_mps": 27.0
+  },
+  "max_vehicle_mass_kg": 165.0,
+  "name": "Rotax 125",
+  "powertrain_type": "ice",
+  "rear_track_m": 0.95,
+  "rear_tyre": {
+    "component_id": "v1_tyre_10x4",
+    "content_hash": "9bbee4621cbb132e68017d5572d01cf2508704d3b3dc7647a2f8746d8ba10006"
+  },
+  "rolling_resistance_coefficient": 0.015,
+  "version": "V1.0",
+  "wheel": {
+    "component_id": "v1_wheel_10in",
+    "content_hash": "a2777c1925ed757e3ad21cba1c61b728d6fd375ca68c6668b2510bd18a62595b"
+  },
+  "wheel_radius_m": 0.127,
+  "wheelbase_m": 1.04
+}

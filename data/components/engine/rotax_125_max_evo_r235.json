@@ -1,0 +1,77 @@
+{
+  "component_type": "engine",
+  "datasheet_path": "https://www.rotax-racing.com/products/125-senior-max-evo",
+  "date_added": "2026-08-19",
+  "displacement_cc": 125.0,
+  "engine_braking_nm": 5.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": 13500.0,
+    "max_power_w": 22000.0,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": 95.0,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "rotax_125_max_evo_r235",
+  "idle_rpm": 1600.0,
+  "manufacturer": "BRP-Rotax",
+  "mass_kg": 23.1,
+  "max_rpm": 13500.0,
+  "max_temp_c": 95.0,
+  "model": "125 MAX evo 23.5 mm restrictor",
+  "notes": "Same 125 MAX evo with a 23.5 mm exhaust restrictor fitted (club / restricted class). ~15 kW / 20 hp. Default on Rotax 125. Swap to rotax_125_max_evo to run unrestricted.",
+  "part_number": "125-MAX-EVO-R23.5",
+  "peak_power_w": 15000.0,
+  "peak_torque_nm": 16.5,
+  "price": null,
+  "redline_rpm": 13500.0,
+  "source": "Rotax MAX evo datasheet scaled for 23.5 mm exhaust restrictor (between Mini 11 kW and Junior 17 kW)",
+  "torque_map": [
+    {
+      "efficiency": 0.22,
+      "rpm": 1600.0,
+      "torque_nm": 3.5
+    },
+    {
+      "efficiency": 0.28,
+      "rpm": 4000.0,
+      "torque_nm": 9.0
+    },
+    {
+      "efficiency": 0.32,
+      "rpm": 6500.0,
+      "torque_nm": 14.0
+    },
+    {
+      "efficiency": 0.34,
+      "rpm": 8500.0,
+      "torque_nm": 16.5
+    },
+    {
+      "efficiency": 0.32,
+      "rpm": 10500.0,
+      "torque_nm": 13.6
+    },
+    {
+      "efficiency": 0.26,
+      "rpm": 11500.0,
+      "torque_nm": 8.5
+    },
+    {
+      "efficiency": 0.2,
+      "rpm": 12500.0,
+      "torque_nm": 3.0
+    },
+    {
+      "efficiency": 0.18,
+      "rpm": 13500.0,
+      "torque_nm": 0.0
+    }
+  ]
+}

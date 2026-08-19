@@ -1,0 +1,29 @@
+{
+  "component_type": "clutch",
+  "datasheet_path": "https://www.rotax-racing.com/products/125-senior-max-evo",
+  "date_added": "2026-08-19",
+  "engagement_rpm": 3500.0,
+  "hardware_limits": {
+    "max_accel_mps2": null,
+    "max_battery_current_a": null,
+    "max_decel_mps2": null,
+    "max_gradient_rad": null,
+    "max_motor_current_a": null,
+    "max_motor_rpm": null,
+    "max_power_w": 22000.0,
+    "max_regen_current_a": null,
+    "max_speed_mps": null,
+    "max_temp_c": null,
+    "max_voltage_v": null,
+    "min_voltage_v": null
+  },
+  "id": "rotax_max_centrifugal",
+  "lock_rpm": 5200.0,
+  "manufacturer": "BRP-Rotax",
+  "max_torque_nm": 30.0,
+  "model": "125 MAX centrifugal clutch",
+  "notes": "Integrated MAX centrifugal clutch. Engagement ~3500 rpm, lock ~5200 rpm.",
+  "part_number": "MAX-CLUTCH",
+  "price": null,
+  "source": "Rotax MAX evo power pack"
+}

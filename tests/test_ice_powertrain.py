@@ -8,7 +8,7 @@ import pytest
 
 from gokart.config.schemas import Clutch, Engine, HardwareLimits, TorqueMapPoint
 from gokart.config.schemas.vehicle import ComponentRef, DrivetrainConfig, VehicleConfig
-from gokart.config.store import load_vehicle
+from gokart.config.store import load_component, load_vehicle
 from gokart.config.validation import validate_vehicle_config
 from gokart.physics.clutch import ClutchParams, engagement_fraction, step_clutch
 from gokart.physics.drivetrain import DrivetrainParams
@@ -192,6 +192,41 @@ def test_torini_vehicles_validate(data_root: Path) -> None:
         vehicle = load_vehicle(name, "V1.0", root=data_root)
         result = validate_vehicle_config(vehicle, data_root=data_root)
         assert result.ok, [v.message for v in result.violations]
+
+
+def test_rotax_125_validates_with_restrictor_default(data_root: Path) -> None:
+    vehicle = load_vehicle("Rotax 125", "V1.0", root=data_root)
+    result = validate_vehicle_config(vehicle, data_root=data_root)
+    assert result.ok, [v.message for v in result.violations]
+    assert vehicle.engine is not None
+    assert vehicle.engine.component_id == "rotax_125_max_evo_r235"
+
+
+def test_rotax_restrictor_is_weaker_than_unrestricted(data_root: Path) -> None:
+    restricted = load_component("engine", "rotax_125_max_evo_r235", root=data_root)
+    unrestricted = load_component("engine", "rotax_125_max_evo", root=data_root)
+    assert restricted.peak_torque_nm < unrestricted.peak_torque_nm
+    assert restricted.peak_power_w < unrestricted.peak_power_w
+
+
+def test_rotax_125_moves(data_root: Path) -> None:
+    model = load_validated_vehicle_model("Rotax 125", "V1.0", data_root=data_root)
+    state = model.initial_state()
+    dt = 0.01
+    for _ in range(1500):
+        state, out = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+            ),
+            dt,
+        )
+    assert out.position_m > 1.0
+    assert out.engine_rpm >= 1600.0
 
 
 def test_ice_vehicle_missing_engine_rejected() -> None:
