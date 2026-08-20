@@ -754,11 +754,18 @@ function isReplayCockpitActive() {
   return isHistoryReplayMode() && state.historyReplaySamples.length > 0;
 }
 
+function pushEngineAudio(sample, { audible = true } = {}) {
+  window.KartEngineAudio?.update?.(sample, { audible });
+}
+
 function applyReplaySampleToUi(sample) {
   if (!sample) return;
   const speedKmh = Number(sample.speed_mps || 0) * 3.6;
   updateDrivePanel(sample, speedKmh);
   updateChannelsGrid(sample);
+  pushEngineAudio(sample, {
+    audible: state.historyReplayPlaying || state.historyReplayScrubbing,
+  });
 }
 
 function syncReplayCockpitChrome() {
@@ -825,6 +832,9 @@ function pauseHistoryReplayPlayback() {
     state.historyReplayRaf = null;
   }
   syncHistoryReplayTransport();
+  if (!state.historyReplayScrubbing) {
+    window.KartEngineAudio?.silence?.();
+  }
 }
 
 async function exitPinnedReplay() {
@@ -1141,6 +1151,7 @@ function flushLiveUi() {
   updateDrivePanel(sample, sample._speedKmh);
   updateChannelsGrid(sample);
   updateHistoryMarkerFromLive();
+  pushEngineAudio(sample, { audible: true });
 }
 
 function scheduleLiveUi(sample, speedKmh) {
@@ -4224,6 +4235,7 @@ function setupControls() {
   });
   updateSliderReadouts();
   updateSimModeUi();
+  window.KartEngineAudio?.bindUi?.();
 }
 
 async function init() {

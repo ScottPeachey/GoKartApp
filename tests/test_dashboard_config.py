@@ -64,6 +64,18 @@ def test_data_root_falls_back_to_bundled_data(tmp_path: Path, monkeypatch: pytes
     assert load_vehicle("Scott Kart V1", "V1.0", root=root).name == "Scott Kart V1"
 
 
+def test_engine_audio_assets_are_served(client: TestClient) -> None:
+    html = client.get("/").text
+    assert "/static/engine-audio.js" in html
+    assert "btn-engine-audio" in html
+    worklet = client.get("/static/engine-audio-worklet.js")
+    controller = client.get("/static/engine-audio.js")
+    assert worklet.status_code == 200
+    assert controller.status_code == 200
+    assert "kart-engine" in worklet.text
+    assert "engine_rpm" in controller.text
+
+
 def test_list_motors(client: TestClient) -> None:
     response = client.get("/api/config/components/motor")
     assert response.status_code == 200

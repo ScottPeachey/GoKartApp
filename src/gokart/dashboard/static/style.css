@@ -24,6 +24,39 @@ header {
   padding: 1rem 1.5rem;
   background: var(--panel);
   border-bottom: 1px solid #2a3548;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.engine-audio-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-left: auto;
+}
+
+button.btn-engine-audio {
+  margin-top: 0;
+}
+
+button.btn-engine-audio.active {
+  background: var(--accent);
+  color: #0f1419;
+}
+
+.engine-audio-volume {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #8aa0b8;
+}
+
+.engine-audio-volume input[type="range"] {
+  width: 7rem;
 }
 
 h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }

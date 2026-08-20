@@ -4,11 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Go-Kart Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=32" />
+  <link rel="stylesheet" href="/static/style.css?v=33" />
 </head>
 <body>
   <header>
     <h1>Electric Go-Kart <span id="app-version" class="app-version"></span></h1>
+    <div class="engine-audio-controls">
+      <button id="btn-engine-audio" type="button" class="btn-toggle btn-engine-audio" aria-pressed="false">
+        Engine sound: OFF
+      </button>
+      <label class="engine-audio-volume">
+        <span>Vol</span>
+        <input id="engine-audio-volume" type="range" min="0" max="100" value="40" disabled />
+        <span id="engine-audio-volume-readout">40%</span>
+      </label>
+    </div>
     <div id="fault-banner" class="fault-banner hidden"></div>
   </header>
 
@@ -535,7 +545,8 @@
     </section>
   </main>
 
-  <script src="/static/app.js?v=88"></script>
+  <script src="/static/engine-audio.js?v=1"></script>
+  <script src="/static/app.js?v=89"></script>
   <script src="/static/config.js?v=7"></script>
 </body>
 </html>
