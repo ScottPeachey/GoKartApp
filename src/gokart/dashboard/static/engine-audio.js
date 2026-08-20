@@ -1,7 +1,7 @@
 (() => {
   const STORAGE_ENABLED = "gokart.engineAudio.enabled";
   const STORAGE_VOLUME = "gokart.engineAudio.volume";
-  const WORKLET_URL = "/static/engine-audio-worklet.js?v=3";
+  const WORKLET_URL = "/static/engine-audio-worklet.js?v=4";
 
   const audio = {
     enabled: false,
@@ -15,6 +15,9 @@
     lastFireHz: 0,
     lastSource: "none",
     uiTimer: 0,
+    lastPostMs: 0,
+    lastPosted: null,
+    masterAudible: null,
   };
 
   function clamp01(value) {
@@ -32,7 +35,8 @@
     const motorRpm = Number(sample?.motor_rpm);
     const hasEngine = Number.isFinite(engineRpm);
     const hasMotor = Number.isFinite(motorRpm);
-    const isIce = hasEngine && engineRpm > 1;
+    const type = String(sample?.powertrain_type || "");
+    const isIce = type === "ice" || (type !== "ev" && hasEngine && engineRpm > 1);
     let rpm = 0;
     let source = "none";
     if (isIce) {
@@ -51,7 +55,7 @@
     const safety = String(sample?.safety_state || "");
     const powered = safety === "DRIVING" || safety === "ARMED" || safety === "READY";
     return {
-      rpm: Math.max(0, rpm),
+      rpm: Math.max(0, Number.isFinite(rpm) ? rpm : 0),
       fireHz: firingHzFromRpm(rpm),
       load: throttle,
       ice: isIce ? 1 : 0,
@@ -83,6 +87,17 @@
 
   function postTelemetry(tel, gain) {
     if (!audio.worklet) return;
+    const nowMs = performance.now();
+    const prev = audio.lastPosted;
+    const rpmChanged = !prev || Math.abs(prev.rpm - tel.rpm) >= 8;
+    const loadChanged = !prev || Math.abs(prev.load - tel.load) >= 0.02;
+    const gainChanged = !prev || prev.gain !== gain;
+    const iceChanged = !prev || prev.ice !== tel.ice;
+    if (!rpmChanged && !loadChanged && !gainChanged && !iceChanged && nowMs - audio.lastPostMs < 20) {
+      return;
+    }
+    audio.lastPosted = { rpm: tel.rpm, load: tel.load, gain, ice: tel.ice };
+    audio.lastPostMs = nowMs;
     audio.worklet.port.postMessage({
       rpm: tel.rpm,
       load: tel.load,
@@ -92,9 +107,15 @@
       brake: tel.brake,
     });
     const param = audio.worklet.parameters?.get("rpm");
-    if (param && audio.context) {
-      param.value = tel.rpm;
-    }
+    if (param) param.value = tel.rpm;
+  }
+
+  function setMasterAudible(audible) {
+    if (!audio.master || !audio.context) return;
+    if (audio.masterAudible === audible) return;
+    audio.masterAudible = audible;
+    const now = audio.context.currentTime;
+    audio.master.gain.setTargetAtTime(audible ? audio.volume : 0, now, audible ? 0.06 : 0.04);
   }
 
   async function ensureGraph() {
@@ -106,7 +127,7 @@
 
     audio.starting = (async () => {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const context = new AudioCtx({ latencyHint: "playback" });
+      const context = new AudioCtx({ latencyHint: "interactive" });
       await context.audioWorklet.addModule(WORKLET_URL);
       const worklet = new AudioWorkletNode(context, "kart-engine", {
         numberOfInputs: 0,
@@ -114,11 +135,11 @@
         outputChannelCount: [1],
       });
       const compressor = context.createDynamicsCompressor();
-      compressor.threshold.value = -18;
-      compressor.knee.value = 12;
-      compressor.ratio.value = 3.5;
-      compressor.attack.value = 0.003;
-      compressor.release.value = 0.12;
+      compressor.threshold.value = -22;
+      compressor.knee.value = 18;
+      compressor.ratio.value = 2.4;
+      compressor.attack.value = 0.008;
+      compressor.release.value = 0.18;
       const master = context.createGain();
       master.gain.value = 0;
       worklet.connect(compressor);
@@ -144,14 +165,9 @@
 
   function applyTelemetry(tel, audible) {
     if (!audio.master || !audio.context) return;
-    const now = audio.context.currentTime;
-    if (!audible || !tel.powered || tel.rpm < 180) {
-      postTelemetry(tel, 0);
-      audio.master.gain.setTargetAtTime(0, now, 0.05);
-      return;
-    }
-    postTelemetry(tel, 1);
-    audio.master.gain.setTargetAtTime(audio.volume, now, 0.08);
+    const live = Boolean(audible && tel.powered && tel.rpm >= 180);
+    postTelemetry(tel, live ? 1 : 0);
+    setMasterAudible(live);
   }
 
   function scheduleRpmUi() {
@@ -189,6 +205,7 @@
       audio.worklet.port.postMessage({ rpm: audio.lastRpm, load: 0, gain: 0, ice: 1, clutch: 1, brake: 0 });
     }
     if (!audio.master || !audio.context) return;
+    audio.masterAudible = null;
     audio.master.gain.setTargetAtTime(0, audio.context.currentTime, 0.04);
   }
 
@@ -216,8 +233,9 @@
   function setVolume(volume) {
     audio.volume = clamp01(volume);
     savePrefs();
-    if (audio.master && audio.enabled && audio.context) {
-      audio.master.gain.setTargetAtTime(audio.volume, audio.context.currentTime, 0.05);
+    if (audio.master && audio.enabled && audio.context && audio.masterAudible) {
+      audio.masterAudible = null;
+      setMasterAudible(true);
     }
     syncUi();
   }

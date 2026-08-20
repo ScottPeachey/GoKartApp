@@ -1,8 +1,9 @@
 /**
  * RPM-locked kart engine / EV motor synth.
  *
- * ICE pitch is engine_rpm / 60 Hz (2-stroke, one combustion per rev).
- * RPM is smoothed per sample so telemetry steps do not zipper the pitch.
+ * ICE pitch is engine_rpm / 60 Hz (2-stroke). Tone is harmonic + resonant
+ * formants. Unfiltered white noise and a long delay-line comb are avoided
+ * because they sound breathy and like a loop restarting.
  */
 class KartEngineProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -10,11 +11,7 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     this.phase = 0;
     this.evPhase = 0;
     this.noise = 1;
-    this.lp = 0;
-    this.hp = 0;
-    this.comb = new Float32Array(4096);
-    this.combIndex = 0;
-    this.overrun = 0;
+    this.brown = 0;
     this.targetRpm = 0;
     this.rpm = 0;
     this.targetLoad = 0;
@@ -26,8 +23,11 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     this.clutch = 1;
     this.targetBrake = 0;
     this.brake = 0;
-    this.delay = 120;
-    this.idleLfo = 0;
+    this.exLp = 0;
+    this.exBp = 0;
+    this.bodyLp = 0;
+    this.bodyBp = 0;
+    this.toneLp = 0;
     this.port.onmessage = (event) => {
       const data = event.data || {};
       if (typeof data.rpm === "number") this.targetRpm = data.rpm;
@@ -48,6 +48,20 @@ class KartEngineProcessor extends AudioWorkletProcessor {
   _noise() {
     this.noise = (Math.imul(this.noise, 1664525) + 1013904223) | 0;
     return this.noise * (1 / 2147483648);
+  }
+
+  _svf(input, cutoffHz, q, lpKey, bpKey, sr) {
+    const f = 2 * Math.sin(Math.PI * Math.max(20, Math.min(cutoffHz, sr * 0.45)) / sr);
+    const damp = Math.min(0.9, 1 / Math.max(0.5, q));
+    let lp = this[lpKey];
+    let bp = this[bpKey];
+    lp += f * bp;
+    const hp = input - lp - damp * bp;
+    bp += f * hp;
+    lp += f * bp;
+    this[lpKey] = lp;
+    this[bpKey] = bp;
+    return { lp, bp, hp };
   }
 
   _polyblep(t, dt) {
@@ -71,10 +85,9 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     if (this.targetRpm <= 0 && paramRpm) this.targetRpm = paramRpm;
 
     const sr = sampleRate;
-    const smooth = 1 - Math.exp(-1 / (sr * 0.04));
-    const gainSmooth = 1 - Math.exp(-1 / (sr * 0.02));
+    const smooth = 1 - Math.exp(-1 / (sr * 0.05));
+    const gainSmooth = 1 - Math.exp(-1 / (sr * 0.03));
     const ice = this.ice >= 0.5;
-    const len = this.comb.length;
 
     for (let i = 0; i < output.length; i += 1) {
       this.rpm += (this.targetRpm - this.rpm) * smooth;
@@ -86,69 +99,60 @@ class KartEngineProcessor extends AudioWorkletProcessor {
       const rpm = Math.max(0, this.rpm);
       const load = Math.max(0, Math.min(1, this.load));
       const gain = Math.max(0, Math.min(1, this.gain));
+      const fireHz = rpm / 60;
+      const increment = Math.max(0, fireHz / sr);
+
+      this.phase += increment;
+      this.phase -= Math.floor(this.phase);
+      this.evPhase += increment;
+      this.evPhase -= Math.floor(this.evPhase);
+
       if (gain < 0.0008 || rpm < 180) {
-        this.lp *= 0.995;
-        output[i] = this.lp * 0.04;
+        this.toneLp *= 0.995;
+        output[i] = this.toneLp * 0.02;
         continue;
       }
 
-      const fireHz = rpm / 60;
-      const increment = fireHz / sr;
-      this.idleLfo += 7.3 / sr;
-      if (this.idleLfo >= 1) this.idleLfo -= 1;
-      const idleWarp = rpm < 2800 ? 1 + Math.sin(this.idleLfo * Math.PI * 2) * 0.008 : 1;
-
       let sample = 0;
       if (ice) {
-        this.phase += increment * idleWarp;
-        this.phase -= Math.floor(this.phase);
-        const saw = 2 * this.phase - 1 - this._polyblep(this.phase, increment);
         const twoPi = this.phase * Math.PI * 2;
+        const saw = 2 * this.phase - 1 - this._polyblep(this.phase, increment);
+        const pulse = this.phase < 0.16 ? 1 - this.phase / 0.16 : 0;
         const tone =
-          Math.sin(twoPi) * 0.42 +
-          Math.sin(twoPi * 2) * 0.28 +
-          Math.sin(twoPi * 3) * 0.16 +
-          Math.sin(twoPi * 5) * 0.07 +
-          saw * 0.12;
-        const slip = 1 - Math.max(0, Math.min(1, this.clutch));
-        const exhaust = this._noise() * (0.06 + load * 0.1 + slip * 0.08);
-        const pop = Math.max(0, 1 - this.phase / 0.18);
-        this.overrun += ((this.brake > 0.28 && load < 0.22 ? 0.35 : 0.04) - this.overrun) * 0.002;
-        const crackle = this.overrun * pop * pop * this._noise() * 0.25;
-        const dry = tone * (0.55 + load * 0.35) + exhaust + crackle;
+          Math.sin(twoPi) * 0.62 +
+          Math.sin(twoPi * 2) * 0.38 +
+          Math.sin(twoPi * 3) * 0.18 +
+          Math.sin(twoPi * 4) * 0.08 +
+          saw * 0.07 +
+          pulse * 0.12;
+        const drive = Math.tanh(tone * (1.35 + load * 1.1));
 
-        const targetDelay = Math.max(48, Math.min(len - 4, sr * (0.0028 + (1 - rpm / 14000) * 0.0012)));
-        this.delay += (targetDelay - this.delay) * smooth;
-        const delayInt = Math.floor(this.delay);
-        const frac = this.delay - delayInt;
-        const i1 = (this.combIndex + len - delayInt) % len;
-        const i2 = (this.combIndex + len - delayInt - 1) % len;
-        const delayed = this.comb[i1] * (1 - frac) + this.comb[i2] * frac;
-        const wet = dry + delayed * 0.38;
-        this.comb[this.combIndex] = wet;
-        this.combIndex = (this.combIndex + 1) % len;
-        sample = wet;
+        this.brown = Math.max(-1, Math.min(1, this.brown + this._noise() * 0.02));
+        const exhaustCutoff = Math.min(sr * 0.42, 180 + fireHz * 2.2 + load * 400);
+        const bodyCutoff = Math.min(sr * 0.42, 90 + fireHz * 1.05);
+        const exhaust = this._svf(this.brown * (0.18 + load * 0.12), exhaustCutoff, 7.5, "exLp", "exBp", sr);
+        const body = this._svf(drive, bodyCutoff, 3.2, "bodyLp", "bodyBp", sr);
+        const slip = 1 - Math.max(0, Math.min(1, this.clutch));
+        sample =
+          drive * (0.72 + load * 0.18) +
+          body.bp * 0.28 +
+          exhaust.bp * (0.08 + slip * 0.05);
+        if (this.brake > 0.3 && load < 0.2) {
+          sample += pulse * this.brown * 0.04;
+        }
       } else {
-        this.evPhase += increment;
-        this.evPhase -= Math.floor(this.evPhase);
         const twoPi = this.evPhase * Math.PI * 2;
-        const whine =
-          Math.sin(twoPi * 4) * 0.42 +
-          Math.sin(twoPi * 9) * 0.14 +
+        sample =
+          Math.sin(twoPi * 4) * 0.5 +
+          Math.sin(twoPi * 9) * 0.16 +
           Math.sin(twoPi * 17) * 0.05;
-        const inverter = this._noise() * (0.015 + load * 0.04);
-        sample = whine * (0.35 + load * 0.55) + inverter;
+        sample *= 0.4 + load * 0.5;
       }
 
-      const cutoff = ice
-        ? 700 + (rpm / 13500) * 6200 + load * 1400
-        : 900 + (rpm / 8000) * 4200 + load * 800;
-      const lpCoeff = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
-      this.lp += lpCoeff * (sample - this.lp);
-      this.hp += 0.035 * (this.lp - this.hp);
-      const bright = this.lp - this.hp * 0.28;
-      const idleDuck = rpm < 2200 ? 0.55 + (rpm / 2200) * 0.3 : 1;
-      output[i] = bright * gain * idleDuck * 0.2;
+      const toneCut = ice ? 1800 + (rpm / 13500) * 4200 + load * 900 : 2500 + load * 800;
+      const lpCoeff = 1 - Math.exp((-2 * Math.PI * toneCut) / sr);
+      this.toneLp += lpCoeff * (sample - this.toneLp);
+      output[i] = this.toneLp * gain * 0.24;
     }
     return true;
   }
