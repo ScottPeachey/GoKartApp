@@ -23,11 +23,12 @@ from gokart.physics.drivetrain import (
     step_drivetrain,
     wheel_torque_to_traction_force,
 )
-from gokart.physics.clutch import ClutchParams
+from gokart.physics.clutch import ClutchParams, step_clutch
 from gokart.physics.engine import (
     EngineInputs,
     EngineParams,
     EngineState,
+    IcePowertrainOutputs,
     advance_engine_rpm,
     available_engine_torque_nm,
     step_ice_powertrain,
@@ -846,33 +847,62 @@ class VehicleModel:
         if inputs.max_speed_mps is not None and inputs.max_speed_mps > 0.0:
             new_speed = min(new_speed, inputs.max_speed_mps)
 
-        if abs(new_speed - state.speed_mps) > 1e-6:
-            axle_rpm = motor_rpm_from_speed(self.drivetrain_params, new_speed)
-            throttle = max(0.0, min(1.0, inputs.throttle))
-            commanded_torque = available_engine_torque_nm(
-                self.engine_params,
-                engine_state.rpm,
-                throttle,
-            )
-            if inputs.motor_torque_request_nm >= 0:
-                commanded_torque = min(commanded_torque, inputs.motor_torque_request_nm)
-            else:
-                commanded_torque = max(commanded_torque, inputs.motor_torque_request_nm)
-            engine_state = EngineState(
-                rpm=advance_engine_rpm(
-                    engine_rpm=engine_state.rpm,
-                    coupled_rpm=axle_rpm,
-                    throttle=throttle,
-                    transmitted_torque_nm=ice_out.engine_torque_nm,
-                    commanded_torque_nm=max(commanded_torque, 1e-6),
-                    clutch_engagement_fraction=ice_out.clutch_engagement_fraction,
-                    clutch_fully_out=engine_state.clutch_fully_out,
-                    engine_params=self.engine_params,
-                    dt=dt,
-                    clutch_engagement_rpm=self.clutch_params.engagement_rpm,
-                ),
-                clutch_fully_out=engine_state.clutch_fully_out,
-            )
+        axle_rpm = motor_rpm_from_speed(self.drivetrain_params, new_speed)
+        throttle = max(0.0, min(1.0, inputs.throttle))
+        commanded_torque = available_engine_torque_nm(
+            self.engine_params,
+            engine_state.rpm,
+            throttle,
+        )
+        if inputs.motor_torque_request_nm >= 0:
+            commanded_torque = min(commanded_torque, inputs.motor_torque_request_nm)
+        else:
+            commanded_torque = max(commanded_torque, inputs.motor_torque_request_nm)
+        final_rpm = advance_engine_rpm(
+            engine_rpm=engine_state.rpm,
+            coupled_rpm=axle_rpm,
+            throttle=throttle,
+            transmitted_torque_nm=ice_out.engine_torque_nm,
+            commanded_torque_nm=max(commanded_torque, 1e-6),
+            clutch_engagement_fraction=ice_out.clutch_engagement_fraction,
+            clutch_fully_out=engine_state.clutch_fully_out,
+            engine_params=self.engine_params,
+            dt=dt,
+            clutch_engagement_rpm=self.clutch_params.engagement_rpm,
+            clutch_lock_rpm=self.clutch_params.lock_rpm,
+        )
+        engine_state = EngineState(
+            rpm=final_rpm,
+            clutch_fully_out=engine_state.clutch_fully_out,
+        )
+        commanded_torque = available_engine_torque_nm(
+            self.engine_params,
+            final_rpm,
+            throttle,
+        )
+        if inputs.motor_torque_request_nm >= 0:
+            commanded_torque = min(commanded_torque, inputs.motor_torque_request_nm)
+        else:
+            commanded_torque = max(commanded_torque, inputs.motor_torque_request_nm)
+        clutch_out = step_clutch(
+            commanded_torque,
+            final_rpm,
+            self.clutch_params,
+            coupled_rpm=axle_rpm,
+        )
+        ice_out = IcePowertrainOutputs(
+            engine_rpm=final_rpm,
+            engine_torque_nm=clutch_out.transmitted_torque_nm,
+            wheel_torque_nm=(
+                clutch_out.transmitted_torque_nm
+                * self.drivetrain_params.gear_ratio
+                * self.drivetrain_params.total_efficiency
+            ),
+            clutch_locked=clutch_out.locked,
+            clutch_engagement_fraction=clutch_out.engagement_fraction,
+            heat_w=ice_out.heat_w,
+            efficiency=ice_out.efficiency,
+        )
 
         achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt

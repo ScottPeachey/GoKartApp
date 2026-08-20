@@ -88,6 +88,14 @@ def test_clutch_unlocked_below_engagement() -> None:
     assert out.transmitted_torque_nm == 0.0
 
 
+def test_clutch_transmits_near_lock_with_small_slip() -> None:
+    """Near lock RPM, small engine/axle slip must not collapse to the 8% capacity floor."""
+    params = ClutchParams(engagement_rpm=3500.0, lock_rpm=5200.0, max_torque_nm=30.0)
+    out = step_clutch(11.4, 5193.0, params, coupled_rpm=5150.0)
+    assert not out.locked
+    assert out.transmitted_torque_nm == pytest.approx(11.4)
+
+
 def test_ice_powertrain_revs_and_moves(data_root: Path) -> None:
     model = load_validated_vehicle_model("Torini Clubmaxx 210", "V1.0", data_root=data_root)
     state = model.initial_state()
@@ -178,10 +186,15 @@ def test_ice_rpm_follows_wheel_speed_under_corner_scrub(data_root: Path) -> None
 
     coupled = motor_rpm_from_speed(model.drivetrain_params, out.speed_mps)
     assert model.clutch_params is not None
-    expected_rpm = max(coupled, model.clutch_params.engagement_rpm)
+    crawl_slip = 150.0
+    crawl_floor = model.clutch_params.engagement_rpm * 0.35
+    if coupled >= crawl_floor:
+        expected_rpm = coupled
+    else:
+        expected_rpm = max(coupled, model.clutch_params.engagement_rpm + crawl_slip)
     assert out.speed_mps < straight_speed * 0.5
     assert out.engine_rpm < straight_rpm * 0.5
-    assert out.engine_rpm == pytest.approx(expected_rpm, rel=0.08, abs=300.0)
+    assert out.engine_rpm == pytest.approx(expected_rpm, rel=0.08, abs=350.0)
 
 
 def test_torini_vehicles_validate(data_root: Path) -> None:

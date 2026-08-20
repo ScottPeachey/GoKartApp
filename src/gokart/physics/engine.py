@@ -17,6 +17,8 @@ CLUTCH_SLIP_HEAT_TO_ENGINE = 0.12
 RPM_ACCEL_PER_NM_S = 55.0
 ENGAGE_PULL_RATE_PER_S = 10.0
 COUPLE_RATE_PER_S = 18.0
+LATCHED_COUPLE_RATE_PER_S = 55.0
+CRAWL_CLUTCH_SLIP_RPM = 150.0
 COAST_RATE_PER_S = 6.0
 REV_LIMITER_DROP_RPM = 350.0
 
@@ -122,18 +124,18 @@ def _update_clutch_fully_out(
     return latched
 
 
-def _axle_target_rpm(
+def _latched_drive_target_rpm(
     coupled_rpm: float,
     *,
     throttle: float,
     idle_rpm: float,
     engagement_rpm: float,
 ) -> float:
-    """RPM target when the clutch is driving the axle."""
+    """Crank speed target once the clutch has locked — follows axle RPM changes."""
     if throttle <= 0.02:
         return max(coupled_rpm, idle_rpm)
-    if engagement_rpm > 0.0 and coupled_rpm < engagement_rpm:
-        return engagement_rpm
+    if engagement_rpm > 0.0 and coupled_rpm < engagement_rpm * 0.35:
+        return max(coupled_rpm, engagement_rpm + CRAWL_CLUTCH_SLIP_RPM)
     return coupled_rpm
 
 
@@ -166,77 +168,42 @@ def advance_engine_rpm(
     engine_params: EngineParams,
     dt: float,
     clutch_engagement_rpm: float = 0.0,
+    clutch_lock_rpm: float = 0.0,
 ) -> float:
-    idle_floor = engine_params.idle_rpm * 0.5
+    _ = clutch_lock_rpm
     couple_step = min(1.0, dt * COUPLE_RATE_PER_S)
+    latched_step = min(1.0, dt * LATCHED_COUPLE_RATE_PER_S)
 
-    axle_coupled = clutch_engagement_fraction >= 1.0 or clutch_fully_out
-
-    if throttle <= 0.02:
-        if axle_coupled:
-            target_rpm = _axle_target_rpm(
-                coupled_rpm,
-                throttle=throttle,
-                idle_rpm=engine_params.idle_rpm,
-                engagement_rpm=clutch_engagement_rpm,
-            )
-            new_rpm = engine_rpm + (target_rpm - engine_rpm) * couple_step
-        else:
-            new_rpm = engine_rpm + (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * COAST_RATE_PER_S)
-        return _clamp_engine_rpm(
-            new_rpm,
-            engine_params=engine_params,
-            coupled_rpm=coupled_rpm,
-            axle_coupled=axle_coupled,
+    if clutch_fully_out:
+        target_rpm = _latched_drive_target_rpm(
+            coupled_rpm,
             throttle=throttle,
+            idle_rpm=engine_params.idle_rpm,
             engagement_rpm=clutch_engagement_rpm,
         )
-
-    if axle_coupled:
-        if engine_rpm > coupled_rpm + SLIP_LOCK_RPM:
-            # Shoes are out but the crank is ahead of the axle — corner scrub / lift-off.
-            target_rpm = _axle_target_rpm(
-                coupled_rpm,
-                throttle=throttle,
-                idle_rpm=engine_params.idle_rpm,
-                engagement_rpm=clutch_engagement_rpm,
-            )
-        elif coupled_rpm > engine_rpm + SLIP_LOCK_RPM:
-            # Axle faster than crank under power — allow limited slip while revving.
-            power_rpm = _peak_power_rpm(engine_params)
-            throttle_target = engine_params.idle_rpm + throttle * (power_rpm - engine_params.idle_rpm)
-            throttle_target = min(throttle_target, engine_params.redline_rpm - 50.0)
-            engage_pull = (throttle_target - engine_rpm) * ENGAGE_PULL_RATE_PER_S * dt
-            crank_accel = (commanded_torque_nm - max(0.0, transmitted_torque_nm)) * RPM_ACCEL_PER_NM_S * dt
-            new_rpm = engine_rpm + engage_pull + crank_accel
-            if new_rpm >= engine_params.redline_rpm:
-                new_rpm = engine_params.redline_rpm - REV_LIMITER_DROP_RPM
-            return _clamp_engine_rpm(
-                new_rpm,
-                engine_params=engine_params,
-                coupled_rpm=coupled_rpm,
-                axle_coupled=axle_coupled,
-                throttle=throttle,
-                engagement_rpm=clutch_engagement_rpm,
-            )
+        rpm_error = target_rpm - engine_rpm
+        if abs(rpm_error) > SLIP_LOCK_RPM:
+            new_rpm = target_rpm
         else:
-            # Clutch locked or small slip — crank tracks wheel speed.
-            target_rpm = _axle_target_rpm(
-                coupled_rpm,
-                throttle=throttle,
-                idle_rpm=engine_params.idle_rpm,
-                engagement_rpm=clutch_engagement_rpm,
-            )
-
-        new_rpm = engine_rpm + (target_rpm - engine_rpm) * couple_step
-
+            new_rpm = engine_rpm + rpm_error * latched_step
         if new_rpm >= engine_params.redline_rpm:
             new_rpm = engine_params.redline_rpm - REV_LIMITER_DROP_RPM
         return _clamp_engine_rpm(
             new_rpm,
             engine_params=engine_params,
             coupled_rpm=coupled_rpm,
-            axle_coupled=axle_coupled,
+            axle_coupled=True,
+            throttle=throttle,
+            engagement_rpm=clutch_engagement_rpm,
+        )
+
+    if throttle <= 0.02:
+        new_rpm = engine_rpm + (engine_params.idle_rpm - engine_rpm) * min(1.0, dt * COAST_RATE_PER_S)
+        return _clamp_engine_rpm(
+            new_rpm,
+            engine_params=engine_params,
+            coupled_rpm=coupled_rpm,
+            axle_coupled=False,
             throttle=throttle,
             engagement_rpm=clutch_engagement_rpm,
         )
@@ -251,7 +218,7 @@ def advance_engine_rpm(
             new_rpm,
             engine_params=engine_params,
             coupled_rpm=coupled_rpm,
-            axle_coupled=axle_coupled,
+            axle_coupled=False,
             throttle=throttle,
             engagement_rpm=clutch_engagement_rpm,
         )
@@ -272,7 +239,7 @@ def advance_engine_rpm(
         new_rpm,
         engine_params=engine_params,
         coupled_rpm=coupled_rpm,
-        axle_coupled=axle_coupled,
+        axle_coupled=False,
         throttle=throttle,
         engagement_rpm=clutch_engagement_rpm,
     )
@@ -307,19 +274,6 @@ def step_ice_powertrain(
         state=state,
         clutch_out=clutch_out,
         throttle=throttle,
-    )
-
-    engine_rpm = advance_engine_rpm(
-        engine_rpm=engine_rpm,
-        coupled_rpm=coupled_rpm,
-        throttle=throttle,
-        transmitted_torque_nm=clutch_out.transmitted_torque_nm,
-        commanded_torque_nm=max(commanded_torque, 1e-6),
-        clutch_engagement_fraction=clutch_out.engagement_fraction,
-        clutch_fully_out=clutch_fully_out,
-        engine_params=engine_params,
-        dt=dt,
-        clutch_engagement_rpm=clutch_params.engagement_rpm,
     )
 
     engine_rpm = max(0.0, min(engine_rpm, engine_params.max_rpm))
