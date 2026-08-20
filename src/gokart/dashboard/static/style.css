@@ -59,6 +59,13 @@ button.btn-engine-audio.active {
   width: 7rem;
 }
 
+.engine-audio-rpm {
+  font-size: 0.75rem;
+  color: #8aa0b8;
+  font-variant-numeric: tabular-nums;
+  min-width: 9.5rem;
+}
+
 h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
 .app-version {
   font-size: 0.75rem;

@@ -1,12 +1,9 @@
 /**
  * RPM-locked kart engine / EV motor synth.
  *
- * ICE: 2-stroke firing (one combustion per revolution) plus an exhaust comb,
- * matching Rotax 125 MAX character more closely than a 4-stroke car model.
- * EV: inverter/whine stack keyed to motor RPM.
- *
- * Inspired by physically informed engine synthesis (Baldan et al. 2015) and
- * browser work such as Antonio-R1/engine-sound-generator — this file is original.
+ * ICE: 2-stroke firing (one combustion per revolution) plus an exhaust comb.
+ * Pitch is engine_rpm / 60 Hz. RPM is received on the MessagePort (AudioParam
+ * automation on worklets is unreliable in several browsers).
  */
 class KartEngineProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -19,16 +16,27 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     this.comb = new Float32Array(4096);
     this.combIndex = 0;
     this.overrun = 0;
+    this.targetRpm = 0;
+    this.rpm = 0;
+    this.load = 0;
+    this.gain = 0;
+    this.ice = 1;
+    this.clutch = 1;
+    this.brake = 0;
+    this.port.onmessage = (event) => {
+      const data = event.data || {};
+      if (typeof data.rpm === "number") this.targetRpm = data.rpm;
+      if (typeof data.load === "number") this.load = data.load;
+      if (typeof data.gain === "number") this.gain = data.gain;
+      if (typeof data.ice === "number") this.ice = data.ice;
+      if (typeof data.clutch === "number") this.clutch = data.clutch;
+      if (typeof data.brake === "number") this.brake = data.brake;
+    };
   }
 
   static get parameterDescriptors() {
     return [
       { name: "rpm", defaultValue: 0, minValue: 0, maxValue: 20000, automationRate: "k-rate" },
-      { name: "load", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" },
-      { name: "gain", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" },
-      { name: "ice", defaultValue: 1, minValue: 0, maxValue: 1, automationRate: "k-rate" },
-      { name: "clutch", defaultValue: 1, minValue: 0, maxValue: 1, automationRate: "k-rate" },
-      { name: "brake", defaultValue: 0, minValue: 0, maxValue: 1, automationRate: "k-rate" },
     ];
   }
 
@@ -41,12 +49,15 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     const output = outputs[0][0];
     if (!output) return true;
 
-    const rpm = Math.max(0, parameters.rpm[0] || 0);
-    const load = Math.max(0, Math.min(1, parameters.load[0] || 0));
-    const gain = Math.max(0, Math.min(1, parameters.gain[0] || 0));
-    const ice = (parameters.ice[0] || 0) >= 0.5;
-    const clutch = Math.max(0, Math.min(1, parameters.clutch[0] || 0));
-    const brake = Math.max(0, Math.min(1, parameters.brake[0] || 0));
+    const paramRpm = parameters.rpm[0];
+    const target = this.targetRpm > 0 ? this.targetRpm : (paramRpm || 0);
+    this.rpm += (target - this.rpm) * 0.18;
+    const rpm = Math.max(0, this.rpm);
+    const load = Math.max(0, Math.min(1, this.load));
+    const gain = Math.max(0, Math.min(1, this.gain));
+    const ice = this.ice >= 0.5;
+    const clutch = Math.max(0, Math.min(1, this.clutch));
+    const brake = Math.max(0, Math.min(1, this.brake));
 
     if (gain < 0.0008 || rpm < 180) {
       output.fill(0);

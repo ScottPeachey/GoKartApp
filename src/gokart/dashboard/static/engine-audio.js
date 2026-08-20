@@ -1,7 +1,7 @@
 (() => {
   const STORAGE_ENABLED = "gokart.engineAudio.enabled";
   const STORAGE_VOLUME = "gokart.engineAudio.volume";
-  const WORKLET_URL = "/static/engine-audio-worklet.js?v=1";
+  const WORKLET_URL = "/static/engine-audio-worklet.js?v=2";
 
   const audio = {
     enabled: false,
@@ -10,12 +10,55 @@
     worklet: null,
     master: null,
     starting: null,
+    pendingSample: null,
+    lastRpm: 0,
+    lastFireHz: 0,
+    lastSource: "none",
   };
 
   function clamp01(value) {
     const number = Number(value);
     if (!Number.isFinite(number)) return 0;
     return Math.max(0, Math.min(1, number));
+  }
+
+  function firingHzFromRpm(rpm) {
+    return Math.max(0, Number(rpm) || 0) / 60;
+  }
+
+  function telemetryFromSample(sample) {
+    const engineRpm = Number(sample?.engine_rpm);
+    const motorRpm = Number(sample?.motor_rpm);
+    const hasEngine = Number.isFinite(engineRpm);
+    const hasMotor = Number.isFinite(motorRpm);
+    const isIce = hasEngine && engineRpm > 1;
+    let rpm = 0;
+    let source = "none";
+    if (isIce) {
+      rpm = engineRpm;
+      source = "engine_rpm";
+    } else if (hasMotor && motorRpm > 1) {
+      rpm = motorRpm;
+      source = "motor_rpm";
+    } else if (hasEngine && engineRpm > 0) {
+      rpm = engineRpm;
+      source = "engine_rpm";
+    }
+    const throttle = clamp01(sample?.throttle);
+    const brake = clamp01(sample?.brake);
+    const clutchLocked = Number(sample?.clutch_locked);
+    const safety = String(sample?.safety_state || "");
+    const powered = safety === "DRIVING" || safety === "ARMED" || safety === "READY";
+    return {
+      rpm: Math.max(0, rpm),
+      fireHz: firingHzFromRpm(rpm),
+      load: throttle,
+      ice: isIce ? 1 : 0,
+      clutch: Number.isFinite(clutchLocked) ? clamp01(clutchLocked) : 1,
+      brake,
+      powered,
+      source,
+    };
   }
 
   function loadPrefs() {
@@ -37,11 +80,20 @@
     }
   }
 
-  function setParam(name, value, seconds = 0.05) {
-    const param = audio.worklet?.parameters?.get(name);
-    if (!param || !audio.context) return;
-    const now = audio.context.currentTime;
-    param.setTargetAtTime(value, now, Math.max(0.01, seconds / 3));
+  function postTelemetry(tel, gain) {
+    if (!audio.worklet) return;
+    audio.worklet.port.postMessage({
+      rpm: tel.rpm,
+      load: tel.load,
+      gain,
+      ice: tel.ice,
+      clutch: tel.clutch,
+      brake: tel.brake,
+    });
+    const param = audio.worklet.parameters?.get("rpm");
+    if (param && audio.context) {
+      param.value = tel.rpm;
+    }
   }
 
   async function ensureGraph() {
@@ -89,53 +141,38 @@
     }
   }
 
-  function telemetryFromSample(sample) {
-    const engineRpm = Number(sample?.engine_rpm);
-    const motorRpm = Number(sample?.motor_rpm);
-    const isIce = Number.isFinite(engineRpm) && engineRpm > 1;
-    const rpm = isIce ? engineRpm : Number.isFinite(motorRpm) ? motorRpm : 0;
-    const throttle = clamp01(sample?.throttle);
-    const brake = clamp01(sample?.brake);
-    const clutchLocked = Number(sample?.clutch_locked);
-    const safety = String(sample?.safety_state || "");
-    const powered = safety === "DRIVING" || safety === "ARMED" || safety === "READY";
-    return {
-      rpm: Math.max(0, rpm),
-      load: throttle,
-      ice: isIce ? 1 : 0,
-      clutch: Number.isFinite(clutchLocked) ? clamp01(clutchLocked) : 1,
-      brake,
-      powered,
-    };
-  }
-
   async function update(sample, { audible = true } = {}) {
+    if (sample) audio.pendingSample = sample;
+    const tel = telemetryFromSample(sample);
+    audio.lastRpm = tel.rpm;
+    audio.lastFireHz = tel.fireHz;
+    audio.lastSource = tel.source;
+    syncUi();
     if (!audio.enabled) return;
     const ready = await ensureGraph();
     if (!ready || !audio.master || !audio.context) return;
 
     const now = audio.context.currentTime;
     if (!audible || !sample) {
+      postTelemetry(tel, 0);
       audio.master.gain.setTargetAtTime(0, now, 0.04);
       return;
     }
 
-    const tel = telemetryFromSample(sample);
     if (!tel.powered || tel.rpm < 180) {
+      postTelemetry(tel, 0);
       audio.master.gain.setTargetAtTime(0, now, 0.06);
       return;
     }
 
-    setParam("rpm", tel.rpm, 0.06);
-    setParam("load", tel.load, 0.04);
-    setParam("ice", tel.ice, 0.02);
-    setParam("clutch", tel.clutch, 0.08);
-    setParam("brake", tel.brake, 0.05);
-    setParam("gain", 1, 0.04);
+    postTelemetry(tel, 1);
     audio.master.gain.setTargetAtTime(audio.volume, now, 0.05);
   }
 
   function silence() {
+    if (audio.worklet) {
+      audio.worklet.port.postMessage({ rpm: audio.lastRpm, load: 0, gain: 0, ice: 1, clutch: 1, brake: 0 });
+    }
     if (!audio.master || !audio.context) return;
     audio.master.gain.setTargetAtTime(0, audio.context.currentTime, 0.04);
   }
@@ -156,6 +193,9 @@
       return;
     }
     await ensureGraph();
+    if (audio.pendingSample) {
+      await update(audio.pendingSample, { audible: true });
+    }
   }
 
   function setVolume(volume) {
@@ -171,10 +211,18 @@
     const toggle = document.getElementById("btn-engine-audio");
     const slider = document.getElementById("engine-audio-volume");
     const readout = document.getElementById("engine-audio-volume-readout");
+    const rpmEl = document.getElementById("engine-audio-rpm");
     if (toggle) {
       toggle.classList.toggle("active", audio.enabled);
       toggle.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
       toggle.textContent = audio.enabled ? "Engine sound: ON" : "Engine sound: OFF";
+    }
+    if (rpmEl) {
+      if (audio.lastRpm >= 180) {
+        rpmEl.textContent = `${Math.round(audio.lastRpm)} rpm · ${audio.lastFireHz.toFixed(1)} Hz`;
+      } else {
+        rpmEl.textContent = "no rpm";
+      }
     }
     if (slider && Number(slider.value) !== Math.round(audio.volume * 100)) {
       slider.value = String(Math.round(audio.volume * 100));
@@ -210,5 +258,13 @@
     setVolume,
     bindUi,
     isEnabled: () => audio.enabled,
+    telemetryFromSample,
+    firingHzFromRpm,
+    debug: () => ({
+      rpm: audio.lastRpm,
+      fireHz: audio.lastFireHz,
+      source: audio.lastSource,
+      enabled: audio.enabled,
+    }),
   };
 })();
