@@ -307,9 +307,15 @@ def apply_cornering_speed_bleed(
     front_normal_n: float | None = None,
 ) -> float:
     """Reduce scalar speed when cornering demand exceeds available lateral grip."""
-    lat_accel = abs(lateral_accel_from_bicycle_mps2(speed_mps, steer_rad, wheelbase_m))
+    speed_cap = cornering_speed_limit_mps(steer_rad, wheelbase_m, grip_coefficient, gradient_rad)
+    incoming = speed_mps
+    new_speed = min(speed_mps, speed_cap) if speed_cap is not None else speed_mps
+
+    # Evaluate grip demand at the post-cap speed so corner entry does not zero speed in one tick.
+    eval_speed = new_speed if new_speed > 1e-6 else speed_mps
+    lat_accel = abs(lateral_accel_from_bicycle_mps2(eval_speed, steer_rad, wheelbase_m))
     if lat_accel <= 1e-6:
-        return speed_mps
+        return min(max(0.0, new_speed), incoming)
 
     max_lat = max_lateral_accel_mps2(
         grip_coefficient,
@@ -318,9 +324,6 @@ def apply_cornering_speed_bleed(
         mass_kg=mass_kg,
     )
     demand_ratio = lat_accel / max(max_lat, 1e-6)
-    speed_cap = cornering_speed_limit_mps(steer_rad, wheelbase_m, grip_coefficient, gradient_rad)
-    incoming = speed_mps
-    new_speed = min(speed_mps, speed_cap) if speed_cap is not None else speed_mps
 
     if demand_ratio > 1.0:
         bleed = min(1.0, (demand_ratio - 1.0) * 8.0 * dt)

@@ -28,6 +28,7 @@ from gokart.physics.engine import (
     EngineInputs,
     EngineParams,
     EngineState,
+    advance_engine_rpm,
     available_engine_torque_nm,
     step_ice_powertrain,
 )
@@ -844,6 +845,35 @@ class VehicleModel:
         )
         if inputs.max_speed_mps is not None and inputs.max_speed_mps > 0.0:
             new_speed = min(new_speed, inputs.max_speed_mps)
+
+        if abs(new_speed - state.speed_mps) > 1e-6:
+            axle_rpm = motor_rpm_from_speed(self.drivetrain_params, new_speed)
+            throttle = max(0.0, min(1.0, inputs.throttle))
+            commanded_torque = available_engine_torque_nm(
+                self.engine_params,
+                engine_state.rpm,
+                throttle,
+            )
+            if inputs.motor_torque_request_nm >= 0:
+                commanded_torque = min(commanded_torque, inputs.motor_torque_request_nm)
+            else:
+                commanded_torque = max(commanded_torque, inputs.motor_torque_request_nm)
+            engine_state = EngineState(
+                rpm=advance_engine_rpm(
+                    engine_rpm=engine_state.rpm,
+                    coupled_rpm=axle_rpm,
+                    throttle=throttle,
+                    transmitted_torque_nm=ice_out.engine_torque_nm,
+                    commanded_torque_nm=max(commanded_torque, 1e-6),
+                    clutch_engagement_fraction=ice_out.clutch_engagement_fraction,
+                    clutch_fully_out=engine_state.clutch_fully_out,
+                    engine_params=self.engine_params,
+                    dt=dt,
+                    clutch_engagement_rpm=self.clutch_params.engagement_rpm,
+                ),
+                clutch_fully_out=engine_state.clutch_fully_out,
+            )
+
         achieved_accel = (new_speed - state.speed_mps) / dt if dt > 0.0 else 0.0
         new_position = state.position_m + new_speed * dt
 
@@ -890,7 +920,7 @@ class VehicleModel:
             pack_voltage_v=state.pack_voltage_v,
         )
 
-        mechanical_power = ice_out.engine_torque_nm * rpm_to_rads(ice_out.engine_rpm)
+        mechanical_power = ice_out.engine_torque_nm * rpm_to_rads(engine_state.rpm)
         return new_state, VehicleStepOutputs(
             position_m=new_position,
             position_x_m=steering_out.position_x_m,
@@ -899,7 +929,7 @@ class VehicleModel:
             steering_angle_deg=math.degrees(steering_out.steering_angle_rad),
             speed_mps=new_speed,
             acceleration_mps2=achieved_accel,
-            motor_rpm=ice_out.engine_rpm,
+            motor_rpm=engine_state.rpm,
             motor_torque_nm=ice_out.engine_torque_nm,
             motor_current_a=0.0,
             battery_current_a=0.0,
@@ -943,7 +973,7 @@ class VehicleModel:
             power_w=mechanical_power,
             accessory_power_w=0.0,
             brown_out_risk=False,
-            engine_rpm=ice_out.engine_rpm,
+            engine_rpm=engine_state.rpm,
             engine_temp_c=motor_thermal_out.temperature_c,
             clutch_locked=ice_out.clutch_locked,
         )
