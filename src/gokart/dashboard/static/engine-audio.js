@@ -1,7 +1,7 @@
 (() => {
   const STORAGE_ENABLED = "gokart.engineAudio.enabled";
   const STORAGE_VOLUME = "gokart.engineAudio.volume";
-  const WORKLET_URL = "/static/engine-audio-worklet.js?v=2";
+  const WORKLET_URL = "/static/engine-audio-worklet.js?v=3";
 
   const audio = {
     enabled: false,
@@ -14,6 +14,7 @@
     lastRpm: 0,
     lastFireHz: 0,
     lastSource: "none",
+    uiTimer: 0,
   };
 
   function clamp01(value) {
@@ -105,7 +106,7 @@
 
     audio.starting = (async () => {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const context = new AudioCtx();
+      const context = new AudioCtx({ latencyHint: "playback" });
       await context.audioWorklet.addModule(WORKLET_URL);
       const worklet = new AudioWorkletNode(context, "kart-engine", {
         numberOfInputs: 0,
@@ -141,32 +142,46 @@
     }
   }
 
-  async function update(sample, { audible = true } = {}) {
+  function applyTelemetry(tel, audible) {
+    if (!audio.master || !audio.context) return;
+    const now = audio.context.currentTime;
+    if (!audible || !tel.powered || tel.rpm < 180) {
+      postTelemetry(tel, 0);
+      audio.master.gain.setTargetAtTime(0, now, 0.05);
+      return;
+    }
+    postTelemetry(tel, 1);
+    audio.master.gain.setTargetAtTime(audio.volume, now, 0.08);
+  }
+
+  function scheduleRpmUi() {
+    const now = performance.now();
+    if (now - audio.uiTimer < 80) return;
+    audio.uiTimer = now;
+    const rpmEl = document.getElementById("engine-audio-rpm");
+    if (!rpmEl) return;
+    if (audio.lastRpm >= 180) {
+      rpmEl.textContent = `${Math.round(audio.lastRpm)} rpm · ${audio.lastFireHz.toFixed(1)} Hz`;
+    } else {
+      rpmEl.textContent = "no rpm";
+    }
+  }
+
+  function update(sample, { audible = true } = {}) {
     if (sample) audio.pendingSample = sample;
     const tel = telemetryFromSample(sample);
     audio.lastRpm = tel.rpm;
     audio.lastFireHz = tel.fireHz;
     audio.lastSource = tel.source;
-    syncUi();
+    scheduleRpmUi();
     if (!audio.enabled) return;
-    const ready = await ensureGraph();
-    if (!ready || !audio.master || !audio.context) return;
-
-    const now = audio.context.currentTime;
-    if (!audible || !sample) {
-      postTelemetry(tel, 0);
-      audio.master.gain.setTargetAtTime(0, now, 0.04);
+    if (!audio.worklet) {
+      void ensureGraph().then((ready) => {
+        if (ready) applyTelemetry(tel, audible);
+      });
       return;
     }
-
-    if (!tel.powered || tel.rpm < 180) {
-      postTelemetry(tel, 0);
-      audio.master.gain.setTargetAtTime(0, now, 0.06);
-      return;
-    }
-
-    postTelemetry(tel, 1);
-    audio.master.gain.setTargetAtTime(audio.volume, now, 0.05);
+    applyTelemetry(tel, audible);
   }
 
   function silence() {

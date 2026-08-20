@@ -1,9 +1,8 @@
 /**
  * RPM-locked kart engine / EV motor synth.
  *
- * ICE: 2-stroke firing (one combustion per revolution) plus an exhaust comb.
- * Pitch is engine_rpm / 60 Hz. RPM is received on the MessagePort (AudioParam
- * automation on worklets is unreliable in several browsers).
+ * ICE pitch is engine_rpm / 60 Hz (2-stroke, one combustion per rev).
+ * RPM is smoothed per sample so telemetry steps do not zipper the pitch.
  */
 class KartEngineProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -18,19 +17,25 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     this.overrun = 0;
     this.targetRpm = 0;
     this.rpm = 0;
+    this.targetLoad = 0;
     this.load = 0;
+    this.targetGain = 0;
     this.gain = 0;
     this.ice = 1;
+    this.targetClutch = 1;
     this.clutch = 1;
+    this.targetBrake = 0;
     this.brake = 0;
+    this.delay = 120;
+    this.idleLfo = 0;
     this.port.onmessage = (event) => {
       const data = event.data || {};
       if (typeof data.rpm === "number") this.targetRpm = data.rpm;
-      if (typeof data.load === "number") this.load = data.load;
-      if (typeof data.gain === "number") this.gain = data.gain;
+      if (typeof data.load === "number") this.targetLoad = data.load;
+      if (typeof data.gain === "number") this.targetGain = data.gain;
       if (typeof data.ice === "number") this.ice = data.ice;
-      if (typeof data.clutch === "number") this.clutch = data.clutch;
-      if (typeof data.brake === "number") this.brake = data.brake;
+      if (typeof data.clutch === "number") this.targetClutch = data.clutch;
+      if (typeof data.brake === "number") this.targetBrake = data.brake;
     };
   }
 
@@ -45,77 +50,105 @@ class KartEngineProcessor extends AudioWorkletProcessor {
     return this.noise * (1 / 2147483648);
   }
 
+  _polyblep(t, dt) {
+    if (dt <= 0) return 0;
+    if (t < dt) {
+      const x = t / dt;
+      return x + x - x * x - 1;
+    }
+    if (t > 1 - dt) {
+      const x = (t - 1) / dt;
+      return x * x + x + x + 1;
+    }
+    return 0;
+  }
+
   process(_inputs, outputs, parameters) {
     const output = outputs[0][0];
     if (!output) return true;
 
     const paramRpm = parameters.rpm[0];
-    const target = this.targetRpm > 0 ? this.targetRpm : (paramRpm || 0);
-    this.rpm += (target - this.rpm) * 0.18;
-    const rpm = Math.max(0, this.rpm);
-    const load = Math.max(0, Math.min(1, this.load));
-    const gain = Math.max(0, Math.min(1, this.gain));
-    const ice = this.ice >= 0.5;
-    const clutch = Math.max(0, Math.min(1, this.clutch));
-    const brake = Math.max(0, Math.min(1, this.brake));
-
-    if (gain < 0.0008 || rpm < 180) {
-      output.fill(0);
-      this.lp *= 0.9;
-      return true;
-    }
+    if (this.targetRpm <= 0 && paramRpm) this.targetRpm = paramRpm;
 
     const sr = sampleRate;
-    const fireHz = rpm / 60;
-    const increment = fireHz / sr;
-    const slip = 1 - clutch;
-    const cutoff = ice
-      ? 480 + (rpm / 13500) * 7200 + load * 1600
-      : 900 + (rpm / 8000) * 4200 + load * 800;
-    const lpCoeff = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
-    const delaySamples = Math.max(
-      40,
-      Math.min(this.comb.length - 2, Math.floor(sr * (0.0026 + (1 - rpm / 14000) * 0.0014))),
-    );
+    const smooth = 1 - Math.exp(-1 / (sr * 0.04));
+    const gainSmooth = 1 - Math.exp(-1 / (sr * 0.02));
+    const ice = this.ice >= 0.5;
+    const len = this.comb.length;
 
     for (let i = 0; i < output.length; i += 1) {
+      this.rpm += (this.targetRpm - this.rpm) * smooth;
+      this.load += (this.targetLoad - this.load) * smooth;
+      this.gain += (this.targetGain - this.gain) * gainSmooth;
+      this.clutch += (this.targetClutch - this.clutch) * smooth;
+      this.brake += (this.targetBrake - this.brake) * smooth;
+
+      const rpm = Math.max(0, this.rpm);
+      const load = Math.max(0, Math.min(1, this.load));
+      const gain = Math.max(0, Math.min(1, this.gain));
+      if (gain < 0.0008 || rpm < 180) {
+        this.lp *= 0.995;
+        output[i] = this.lp * 0.04;
+        continue;
+      }
+
+      const fireHz = rpm / 60;
+      const increment = fireHz / sr;
+      this.idleLfo += 7.3 / sr;
+      if (this.idleLfo >= 1) this.idleLfo -= 1;
+      const idleWarp = rpm < 2800 ? 1 + Math.sin(this.idleLfo * Math.PI * 2) * 0.008 : 1;
+
       let sample = 0;
       if (ice) {
-        this.phase += increment;
-        if (this.phase >= 1) {
-          this.phase -= 1;
-          if (rpm < 2800) {
-            this.phase += (this._noise() * 0.5) * 0.03;
-            if (this.phase < 0) this.phase = 0;
-          }
-          this.overrun = brake > 0.28 && load < 0.22 ? 0.85 : 0.12;
-        }
-        const env = Math.exp(-this.phase * (10 + load * 14));
-        const pop = (2 * this.phase - 1) * env;
-        const rasp = this._noise() * env * (0.35 + load * 0.45 + slip * 0.35);
-        const crackle = this.overrun * env * env * this._noise();
-        this.overrun *= 0.9992;
-        const dry = pop * (0.55 + load * 0.35) + rasp + crackle * 0.55;
-        const readIndex = (this.combIndex + this.comb.length - delaySamples) % this.comb.length;
-        const delayed = this.comb[readIndex];
-        const wet = dry + delayed * 0.32;
+        this.phase += increment * idleWarp;
+        this.phase -= Math.floor(this.phase);
+        const saw = 2 * this.phase - 1 - this._polyblep(this.phase, increment);
+        const twoPi = this.phase * Math.PI * 2;
+        const tone =
+          Math.sin(twoPi) * 0.42 +
+          Math.sin(twoPi * 2) * 0.28 +
+          Math.sin(twoPi * 3) * 0.16 +
+          Math.sin(twoPi * 5) * 0.07 +
+          saw * 0.12;
+        const slip = 1 - Math.max(0, Math.min(1, this.clutch));
+        const exhaust = this._noise() * (0.06 + load * 0.1 + slip * 0.08);
+        const pop = Math.max(0, 1 - this.phase / 0.18);
+        this.overrun += ((this.brake > 0.28 && load < 0.22 ? 0.35 : 0.04) - this.overrun) * 0.002;
+        const crackle = this.overrun * pop * pop * this._noise() * 0.25;
+        const dry = tone * (0.55 + load * 0.35) + exhaust + crackle;
+
+        const targetDelay = Math.max(48, Math.min(len - 4, sr * (0.0028 + (1 - rpm / 14000) * 0.0012)));
+        this.delay += (targetDelay - this.delay) * smooth;
+        const delayInt = Math.floor(this.delay);
+        const frac = this.delay - delayInt;
+        const i1 = (this.combIndex + len - delayInt) % len;
+        const i2 = (this.combIndex + len - delayInt - 1) % len;
+        const delayed = this.comb[i1] * (1 - frac) + this.comb[i2] * frac;
+        const wet = dry + delayed * 0.38;
         this.comb[this.combIndex] = wet;
-        this.combIndex = (this.combIndex + 1) % this.comb.length;
+        this.combIndex = (this.combIndex + 1) % len;
         sample = wet;
       } else {
         this.evPhase += increment;
-        if (this.evPhase >= 1) this.evPhase -= 1;
+        this.evPhase -= Math.floor(this.evPhase);
         const twoPi = this.evPhase * Math.PI * 2;
-        const whine = Math.sin(twoPi * 4) * 0.42 + Math.sin(twoPi * 9) * 0.14 + Math.sin(twoPi * 17) * 0.05;
-        const inverter = this._noise() * (0.02 + load * 0.05);
+        const whine =
+          Math.sin(twoPi * 4) * 0.42 +
+          Math.sin(twoPi * 9) * 0.14 +
+          Math.sin(twoPi * 17) * 0.05;
+        const inverter = this._noise() * (0.015 + load * 0.04);
         sample = whine * (0.35 + load * 0.55) + inverter;
       }
 
+      const cutoff = ice
+        ? 700 + (rpm / 13500) * 6200 + load * 1400
+        : 900 + (rpm / 8000) * 4200 + load * 800;
+      const lpCoeff = 1 - Math.exp((-2 * Math.PI * cutoff) / sr);
       this.lp += lpCoeff * (sample - this.lp);
-      this.hp += 0.04 * (this.lp - this.hp);
-      const bright = this.lp - this.hp * 0.35;
-      const idleDuck = rpm < 2200 ? 0.45 + (rpm / 2200) * 0.35 : 1;
-      output[i] = bright * gain * idleDuck * 0.22;
+      this.hp += 0.035 * (this.lp - this.hp);
+      const bright = this.lp - this.hp * 0.28;
+      const idleDuck = rpm < 2200 ? 0.55 + (rpm / 2200) * 0.3 : 1;
+      output[i] = bright * gain * idleDuck * 0.2;
     }
     return true;
   }

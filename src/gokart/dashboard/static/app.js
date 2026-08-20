@@ -1151,7 +1151,6 @@ function flushLiveUi() {
   updateDrivePanel(sample, sample._speedKmh);
   updateChannelsGrid(sample);
   updateHistoryMarkerFromLive();
-  pushEngineAudio(sample, { audible: true });
 }
 
 function scheduleLiveUi(sample, speedKmh) {
@@ -1177,6 +1176,9 @@ function connectWebSocket() {
       return;
     }
     if (message.type !== "sample" || !message.data) return;
+    if (!isReplayCockpitActive()) {
+      pushEngineAudio(message.data, { audible: true });
+    }
     scheduleLiveUi(message.data, message.speed_kmh);
   };
   state.ws.onclose = () => setTimeout(connectWebSocket, 1000);
