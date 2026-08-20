@@ -1,7 +1,7 @@
 (() => {
   const STORAGE_ENABLED = "gokart.engineAudio.enabled";
   const STORAGE_VOLUME = "gokart.engineAudio.volume";
-  const WORKLET_URL = "/static/engine-audio-worklet.js?v=4";
+  const WORKLET_URL = "/static/engine-audio-worklet.js?v=5";
 
   const audio = {
     enabled: false,
