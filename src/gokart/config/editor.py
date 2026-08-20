@@ -288,6 +288,7 @@ def build_vehicle_detail(
     return {
         "name": vehicle.name,
         "version": vehicle.version,
+        "powertrain_type": vehicle.powertrain_type,
         "suggested_next_version": suggest_next_version(vehicle.name, root=store_root),
         "mass_kg": total_mass,
         "dry_mass_kg": vehicle.dry_mass_kg,

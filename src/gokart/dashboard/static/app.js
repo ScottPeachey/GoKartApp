@@ -349,6 +349,39 @@ function formatLapTime(seconds) {
   return `${secs.toFixed(1)}s`;
 }
 
+function selectedVehicleRecord() {
+  const key = document.getElementById("vehicle-select")?.value;
+  if (!key) return null;
+  return state.vehicles.find((vehicle) => `${vehicle.name}|${vehicle.version}` === key) || null;
+}
+
+function isBatteryPoweredKart(sample = state.lastSample) {
+  const type = sample?.powertrain_type;
+  if (type === "ice") return false;
+  if (type === "ev") return true;
+  const slots = selectedVehicleRecord()?.detail?.slots;
+  if (slots) return Boolean(slots.battery?.component_id);
+  const listedType = selectedVehicleRecord()?.detail?.powertrain_type;
+  if (listedType === "ice") return false;
+  if (listedType === "ev") return true;
+  return true;
+}
+
+function syncSocVisibility(sample = state.lastSample) {
+  const show = isBatteryPoweredKart(sample);
+  document.getElementById("cockpit-soc")?.classList.toggle("hidden", !show);
+  if (!show) {
+    const text = document.getElementById("soc-text");
+    const fill = document.getElementById("soc-fill");
+    if (text) text.textContent = "—";
+    if (fill) fill.style.width = "0%";
+  }
+  if (state._socChannelVisible !== show) {
+    state._socChannelVisible = show;
+    rebuildChannelsGrid();
+  }
+}
+
 function updateDrivePanel(sample, speedKmh) {
   document.getElementById("speed-value").textContent = Math.round(speedKmh || 0);
   const driveMode = sample.drive_mode || "—";
@@ -372,9 +405,12 @@ function updateDrivePanel(sample, speedKmh) {
     : "—";
   document.getElementById("pitch-value").textContent = `${Number(sample.pitch_deg || 0).toFixed(1)}°`;
   document.getElementById("roll-value").textContent = `${Number(sample.roll_deg || 0).toFixed(1)}°`;
-  const soc = Number(sample.soc || 0);
-  document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
-  document.getElementById("soc-fill").style.width = `${soc * 100}%`;
+  syncSocVisibility(sample);
+  if (isBatteryPoweredKart(sample)) {
+    const soc = Number(sample.soc || 0);
+    document.getElementById("soc-text").textContent = `${(soc * 100).toFixed(0)}%`;
+    document.getElementById("soc-fill").style.width = `${soc * 100}%`;
+  }
 
   const lapNumber = Number(sample.lap_number || 0);
   const lapTime = Number(sample.lap_time_s || 0);
@@ -665,6 +701,7 @@ function resetDriveUi() {
   document.getElementById("elevation-pill")?.classList.add("hidden");
   document.getElementById("soc-text").textContent = "—";
   document.getElementById("soc-fill").style.width = "0%";
+  syncSocVisibility({});
   const safetyCard = document.getElementById("safety-card");
   safetyCard.classList.remove(...SAFETY_CLASSES);
   safetyCard.classList.add("safety-off");
@@ -975,7 +1012,12 @@ function isChannelVisible(name) {
 }
 
 function visibleChannels() {
-  return state.channels.filter((channel) => isChannelVisible(channel.name));
+  const batteryPowered = isBatteryPoweredKart();
+  return state.channels.filter((channel) => {
+    if (!isChannelVisible(channel.name)) return false;
+    if (!batteryPowered && channel.name === "soc") return false;
+    return true;
+  });
 }
 
 function setChannelCustomiseOpen(open) {
@@ -993,6 +1035,7 @@ function renderChannelCustomiseMenu() {
     return leftLabel.localeCompare(rightLabel);
   });
   for (const channel of sorted) {
+    if (channel.name === "soc" && !isBatteryPoweredKart()) continue;
     const meta = channelUiMeta(channel.name);
     const item = document.createElement("label");
     item.className = "channel-customise-item";
@@ -1319,6 +1362,7 @@ async function refreshVehicleLists(selectName = null, selectVersion = null) {
       void window.loadConfigEditor();
     }
   }
+  syncSocVisibility();
 }
 
 window.refreshVehicleLists = refreshVehicleLists;
@@ -4001,6 +4045,7 @@ function setupControls() {
     });
   }
   document.getElementById("vehicle-select").addEventListener("change", () => {
+    syncSocVisibility();
     void updateEffectiveLimits();
     void updateAutoPolicyStatus();
   });

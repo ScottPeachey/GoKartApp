@@ -25,7 +25,12 @@ def test_vehicle_list_includes_detail(client: TestClient) -> None:
     response = client.get("/api/config/vehicles")
     assert response.status_code == 200
     vehicles = response.json()
-    assert vehicles[0]["detail"]["slots"]["motor"]["component_id"] == "v1_motor_5kw"
+    scott = next(item for item in vehicles if item["name"] == "Scott Kart V1")
+    assert scott["detail"]["slots"]["motor"]["component_id"] == "v1_motor_5kw"
+    assert scott["detail"]["powertrain_type"] == "ev"
+    rotax = next(item for item in vehicles if item["name"] == "Rotax 125")
+    assert rotax["detail"]["powertrain_type"] == "ice"
+    assert "battery" not in rotax["detail"]["slots"]
 
 
 def test_vehicle_detail_endpoint(client: TestClient) -> None:
@@ -34,6 +39,15 @@ def test_vehicle_detail_endpoint(client: TestClient) -> None:
     payload = response.json()
     assert payload["slots"]["motor"]["component_id"] == "v1_motor_5kw"
     assert payload["suggested_next_version"] == "V1.1"
+    assert payload["powertrain_type"] == "ev"
+
+
+def test_rotax_vehicle_detail_is_ice(client: TestClient) -> None:
+    response = client.get("/api/config/vehicles/Rotax%20125/V1.0/detail")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["powertrain_type"] == "ice"
+    assert "battery" not in payload["slots"]
 
 
 def test_vehicle_detail_query_endpoint(client: TestClient) -> None:
@@ -68,6 +82,7 @@ def test_engine_audio_assets_are_served(client: TestClient) -> None:
     html = client.get("/").text
     assert "/static/engine-audio.js" in html
     assert "btn-engine-audio" in html
+    assert "id=\"cockpit-soc\"" in html
     worklet = client.get("/static/engine-audio-worklet.js")
     controller = client.get("/static/engine-audio.js")
     assert worklet.status_code == 200

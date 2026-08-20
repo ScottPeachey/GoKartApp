@@ -40,6 +40,13 @@ def test_build_vehicle_detail(data_copy: Path) -> None:
     assert detail["name"] == "Scott Kart V1"
     assert "motor" in detail["slots"]
     assert detail["slots"]["motor"]["component_id"] == "v1_motor_5kw"
+    assert detail["powertrain_type"] == "ev"
+
+
+def test_ice_vehicle_detail_is_not_battery_powered(data_copy: Path) -> None:
+    detail = build_vehicle_detail("Rotax 125", "V1.0", root=data_copy)
+    assert detail["powertrain_type"] == "ice"
+    assert "battery" not in detail["slots"]
 
 
 def test_save_new_version_with_sprocket_change(data_copy: Path) -> None:
