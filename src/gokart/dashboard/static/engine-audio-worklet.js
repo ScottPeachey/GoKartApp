@@ -127,18 +127,18 @@ class KartEngineProcessor extends AudioWorkletProcessor {
           pulse * 0.12;
         const drive = Math.tanh(tone * (1.35 + load * 1.1));
 
-        this.brown = Math.max(-1, Math.min(1, this.brown + this._noise() * 0.026));
+        this.brown = Math.max(-1, Math.min(1, this.brown + this._noise() * 0.034));
         const exhaustCutoff = Math.min(sr * 0.42, 180 + fireHz * 2.2 + load * 400);
         const bodyCutoff = Math.min(sr * 0.42, 90 + fireHz * 1.05);
-        const exhaust = this._svf(this.brown * (0.24 + load * 0.14), exhaustCutoff, 7.5, "exLp", "exBp", sr);
+        const exhaust = this._svf(this.brown * (0.32 + load * 0.18), exhaustCutoff, 7.5, "exLp", "exBp", sr);
         const body = this._svf(drive, bodyCutoff, 3.2, "bodyLp", "bodyBp", sr);
         const slip = 1 - Math.max(0, Math.min(1, this.clutch));
         sample =
           drive * (0.72 + load * 0.18) +
           body.bp * 0.28 +
-          exhaust.bp * (0.11 + slip * 0.06);
+          exhaust.bp * (0.17 + slip * 0.08);
         if (this.brake > 0.3 && load < 0.2) {
-          sample += pulse * this.brown * 0.05;
+          sample += pulse * this.brown * 0.07;
         }
       } else {
         const twoPi = this.evPhase * Math.PI * 2;
