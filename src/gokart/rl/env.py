@@ -142,6 +142,7 @@ class TrackRacingEnv(gym.Env):
         step_result.info["max_drive_steps"] = self._max_drive_steps
         if self._max_drive_steps > 0 and self._drive_steps + 1 >= self._max_drive_steps:
             step_result.info["truncated_max_steps"] = True
+        step_result.info["target_laps"] = self.session_config.target_laps
         reward, self._reward_state, components = compute_reward(
             tick_values=step_result.tick.values,
             step_info=step_result.info,

@@ -63,6 +63,10 @@ def model_path(identity: PolicyIdentity, root: Path | None = None) -> Path:
     return policy_dir(identity, root=root) / "model.zip"
 
 
+def best_model_path(identity: PolicyIdentity, root: Path | None = None) -> Path:
+    return policy_dir(identity, root=root) / "model_best.zip"
+
+
 def save_manifest(manifest: PolicyManifest, root: Path | None = None) -> Path:
     path = manifest_path(manifest.identity, root=root)
     manifest.updated_at = datetime.now(UTC).isoformat()

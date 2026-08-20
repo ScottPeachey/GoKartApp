@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import shutil
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -20,9 +21,34 @@ from gokart.rl.episode_recording import (
 )
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
-from gokart.rl.registry import PolicyManifest, model_path, save_manifest
+from gokart.rl.registry import PolicyManifest, best_model_path, model_path, save_manifest
+from gokart.rl.rewards import _BLOCKING_THERMAL_FAULTS
 from gokart.rl.training_setup import RlTrainingSetup, default_training_setup
 from gokart.track.store import load_track
+
+
+def _linear_learning_rate(base_lr: float):
+    """SB3 schedule: multiply the initial LR by training progress remaining."""
+
+    def schedule(progress_remaining: float) -> float:
+        return base_lr * progress_remaining
+
+    return schedule
+
+
+def _episode_has_blocking_fault(active_faults: Any) -> bool:
+    faults = {
+        part.strip()
+        for part in str(active_faults or "").split(",")
+        if part.strip()
+    }
+    return bool(faults & _BLOCKING_THERMAL_FAULTS)
+
+
+def _save_best_checkpoint(model: Any, identity: PolicyIdentity, *, root: Path | None) -> None:
+    path = best_model_path(identity, root=root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    model.save(str(path))
 
 
 @dataclass(frozen=True)
@@ -106,7 +132,7 @@ def run_preview_episode(
         episode_reward += float(reward)
         done = terminated or truncated
         if info.get("active_faults"):
-            had_fault = True
+            had_fault = _episode_has_blocking_fault(info.get("active_faults"))
         best = float(info.get("best_lap_time_s", 0.0) or 0.0)
         if best > 0:
             lap_best = best if lap_best is None else min(lap_best, best)
@@ -236,7 +262,7 @@ def train_policy(
         env,
         verbose=0,
         seed=config.seed,
-        learning_rate=ppo.learning_rate,
+        learning_rate=_linear_learning_rate(ppo.learning_rate),
         n_steps=ppo.n_steps,
         batch_size=ppo.batch_size,
         ent_coef=ppo.ent_coef,
@@ -255,6 +281,8 @@ def train_policy(
 
     eval_history: list[float | None] = []
     best_lap: float | None = None
+    best_preview_reward: float | None = None
+    best_checkpoint_timestep: int | None = None
     clean_rates: list[float] = []
     stop_training_flag = False
     previews_completed = 0
@@ -291,6 +319,7 @@ def train_policy(
         def _on_step(self) -> bool:
             nonlocal best_lap, stop_training_flag, previews_completed, tests_completed
             nonlocal last_episode_reward, last_eval_lap
+            nonlocal best_preview_reward, best_checkpoint_timestep
             training_state["timesteps"] = self.num_timesteps
             if stop_training_flag or should_stop() or callbacks.should_stop():
                 stop_training_flag = True
@@ -384,10 +413,24 @@ def train_policy(
                 last_eval_lap = lap
                 eval_history.append(lap)
                 clean_rates.append(clean)
-                if lap is not None and (
+                improved_lap = lap is not None and (
                     best_lap is None or lap < best_lap - config.min_improvement_s
-                ):
-                    best_lap = lap
+                )
+                improved_reward = (
+                    lap is None
+                    and best_lap is None
+                    and (
+                        best_preview_reward is None
+                        or reward > best_preview_reward + 10.0
+                    )
+                )
+                if improved_lap or improved_reward:
+                    if improved_lap:
+                        best_lap = lap
+                    if improved_reward:
+                        best_preview_reward = reward
+                    _save_best_checkpoint(model, identity, root=root)
+                    best_checkpoint_timestep = self.num_timesteps
                 if _plateau_reached(eval_history, config.plateau_evals, config.min_improvement_s):
                     stop_training_flag = True
                     _emit_progress(
@@ -414,6 +457,8 @@ def train_policy(
                     best_lap is None or lap < best_lap - config.min_improvement_s
                 ):
                     best_lap = lap
+                    _save_best_checkpoint(model, identity, root=root)
+                    best_checkpoint_timestep = self.num_timesteps
                 if _plateau_reached(eval_history, config.plateau_evals, config.min_improvement_s):
                     stop_training_flag = True
                     return False
@@ -440,6 +485,9 @@ def train_policy(
 
     out_path = model_path(identity, root=root)
     model.save(str(out_path))
+    best_path = best_model_path(identity, root=root)
+    if best_path.exists():
+        shutil.copy2(best_path, out_path)
 
     if manifest.status != "stopped":
         manifest.status = "ceiling_reached" if best_lap is not None else "failed"
@@ -454,6 +502,7 @@ def train_policy(
                 "eval_history": eval_history,
                 "best_lap_s": best_lap,
                 "clean_lap_rate": manifest.clean_lap_rate,
+                "best_checkpoint_timestep": best_checkpoint_timestep,
             },
             indent=2,
         ),
@@ -563,7 +612,7 @@ def evaluate_policy(
             obs, _reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             if info.get("active_faults"):
-                had_fault = True
+                had_fault = _episode_has_blocking_fault(info.get("active_faults"))
             best = float(info.get("best_lap_time_s", 0.0) or 0.0)
             if best > 0:
                 lap_best = best if lap_best is None else min(lap_best, best)

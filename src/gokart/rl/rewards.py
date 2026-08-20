@@ -22,6 +22,7 @@ class RewardWeights:
     wall: float = 15.0
     stagnant_terminal: float = 5.0
     off_track_wander: float = 8.0
+    incomplete_lap: float = 40.0
     lap: float = 80.0
     thermal: float = 0.3
     thermal_fault: float = 6.0
@@ -109,6 +110,14 @@ def compute_reward(
         wander = -weights.off_track_wander
         reward += wander
         components["off_track_wander"] = wander
+
+    if bool(step_info.get("truncated_max_steps")):
+        target_laps = int(step_info.get("target_laps", 1))
+        completed_laps = int(step_info.get("completed_laps", 0))
+        if target_laps > 0 and completed_laps < target_laps:
+            incomplete = -weights.incomplete_lap
+            reward += incomplete
+            components["incomplete_lap"] = incomplete
 
     is_ice = str(tick_values.get("powertrain_type", "ev")) == "ice"
     if is_ice:

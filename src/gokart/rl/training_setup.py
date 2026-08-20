@@ -19,7 +19,7 @@ class ActionConfig:
 class EnvRuntimeConfig:
     max_steps: int = 15_000
     target_laps: int = 1
-    terminate_on_off_track: bool = False
+    terminate_on_off_track: bool = True
     stagnant_delta_s: float = 0.01
     max_stagnant_steps: int = 250
     max_off_track_steps: int = 250
@@ -116,6 +116,7 @@ _NUMBER_FIELD_META: dict[str, dict[str, float | int]] = {
     "rewards.wall": {"step": 1, "min": 0, "max": 50},
     "rewards.stagnant_terminal": {"step": 1, "min": 0, "max": 50},
     "rewards.off_track_wander": {"step": 1, "min": 0, "max": 50},
+    "rewards.incomplete_lap": {"step": 5, "min": 0, "max": 200},
     "rewards.lap": {"step": 1, "min": 0, "max": 200},
     "rewards.thermal": {"step": 0.05, "min": 0, "max": 10},
     "rewards.thermal_fault": {"step": 1, "min": 0, "max": 50},
@@ -241,6 +242,10 @@ def training_setup_schema() -> dict[str, Any]:
                     "stagnant_terminal": "Small one-shot cost when cut for not moving.",
                     "off_track_wander": (
                         "One-shot cost when the episode is cut after wandering off track."
+                    ),
+                    "incomplete_lap": (
+                        "One-shot cost when the episode hits max steps without finishing "
+                        "target laps."
                     ),
                     "lap": "Flat bonus for finishing a lap.",
                     "thermal": "Per-second cost as motor/controller temp goes from derate to trip.",

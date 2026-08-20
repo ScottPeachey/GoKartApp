@@ -77,7 +77,7 @@ def test_training_setup_from_dict_round_trip() -> None:
         if field["key"] == "terminate_on_off_track"
     )
     assert off_track_field["type"] == "bool"
-    assert off_track_field["default"] is False
+    assert off_track_field["default"] is True
     custom = training_setup_from_dict(
         {
             "objective": "custom",
@@ -101,11 +101,12 @@ def test_default_setup_is_min_time() -> None:
     assert setup.env.max_stagnant_steps == 250
     assert setup.env.max_off_track_steps == 250
     assert setup.env.target_laps == 1
-    assert setup.env.terminate_on_off_track is False
+    assert setup.env.terminate_on_off_track is True
     assert setup.env.stagnant_delta_s == pytest.approx(0.01)
     assert setup.rewards.wall == pytest.approx(15.0)
     assert setup.rewards.stagnant_terminal == pytest.approx(5.0)
     assert setup.rewards.off_track_wander == pytest.approx(8.0)
+    assert setup.rewards.incomplete_lap == pytest.approx(40.0)
     assert setup.rewards.lap == pytest.approx(80.0)
     assert setup.rewards.time == pytest.approx(0.05)
     assert setup.rewards.progress == pytest.approx(1.0)
@@ -229,6 +230,62 @@ def test_reward_penalizes_wall_hit_when_off_track_terminates() -> None:
     _, _, fast_parts = _reward({**_TICK, "speed_mps": 12.5}, info)
     assert slow_parts["wall_hit"] == pytest.approx(-15.0)
     assert fast_parts["wall_hit"] == pytest.approx(slow_parts["wall_hit"])
+
+
+def test_reward_penalizes_incomplete_lap_at_horizon() -> None:
+    info = {
+        "delta_track_s_m": 0.08,
+        "lateral_offset_m": 0.5,
+        "heading_error_deg": 5.0,
+        "track_width_m": 10.0,
+        "truncated_max_steps": True,
+        "target_laps": 1,
+        "completed_laps": 0,
+    }
+    _, _, parts = _reward(_TICK, info)
+    assert parts["incomplete_lap"] == pytest.approx(-40.0)
+
+
+def test_completed_lap_beats_full_horizon_without_finish() -> None:
+    dt_s = 0.01
+    weights = reward_preset("god")
+    track_len_m = 1164.0
+    speed_mps = 30.0 / 3.6
+    delta_s = speed_mps * dt_s
+    lap_steps = int(track_len_m / delta_s)
+
+    def _episode(*, steps: int, lap_at_end: bool, terminal: dict) -> float:
+        total = 0.0
+        state = RewardState(last_lap_number=1.0 if lap_at_end else 0.0)
+        for step in range(1, steps + 1):
+            info = {
+                "delta_track_s_m": delta_s,
+                "lateral_offset_m": 0.5,
+                "heading_error_deg": 5.0,
+                "track_width_m": 10.0,
+                "target_laps": 1,
+                "completed_laps": 1 if lap_at_end and step == steps else 0,
+                "lap_number": 2.0 if lap_at_end and step == steps else 1.0,
+                **(terminal if step == steps else {}),
+            }
+            step_reward, state, _ = compute_reward(
+                tick_values={**_TICK, "speed_mps": speed_mps},
+                step_info=info,
+                weights=weights,
+                dt_s=dt_s,
+                state=state,
+                objective="god",
+            )
+            total += step_reward
+        return total
+
+    finished = _episode(steps=lap_steps, lap_at_end=True, terminal={})
+    horizon = _episode(
+        steps=15_000,
+        lap_at_end=False,
+        terminal={"truncated_max_steps": True},
+    )
+    assert finished > horizon
 
 
 def test_idle_on_track_is_not_rewarded() -> None:
