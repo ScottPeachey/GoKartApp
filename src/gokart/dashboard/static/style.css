@@ -592,7 +592,7 @@ button.btn-path-follow {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-height: 12rem;
+  max-height: 14rem;
   overflow-y: auto;
   margin: 0.5rem 0 0.75rem;
   padding: 0.35rem;
@@ -601,42 +601,12 @@ button.btn-path-follow {
   background: #121a26;
 }
 
-.session-list-panel {
+.recordings-panel {
   min-width: 0;
 }
 
-.session-list-mount {
-  min-width: 0;
-}
-
-.session-list-mount-sidebar .session-list-panel {
-  position: sticky;
-  top: 0.5rem;
-}
-
-.session-list-mount-sidebar .session-list,
-.telemetry-split.layout-split .session-list-mount-sidebar .session-list {
-  max-height: min(42vh, 520px);
-}
-
-#session-list-mount-live .session-list {
-  max-height: 14rem;
-}
-
-#session-list-mount-live.hidden {
-  display: none;
-}
-
-.history-workspace {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-  min-width: 0;
-}
-
-.history-main {
-  min-width: 0;
+.telemetry-split.layout-split .recordings-panel .session-list {
+  max-height: min(72vh, 760px);
 }
 
 .track-map-hud {
@@ -785,7 +755,8 @@ button.btn-path-follow {
 }
 
 .telemetry-panel,
-#tab-history {
+#tab-history,
+#tab-recordings {
   min-width: 0;
   max-width: 100%;
 }
@@ -1030,8 +1001,21 @@ body.replay-cockpit-active #tab-live .telemetry-panel-title::after {
 
 @media (min-width: 1200px) {
   .telemetry-split.layout-split {
-    grid-template-columns: minmax(260px, 1fr) minmax(0, 2.2fr);
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 280px) minmax(0, 2.2fr);
+    grid-template-areas: "live recordings history";
     align-items: start;
+  }
+
+  .telemetry-split.layout-split #tab-live {
+    grid-area: live;
+  }
+
+  .telemetry-split.layout-split #tab-recordings {
+    grid-area: recordings;
+  }
+
+  .telemetry-split.layout-split #tab-history {
+    grid-area: history;
   }
 
   .telemetry-split.layout-split .telemetry-panel {
@@ -1056,24 +1040,15 @@ body.replay-cockpit-active #tab-live .telemetry-panel-title::after {
     font-size: 0.78rem;
   }
 
-  .telemetry-split.layout-split .history-workspace {
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  .telemetry-split.layout-split .recordings-panel {
+    position: sticky;
+    top: 0.5rem;
   }
 
   .tabs.split-telemetry-active .tab[data-tab="live"],
   .tabs.split-telemetry-active .tab[data-tab="history"] {
     color: var(--accent);
     background: var(--panel);
-  }
-}
-
-@media (max-width: 1199px) {
-  .history-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .session-list-mount-sidebar .session-list-panel {
-    position: static;
   }
 }
 

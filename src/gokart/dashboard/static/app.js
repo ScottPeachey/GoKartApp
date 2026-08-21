@@ -1478,19 +1478,6 @@ function updateTrackMapHud({ speedKmh = null, episodeReward = null, showReward =
   }
 }
 
-function syncSessionListPlacement(tab) {
-  const panel = document.getElementById("session-list-panel");
-  const liveMount = document.getElementById("session-list-mount-live");
-  const historyMount = document.getElementById("session-list-mount-history");
-  if (!panel || !liveMount || !historyMount) return;
-  const useHistoryMount = isSplitTelemetryView() || tab === "history";
-  const mount = useHistoryMount ? historyMount : liveMount;
-  if (panel.parentElement !== mount) {
-    mount.appendChild(panel);
-  }
-  liveMount.classList.toggle("hidden", useHistoryMount);
-}
-
 function sessionOptionLabel(session, displayNumber) {
   const numberTag = displayNumber != null
     ? `#${String(displayNumber).padStart(3, "0")} · `
@@ -2539,6 +2526,7 @@ function activeTabName() {
 
 function syncTelemetryPanels(tab) {
   const live = document.getElementById("tab-live");
+  const recordings = document.getElementById("tab-recordings");
   const history = document.getElementById("tab-history");
   const split = document.getElementById("telemetry-split");
   const config = document.getElementById("tab-config");
@@ -2555,9 +2543,12 @@ function syncTelemetryPanels(tab) {
   split.classList.remove("hidden");
   config.classList.add("hidden");
 
+  const showRecordings = tab === "live" || tab === "history";
+
   if (isSplitTelemetryView()) {
     split.classList.add("layout-split");
     live.classList.remove("hidden");
+    recordings.classList.remove("hidden");
     history.classList.remove("hidden");
     tabsBar?.classList.add("split-telemetry-active");
     rebuildChannelsGrid();
@@ -2565,15 +2556,15 @@ function syncTelemetryPanels(tab) {
       updateChannelsGrid(state.lastSample);
     }
     startHistoryPolling();
-    syncSessionListPlacement(tab);
     return;
   }
 
   split.classList.remove("layout-split");
   tabsBar?.classList.remove("split-telemetry-active");
   live.classList.toggle("hidden", tab !== "live");
+  recordings.classList.toggle("hidden", !showRecordings);
   history.classList.toggle("hidden", tab !== "history");
-  if (tab === "history") {
+  if (showRecordings || tab === "history") {
     startHistoryPolling();
   } else {
     stopHistoryPolling();
@@ -2584,7 +2575,6 @@ function syncTelemetryPanels(tab) {
       updateChannelsGrid(state.lastSample);
     }
   }
-  syncSessionListPlacement(tab);
 }
 
 function historyChartPanelLayout() {

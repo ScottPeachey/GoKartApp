@@ -347,35 +347,32 @@
           </div>
         </div>
         <div id="channels-grid" class="channels-grid" aria-live="polite"></div>
-        <div id="session-list-mount-live" class="session-list-mount"></div>
+      </section>
+
+      <section id="tab-recordings" class="tab-panel telemetry-panel recordings-panel hidden">
+        <h3 class="telemetry-panel-title">Recordings</h3>
+        <div class="row session-toolbar">
+          <button id="btn-refresh-sessions">Refresh</button>
+          <button id="btn-session-select-all" type="button" class="btn-secondary">Select all</button>
+          <button id="btn-session-clear-selection" type="button" class="btn-secondary">Clear</button>
+          <button id="btn-session-delete-selected" type="button" class="btn-secondary" disabled>Delete selected</button>
+          <span id="session-list-count" class="config-hint session-list-count"></span>
+        </div>
+        <div id="session-list" class="session-list" role="listbox" aria-label="Session recordings"></div>
+        <select id="session-select" class="visually-hidden" aria-hidden="true" tabindex="-1"></select>
+        <div id="session-laps-panel" class="session-laps hidden">
+          <h4>Laps</h4>
+          <table id="session-laps-table" class="session-laps-table">
+            <thead>
+              <tr><th>Lap</th><th>Time</th><th>At (s)</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
 
       <section id="tab-history" class="tab-panel telemetry-panel hidden">
         <h3 class="telemetry-panel-title">Session History</h3>
-        <div class="history-workspace">
-          <div id="session-list-mount-history" class="session-list-mount session-list-mount-sidebar">
-            <aside id="session-list-panel" class="session-list-panel">
-              <div class="row session-toolbar">
-                <button id="btn-refresh-sessions">Refresh</button>
-                <button id="btn-session-select-all" type="button" class="btn-secondary">Select all</button>
-                <button id="btn-session-clear-selection" type="button" class="btn-secondary">Clear</button>
-                <button id="btn-session-delete-selected" type="button" class="btn-secondary" disabled>Delete selected</button>
-                <span id="session-list-count" class="config-hint session-list-count"></span>
-              </div>
-              <div id="session-list" class="session-list" role="listbox" aria-label="Session recordings"></div>
-              <select id="session-select" class="visually-hidden" aria-hidden="true" tabindex="-1"></select>
-              <div id="session-laps-panel" class="session-laps hidden">
-                <h4>Laps</h4>
-                <table id="session-laps-table" class="session-laps-table">
-                  <thead>
-                    <tr><th>Lap</th><th>Time</th><th>At (s)</th></tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </aside>
-          </div>
-          <div class="history-main">
         <div class="row history-track-controls">
           <label>Track
             <select id="track-select">
@@ -452,8 +449,6 @@
           <div id="track-map-hud" class="track-map-hud" aria-live="polite">
             <div id="track-map-hud-speed" class="track-map-hud-speed">— km/h</div>
             <div id="track-map-hud-reward" class="track-map-hud-reward hidden">—</div>
-          </div>
-        </div>
           </div>
         </div>
       </section>
