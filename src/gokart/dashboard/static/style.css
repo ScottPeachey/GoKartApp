@@ -601,6 +601,82 @@ button.btn-path-follow {
   background: #121a26;
 }
 
+.session-list-panel {
+  min-width: 0;
+}
+
+.session-list-mount {
+  min-width: 0;
+}
+
+.session-list-mount-sidebar .session-list-panel {
+  position: sticky;
+  top: 0.5rem;
+}
+
+.session-list-mount-sidebar .session-list,
+.telemetry-split.layout-split .session-list-mount-sidebar .session-list {
+  max-height: min(42vh, 520px);
+}
+
+#session-list-mount-live .session-list {
+  max-height: 14rem;
+}
+
+#session-list-mount-live.hidden {
+  display: none;
+}
+
+.history-workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.history-main {
+  min-width: 0;
+}
+
+.track-map-hud {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  pointer-events: none;
+}
+
+.track-map-hud-speed,
+.track-map-hud-reward {
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(11, 17, 24, 0.82);
+  border: 1px solid rgba(138, 160, 184, 0.35);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  color: #e6edf3;
+  line-height: 1.2;
+}
+
+.track-map-hud-speed {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #3dd6c6;
+}
+
+.track-map-hud-reward {
+  color: #e8c547;
+}
+
+.track-map-hud-reward.hidden {
+  display: none;
+}
+
 .session-list-item {
   display: flex;
   align-items: flex-start;
@@ -954,7 +1030,7 @@ body.replay-cockpit-active #tab-live .telemetry-panel-title::after {
 
 @media (min-width: 1200px) {
   .telemetry-split.layout-split {
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: minmax(260px, 1fr) minmax(0, 2.2fr);
     align-items: start;
   }
 
@@ -980,10 +1056,24 @@ body.replay-cockpit-active #tab-live .telemetry-panel-title::after {
     font-size: 0.78rem;
   }
 
+  .telemetry-split.layout-split .history-workspace {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  }
+
   .tabs.split-telemetry-active .tab[data-tab="live"],
   .tabs.split-telemetry-active .tab[data-tab="history"] {
     color: var(--accent);
     background: var(--panel);
+  }
+}
+
+@media (max-width: 1199px) {
+  .history-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .session-list-mount-sidebar .session-list-panel {
+    position: static;
   }
 }
 

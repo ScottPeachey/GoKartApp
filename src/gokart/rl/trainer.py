@@ -672,6 +672,10 @@ def _stream_training_tick(vec_env: Any, hooks: TrainingHooks) -> None:
     session = getattr(kart_env, "session", None)
     if session is None or session.state.last_tick is None:
         return
+    rows = getattr(kart_env, "physics_tick_rows", None)
+    if rows:
+        hooks.on_preview_tick(dict(rows[-1]))
+        return
     hooks.on_preview_tick(session.state.last_tick.to_row())
 
 

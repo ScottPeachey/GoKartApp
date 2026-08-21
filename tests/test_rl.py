@@ -381,6 +381,11 @@ def test_env_holds_each_decision_for_several_ticks(hairpin_track) -> None:
     assert len(env.physics_tick_rows) == env.setup.action.hold_ticks
     _throttle, _brake, steering = env._last_policy_controls
     assert steering == pytest.approx(1.0)
+    row = env.physics_tick_rows[-1]
+    assert "rl_step_reward" in row
+    assert "rl_episode_reward" in row
+    total = sum(tick["rl_step_reward"] for tick in env.physics_tick_rows)
+    assert row["rl_episode_reward"] == pytest.approx(total)
 
 
 def test_encode_expert_action_round_trips() -> None:

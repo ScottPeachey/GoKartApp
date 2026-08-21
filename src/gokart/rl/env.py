@@ -50,6 +50,7 @@ class TrackRacingEnv(gym.Env):
             max_drive_steps if max_drive_steps is not None else session_config.max_steps
         )
         self._drive_steps = 0
+        self._episode_reward_total = 0.0
         self._last_policy_controls = (0.0, 0.0, 0.0)
         self.physics_tick_rows: list[dict[str, Any]] = []
 
@@ -80,6 +81,7 @@ class TrackRacingEnv(gym.Env):
         self._stagnant_steps = 0
         self._off_track_steps = 0
         self._drive_steps = 0
+        self._episode_reward_total = 0.0
         self._last_policy_controls = (0.0, 0.0, 0.0)
         self.physics_tick_rows = []
         step_result = self.session.reset()
@@ -151,6 +153,10 @@ class TrackRacingEnv(gym.Env):
             state=self._reward_state,
             objective=self.objective,
         )
+        self._episode_reward_total += reward
+        if self.physics_tick_rows:
+            self.physics_tick_rows[-1]["rl_step_reward"] = reward
+            self.physics_tick_rows[-1]["rl_episode_reward"] = self._episode_reward_total
         obs = self._obs_from_step(step_result.tick.values, step_result.info)
         self._last_obs = obs
         if stagnant_now:

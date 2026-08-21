@@ -803,6 +803,15 @@ function applyReplaySampleToUi(sample) {
   pushEngineAudio(sample, {
     audible: state.historyReplayPlaying || state.historyReplayScrubbing,
   });
+  updateTrackMapHud({
+    speedKmh,
+    episodeReward: resolveEpisodeReward(
+      sample,
+      state.historyReplaySamples,
+      state.historyReplayIndex,
+    ),
+    showReward: sampleHasRlReward(sample) || selectedSessionHasRlReward(),
+  });
 }
 
 function syncReplayCockpitChrome() {
@@ -1418,6 +1427,68 @@ function formatEpisodeReward(value) {
   if (!Number.isFinite(n)) return "";
   const sign = n > 0 ? "+" : "";
   return `reward ${sign}${n.toFixed(1)}`;
+}
+
+function sampleHasRlReward(sample) {
+  if (!sample) return false;
+  return sample.rl_episode_reward != null || sample.rl_step_reward != null;
+}
+
+function resolveEpisodeReward(sample, samples = null, index = null) {
+  if (sample?.rl_episode_reward != null) {
+    const total = Number(sample.rl_episode_reward);
+    if (Number.isFinite(total)) return total;
+  }
+  if (Array.isArray(samples) && index != null && index >= 0) {
+    let total = 0;
+    let sawStep = false;
+    for (let i = 0; i <= index && i < samples.length; i += 1) {
+      const step = samples[i]?.rl_step_reward;
+      if (step == null) continue;
+      total += Number(step);
+      sawStep = true;
+    }
+    if (sawStep) return total;
+  }
+  return null;
+}
+
+function selectedSessionHasRlReward() {
+  const select = document.getElementById("session-select");
+  const option = select?.selectedOptions?.[0];
+  if (!option) return false;
+  const label = option.textContent || "";
+  return label.includes("RL ") || label.includes("reward ");
+}
+
+function updateTrackMapHud({ speedKmh = null, episodeReward = null, showReward = false } = {}) {
+  const speedEl = document.getElementById("track-map-hud-speed");
+  const rewardEl = document.getElementById("track-map-hud-reward");
+  if (speedEl) {
+    speedEl.textContent = speedKmh != null && Number.isFinite(Number(speedKmh))
+      ? `${Number(speedKmh).toFixed(1)} km/h`
+      : "— km/h";
+  }
+  if (!rewardEl) return;
+  if (showReward && episodeReward != null && Number.isFinite(Number(episodeReward))) {
+    rewardEl.textContent = formatEpisodeReward(episodeReward) || "—";
+    rewardEl.classList.remove("hidden");
+  } else {
+    rewardEl.classList.add("hidden");
+  }
+}
+
+function syncSessionListPlacement(tab) {
+  const panel = document.getElementById("session-list-panel");
+  const liveMount = document.getElementById("session-list-mount-live");
+  const historyMount = document.getElementById("session-list-mount-history");
+  if (!panel || !liveMount || !historyMount) return;
+  const useHistoryMount = isSplitTelemetryView() || tab === "history";
+  const mount = useHistoryMount ? historyMount : liveMount;
+  if (panel.parentElement !== mount) {
+    mount.appendChild(panel);
+  }
+  liveMount.classList.toggle("hidden", useHistoryMount);
 }
 
 function sessionOptionLabel(session, displayNumber) {
@@ -2494,6 +2565,7 @@ function syncTelemetryPanels(tab) {
       updateChannelsGrid(state.lastSample);
     }
     startHistoryPolling();
+    syncSessionListPlacement(tab);
     return;
   }
 
@@ -2512,6 +2584,7 @@ function syncTelemetryPanels(tab) {
       updateChannelsGrid(state.lastSample);
     }
   }
+  syncSessionListPlacement(tab);
 }
 
 function historyChartPanelLayout() {
@@ -3145,6 +3218,11 @@ function updateHistoryMarkerFromLive() {
   }
 
   drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
+  updateTrackMapHud({
+    speedKmh: liveSpeedKmh,
+    episodeReward: resolveEpisodeReward(state.lastSample),
+    showReward: sampleHasRlReward(state.lastSample) || selectedSessionHasRlReward(),
+  });
   state.historyMarkerFingerprint = markerFingerprint;
 }
 

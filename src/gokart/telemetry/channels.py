@@ -93,6 +93,8 @@ TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
     TelemetryChannel("torque_permitted", "1"),
     TelemetryChannel("active_faults", "1", channel_type="string"),
     TelemetryChannel("derating_factor", "1"),
+    TelemetryChannel("rl_step_reward", "1"),
+    TelemetryChannel("rl_episode_reward", "1"),
 )
 
 CHANNEL_NAMES: tuple[str, ...] = tuple(channel.name for channel in TELEMETRY_CHANNELS)
