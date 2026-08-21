@@ -3452,6 +3452,7 @@ function applyTrainingMetrics(metrics) {
     });
   }
   if (wasRunning && !state.trainingRunning) {
+    syncAutoObjectiveFromTraining();
     void refreshHistoryView(true);
     void updateAutoPolicyStatus();
   }
@@ -3637,9 +3638,19 @@ function readRlTrainingSetupFromForm() {
   return setup;
 }
 
+function syncAutoObjectiveFromTraining() {
+  const trainObjective = document.getElementById("train-objective")?.value;
+  const autoObjective = document.getElementById("auto-objective");
+  if (!trainObjective || !autoObjective) return;
+  if (autoObjective.querySelector(`option[value="${trainObjective}"]`)) {
+    autoObjective.value = trainObjective;
+  }
+}
+
 function applyRlTrainingSetupToForm(setup) {
   const objectiveEl = document.getElementById("train-objective");
   if (objectiveEl && setup.objective) objectiveEl.value = setup.objective;
+  syncAutoObjectiveFromTraining();
   for (const [sectionKey, values] of Object.entries(setup)) {
     if (typeof values !== "object" || values === null) continue;
     for (const [key, value] of Object.entries(values)) {
@@ -3702,7 +3713,9 @@ async function initRlTrainingConfig() {
     if (preset === "god" || preset === "endurance") {
       applyRewardPresetToForm(preset);
     }
+    syncAutoObjectiveFromTraining();
     persistRlTrainingSetup();
+    void updateAutoPolicyStatus();
   });
   document.getElementById("rl-train-config-sections")?.addEventListener("input", () => {
     const objectiveEl = document.getElementById("train-objective");
@@ -3802,7 +3815,13 @@ async function updateAutoPolicyStatus() {
     );
     if (status.available) {
       const lap = status.ceiling_lap_s ? `, ceiling ${Number(status.ceiling_lap_s).toFixed(1)}s` : "";
-      pill.textContent = `Policy ${status.policy_key}: ${status.status}${lap}`;
+      const statusNote = status.status === "failed"
+        ? "trained (no clean eval lap)"
+        : status.status;
+      pill.textContent = `Policy ${status.policy_key}: ${statusNote}${lap}`;
+    } else if (Array.isArray(status.trained_objectives) && status.trained_objectives.length > 0) {
+      const trained = status.trained_objectives.join(", ");
+      pill.textContent = `Policy ${status.policy_key}: not trained for ${objective} — switch Objective to ${trained}`;
     } else {
       pill.textContent = `Policy ${status.policy_key}: not trained — use Train below or gokart rl train`;
     }

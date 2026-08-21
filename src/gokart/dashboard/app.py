@@ -440,7 +440,7 @@ def create_app(
         objective: str = "god",
     ) -> dict[str, Any]:
         from gokart.rl.policy_key import build_policy_identity
-        from gokart.rl.registry import load_manifest, model_path
+        from gokart.rl.registry import find_trained_objectives, load_manifest, model_path
 
         identity = build_policy_identity(
             vehicle_name=vehicle_name,
@@ -451,9 +451,18 @@ def create_app(
             objective=objective,  # type: ignore[arg-type]
         )
         manifest = load_manifest(identity)
+        trained_objectives = find_trained_objectives(
+            vehicle_name=vehicle_name,
+            vehicle_version=vehicle_version,
+            track_id=track_id,
+            drive_mode=drive_mode,
+            driver_profile=driver_profile,
+        )
         return {
             "policy_key": identity.policy_key,
+            "objective": objective,
             "available": manifest is not None and model_path(identity).exists(),
+            "trained_objectives": trained_objectives,
             "status": manifest.status if manifest else None,
             "ceiling_lap_s": manifest.ceiling_lap_s if manifest else None,
             "clean_lap_rate": manifest.clean_lap_rate if manifest else None,

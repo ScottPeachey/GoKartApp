@@ -117,3 +117,31 @@ def find_policy(
         root=root,
     )
     return load_manifest(identity, root=root)
+
+
+def find_trained_objectives(
+    *,
+    vehicle_name: str,
+    vehicle_version: str,
+    track_id: str,
+    drive_mode: str,
+    driver_profile: str,
+    root: Path | None = None,
+) -> list[str]:
+    """Return objectives that have a saved model for this vehicle/track/mode/profile."""
+    from gokart.rl.policy_key import build_policy_identity
+
+    trained: list[str] = []
+    for objective in ("god", "endurance", "custom"):
+        identity = build_policy_identity(
+            vehicle_name=vehicle_name,
+            vehicle_version=vehicle_version,
+            track_id=track_id,
+            drive_mode=drive_mode,
+            driver_profile=driver_profile,
+            objective=objective,  # type: ignore[arg-type]
+            root=root,
+        )
+        if load_manifest(identity, root=root) is not None and model_path(identity, root=root).exists():
+            trained.append(objective)
+    return trained
