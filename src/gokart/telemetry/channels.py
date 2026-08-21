@@ -42,6 +42,7 @@ TELEMETRY_CHANNELS: tuple[TelemetryChannel, ...] = (
     TelemetryChannel("engine_temp_derate_c", "C"),
     TelemetryChannel("engine_temp_fault_c", "C"),
     TelemetryChannel("clutch_locked", "1"),
+    TelemetryChannel("clutch_slip_rpm", "rpm"),
     TelemetryChannel("motor_torque_nm", "N*m"),
     TelemetryChannel("motor_current_a", "A"),
     TelemetryChannel("battery_current_a", "A"),

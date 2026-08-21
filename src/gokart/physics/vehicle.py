@@ -164,6 +164,7 @@ class VehicleStepOutputs:
     engine_rpm: float = 0.0
     engine_temp_c: float = 25.0
     clutch_locked: bool = False
+    clutch_slip_rpm: float = 0.0
 
 
 @dataclass
@@ -1006,6 +1007,7 @@ class VehicleModel:
             engine_rpm=engine_state.rpm,
             engine_temp_c=motor_thermal_out.temperature_c,
             clutch_locked=ice_out.clutch_locked,
+            clutch_slip_rpm=clutch_out.slip_rpm,
         )
 
 

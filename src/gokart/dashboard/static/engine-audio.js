@@ -30,6 +30,15 @@
     return Math.max(0, Number(rpm) || 0) / 60;
   }
 
+  function effectiveIceAudioRpm(engineRpm, clutchLocked, clutchSlipRpm) {
+    if (!Number.isFinite(engineRpm) || engineRpm <= 0) return 0;
+    if (clutchLocked >= 0.5) return engineRpm;
+    if (!Number.isFinite(clutchSlipRpm) || clutchSlipRpm <= 150) return engineRpm;
+    const coupled = Math.max(0, engineRpm - clutchSlipRpm);
+    const slipBlend = Math.min(1, (clutchSlipRpm - 150) / 3500);
+    return coupled + (engineRpm - coupled) * (1 - slipBlend * 0.9);
+  }
+
   function telemetryFromSample(sample) {
     const engineRpm = Number(sample?.engine_rpm);
     const motorRpm = Number(sample?.motor_rpm);
@@ -37,10 +46,11 @@
     const hasMotor = Number.isFinite(motorRpm);
     const type = String(sample?.powertrain_type || "");
     const isIce = type === "ice" || (type !== "ev" && hasEngine && engineRpm > 1);
+    const clutchLocked = Number(sample?.clutch_locked);
     let rpm = 0;
     let source = "none";
     if (isIce) {
-      rpm = engineRpm;
+      rpm = effectiveIceAudioRpm(engineRpm, clutchLocked, Number(sample?.clutch_slip_rpm));
       source = "engine_rpm";
     } else if (hasMotor && motorRpm > 1) {
       rpm = motorRpm;
@@ -51,7 +61,6 @@
     }
     const throttle = clamp01(sample?.throttle);
     const brake = clamp01(sample?.brake);
-    const clutchLocked = Number(sample?.clutch_locked);
     const safety = String(sample?.safety_state || "");
     const powered = safety === "DRIVING" || safety === "ARMED" || safety === "READY";
     return {
@@ -292,6 +301,7 @@
     bindUi,
     isEnabled: () => audio.enabled,
     telemetryFromSample,
+    effectiveIceAudioRpm,
     firingHzFromRpm,
     debug: () => ({
       rpm: audio.lastRpm,

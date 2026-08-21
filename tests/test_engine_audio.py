@@ -24,6 +24,7 @@ def test_worklet_firing_rate_is_rpm_over_60() -> None:
 def test_controller_posts_engine_rpm_to_worklet() -> None:
     source = (STATIC / "engine-audio.js").read_text()
     assert 'source = "engine_rpm"' in source
+    assert "effectiveIceAudioRpm" in source
     assert "worklet.port.postMessage" in source
     html = (STATIC / "index.html").read_text()
     assert "engine-audio-rpm" in html

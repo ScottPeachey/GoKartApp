@@ -494,6 +494,7 @@ class SimulationSession:
                 "motor_rpm": physics_out.motor_rpm,
                 "engine_rpm": physics_out.engine_rpm,
                 "clutch_locked": float(physics_out.clutch_locked),
+                "clutch_slip_rpm": float(physics_out.clutch_slip_rpm),
                 "motor_torque_nm": physics_out.motor_torque_nm,
                 "motor_current_a": physics_out.motor_current_a,
                 "battery_current_a": physics_out.battery_current_a,
