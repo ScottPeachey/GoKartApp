@@ -186,6 +186,7 @@ const TRAIN_STATUS_LABELS = {
   starting: "Starting…",
   loading_libraries: "Loading PyTorch (first run can take a minute)…",
   building_model: "Building policy network…",
+  loading_checkpoint: "Loading saved checkpoint…",
   collecting_demos: "Recording expert laps to clone…",
   behavior_cloning: "Copying the racing-line driver into the policy…",
   preview_recording: "Recording preview lap…",
@@ -3500,7 +3501,9 @@ function renderTrainingMetricsPanel(metrics) {
   setText("train-status", statusLabel);
   setText(
     "train-timesteps",
-    `${Number(metrics.timesteps || 0).toLocaleString()} / ${Number(metrics.total_timesteps || 0).toLocaleString()}`,
+    Number(metrics.resumed_from_timesteps || 0) > 0
+      ? `${Number(metrics.timesteps || 0).toLocaleString()} total (+${Number(metrics.total_timesteps || 0).toLocaleString()} this run)`
+      : `${Number(metrics.timesteps || 0).toLocaleString()} / ${Number(metrics.total_timesteps || 0).toLocaleString()}`,
   );
   setText(
     "train-best-lap",
@@ -3753,6 +3756,7 @@ async function startRlTraining() {
   const totalSteps = Number(document.getElementById("train-total-steps")?.value || 50000);
   const previewFreq = Number(document.getElementById("train-preview-freq")?.value || 10000);
   const seed = Number(document.getElementById("train-seed")?.value || 0);
+  const resumeFromCheckpoint = document.getElementById("train-resume")?.checked ?? true;
   const setup = readRlTrainingSetupFromForm();
   setup.objective = objective;
   persistRlTrainingSetup();
@@ -3773,6 +3777,7 @@ async function startRlTraining() {
       preview_freq: previewFreq,
       seed,
       setup,
+      resume_from_checkpoint: resumeFromCheckpoint,
     }),
   });
   await refreshTrainingStatus();

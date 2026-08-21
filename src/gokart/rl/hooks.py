@@ -10,6 +10,8 @@ from typing import Any, Protocol
 class TrainingProgress:
     timesteps: int = 0
     total_timesteps: int = 0
+    resumed_from_timesteps: int = 0
+    resume_enabled: bool = False
     status: str = "idle"
     policy_key: str = ""
     best_lap_s: float | None = None
@@ -27,11 +29,14 @@ class TrainingProgress:
     error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        session_done = max(0, self.timesteps - self.resumed_from_timesteps)
         return {
             "timesteps": self.timesteps,
             "total_timesteps": self.total_timesteps,
+            "resumed_from_timesteps": self.resumed_from_timesteps,
+            "resume_enabled": self.resume_enabled,
             "progress_pct": (
-                100.0 * self.timesteps / self.total_timesteps if self.total_timesteps > 0 else 0.0
+                100.0 * session_done / self.total_timesteps if self.total_timesteps > 0 else 0.0
             ),
             "status": self.status,
             "policy_key": self.policy_key,

@@ -67,6 +67,34 @@ def best_model_path(identity: PolicyIdentity, root: Path | None = None) -> Path:
     return policy_dir(identity, root=root) / "model_best.zip"
 
 
+def training_metrics_path(identity: PolicyIdentity, root: Path | None = None) -> Path:
+    return policy_dir(identity, root=root) / "training_metrics.json"
+
+
+def load_training_metrics(identity: PolicyIdentity, root: Path | None = None) -> dict[str, Any]:
+    path = training_metrics_path(identity, root=root)
+    if not path.is_file():
+        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_resume_checkpoint(
+    identity: PolicyIdentity,
+    *,
+    root: Path | None = None,
+    prefer_best: bool = True,
+) -> Path | None:
+    """Return the checkpoint to load when resuming, preferring the best eval snapshot."""
+    if prefer_best:
+        best = best_model_path(identity, root=root)
+        if best.is_file():
+            return best
+    deployed = model_path(identity, root=root)
+    if deployed.is_file():
+        return deployed
+    return None
+
+
 def save_manifest(manifest: PolicyManifest, root: Path | None = None) -> Path:
     path = manifest_path(manifest.identity, root=root)
     manifest.updated_at = datetime.now(UTC).isoformat()

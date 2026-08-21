@@ -1110,3 +1110,27 @@ def test_stream_training_tick_unwraps_monitor() -> None:
     vec = SimpleNamespace(envs=[SimpleNamespace(env=inner)])
     _stream_training_tick(vec, _Hooks())
     assert ticks == [{"speed_mps": 3.2}]
+
+
+def test_resolve_resume_checkpoint_prefers_best(tmp_path) -> None:
+    from gokart.rl.policy_key import PolicyIdentity, policy_dir
+    from gokart.rl.registry import model_path, resolve_resume_checkpoint
+
+    identity = PolicyIdentity(
+        vehicle_name="Scott Kart V1",
+        vehicle_version="V1.0",
+        config_hash="abc",
+        track_id="test-track",
+        drive_mode="default",
+        driver_profile="owner",
+        objective="god",
+    )
+    assert resolve_resume_checkpoint(identity, root=tmp_path) is None
+
+    policy_dir(identity, root=tmp_path).mkdir(parents=True, exist_ok=True)
+    deployed = model_path(identity, root=tmp_path)
+    deployed.write_bytes(b"deployed")
+    best = deployed.parent / "model_best.zip"
+    best.write_bytes(b"best")
+
+    assert resolve_resume_checkpoint(identity, root=tmp_path) == best

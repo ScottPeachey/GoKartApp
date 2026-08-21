@@ -289,9 +289,13 @@ def cmd_rl_train(args: argparse.Namespace) -> int:
             preview_freq=args.preview_freq,
             eval_freq=args.preview_freq,
             seed=args.seed,
+            resume_from_checkpoint=not args.no_resume,
         )
     )
     print(f"Policy key: {result.identity.policy_key}")
+    if result.resumed:
+        print(f"Resumed from {result.resumed_from_timesteps:,} steps")
+    print(f"Final timesteps: {result.final_timesteps:,}")
     print(f"Status: {result.manifest.status}")
     print(f"Model: {result.model_path}")
     if result.best_lap_s is not None:
@@ -476,11 +480,16 @@ def build_parser() -> argparse.ArgumentParser:
     rl_train.add_argument("--track", required=True, help="Track id")
     rl_train.add_argument("--mode", default="default", help="Drive mode")
     rl_train.add_argument("--profile", default="owner", help="Driver profile")
-    rl_train.add_argument("--objective", choices=["god", "endurance"], default="god")
+    rl_train.add_argument("--objective", choices=["god", "endurance", "custom"], default="god")
     rl_train.add_argument("--laps", type=int, default=3)
     rl_train.add_argument("--timesteps", type=int, default=50_000)
     rl_train.add_argument("--preview-freq", type=int, default=10_000, help="Preview/eval interval in env steps")
     rl_train.add_argument("--seed", type=int, default=0)
+    rl_train.add_argument(
+        "--no-resume",
+        action="store_true",
+        help="Train from scratch with expert warmup instead of loading a saved checkpoint",
+    )
     rl_train.set_defaults(func=cmd_rl_train)
 
     rl_list = rl_sub.add_parser("list", help="List trained policies")

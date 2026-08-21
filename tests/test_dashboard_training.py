@@ -28,6 +28,18 @@ def test_training_progress_to_dict() -> None:
     assert payload["preview_session_id"] == ""
 
 
+def test_training_progress_resume_session_pct() -> None:
+    progress = TrainingProgress(
+        timesteps=550_000,
+        total_timesteps=50_000,
+        resumed_from_timesteps=500_000,
+        resume_enabled=True,
+        status="training",
+    )
+    payload = progress.to_dict()
+    assert payload["progress_pct"] == 100.0
+
+
 def test_training_status_labels_cover_init_phases() -> None:
     for status in (
         "starting",
@@ -35,6 +47,7 @@ def test_training_status_labels_cover_init_phases() -> None:
         "building_model",
         "collecting_demos",
         "behavior_cloning",
+        "loading_checkpoint",
         "training",
         "preview_recording",
     ):

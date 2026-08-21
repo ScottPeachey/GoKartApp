@@ -21,7 +21,16 @@ from gokart.rl.episode_recording import (
 )
 from gokart.rl.hooks import NullTrainingHooks, TrainingHooks, TrainingProgress
 from gokart.rl.policy_key import PolicyIdentity, build_policy_identity, policy_dir
-from gokart.rl.registry import PolicyManifest, best_model_path, model_path, save_manifest
+from gokart.rl.registry import (
+    PolicyManifest,
+    best_model_path,
+    load_manifest,
+    load_training_metrics,
+    model_path,
+    resolve_resume_checkpoint,
+    save_manifest,
+    training_metrics_path,
+)
 from gokart.rl.rewards import _BLOCKING_THERMAL_FAULTS
 from gokart.rl.training_setup import RlTrainingSetup, default_training_setup
 from gokart.track.store import load_track
@@ -77,6 +86,8 @@ class TrainingConfig:
     min_improvement_s: float = 0.05
     clean_lap_fault_free: bool = True
     setup: RlTrainingSetup | None = None
+    resume_from_checkpoint: bool = True
+    fine_tune_lr_scale: float = 0.5
 
 
 @dataclass
@@ -87,6 +98,9 @@ class TrainingResult:
     best_lap_s: float | None
     clean_lap_rate: float
     plateau_reached: bool
+    resumed: bool = False
+    resumed_from_timesteps: int = 0
+    final_timesteps: int = 0
 
 
 def run_preview_episode(
@@ -185,11 +199,18 @@ def train_policy(
         root=root,
     )
 
+    prior_metrics = load_training_metrics(identity, root=root)
+    checkpoint_path = resolve_resume_checkpoint(identity, root=root)
+    resumed = bool(config.resume_from_checkpoint and checkpoint_path is not None)
+    resumed_from_timesteps = 0
+
     def _status(status: str, **kwargs: Any) -> None:
         callbacks.on_progress(
             TrainingProgress(
-                timesteps=int(kwargs.get("timesteps", 0)),
+                timesteps=int(kwargs.get("timesteps", resumed_from_timesteps)),
                 total_timesteps=config.total_timesteps,
+                resumed_from_timesteps=resumed_from_timesteps,
+                resume_enabled=resumed,
                 status=status,
                 policy_key=identity.policy_key,
                 preview_running=bool(kwargs.get("preview_running", False)),
@@ -206,19 +227,29 @@ def train_policy(
             "RL training requires stable-baselines3. Install with: uv sync --group rl"
         ) from exc
 
-    manifest = PolicyManifest(
-        identity=identity,
-        status="training",
-        training_seed=config.seed,
-        sim_version=__version__,
-        reward_preset="min_time_v1",
-    )
+    existing_manifest = load_manifest(identity, root=root)
+    if existing_manifest is not None:
+        manifest = replace(
+            existing_manifest,
+            status="training",
+            training_seed=config.seed,
+            sim_version=__version__,
+        )
+    else:
+        manifest = PolicyManifest(
+            identity=identity,
+            status="training",
+            training_seed=config.seed,
+            sim_version=__version__,
+            reward_preset="min_time_v1",
+        )
     save_manifest(manifest, root=root)
 
     training_state = {"timesteps": 0}
 
     setup = config.setup or default_training_setup()
     ppo = setup.ppo
+    learning_rate = ppo.learning_rate * (config.fine_tune_lr_scale if resumed else 1.0)
 
     def _make():
         env = make_env(
@@ -255,34 +286,48 @@ def train_policy(
             )
         return Monitor(env)
 
-    _status("building_model")
+    if resumed:
+        _status("loading_checkpoint")
+    else:
+        _status("building_model")
     env = _make()
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=0,
-        seed=config.seed,
-        learning_rate=_linear_learning_rate(ppo.learning_rate),
-        n_steps=ppo.n_steps,
-        batch_size=ppo.batch_size,
-        ent_coef=ppo.ent_coef,
-        gamma=ppo.gamma,
-        policy_kwargs={"log_std_init": -1.0},
-    )
+    if resumed:
+        assert checkpoint_path is not None
+        model = PPO.load(str(checkpoint_path), env=env)
+        resumed_from_timesteps = int(getattr(model, "num_timesteps", 0))
+        training_state["timesteps"] = resumed_from_timesteps
+        model.learning_rate = _linear_learning_rate(learning_rate)
+    else:
+        model = PPO(
+            "MlpPolicy",
+            env,
+            verbose=0,
+            seed=config.seed,
+            learning_rate=_linear_learning_rate(learning_rate),
+            n_steps=ppo.n_steps,
+            batch_size=ppo.batch_size,
+            ent_coef=ppo.ent_coef,
+            gamma=ppo.gamma,
+            policy_kwargs={"log_std_init": -1.0},
+        )
 
-    _warm_start_from_expert(
-        model,
-        config=config,
-        track=track,
-        setup=setup,
-        should_stop=lambda: should_stop() or callbacks.should_stop(),
-        on_status=_status,
-    )
+        _warm_start_from_expert(
+            model,
+            config=config,
+            track=track,
+            setup=setup,
+            should_stop=lambda: should_stop() or callbacks.should_stop(),
+            on_status=_status,
+        )
 
     eval_history: list[float | None] = []
-    best_lap: float | None = None
+    prior_best_lap = prior_metrics.get("best_lap_s")
+    best_lap: float | None = float(prior_best_lap) if prior_best_lap is not None else None
     best_preview_reward: float | None = None
-    best_checkpoint_timestep: int | None = None
+    prior_checkpoint = prior_metrics.get("best_checkpoint_timestep")
+    best_checkpoint_timestep: int | None = (
+        int(prior_checkpoint) if prior_checkpoint is not None else None
+    )
     clean_rates: list[float] = []
     stop_training_flag = False
     previews_completed = 0
@@ -301,6 +346,8 @@ def train_policy(
             TrainingProgress(
                 timesteps=timesteps,
                 total_timesteps=config.total_timesteps,
+                resumed_from_timesteps=resumed_from_timesteps,
+                resume_enabled=resumed,
                 status=status,
                 policy_key=identity.policy_key,
                 best_lap_s=best_lap,
@@ -466,9 +513,13 @@ def train_policy(
 
             return True
 
-    _emit_progress(timesteps=0)
+    _emit_progress(timesteps=resumed_from_timesteps)
     callback = CeilingCallback()
-    model.learn(total_timesteps=config.total_timesteps, callback=callback)
+    model.learn(
+        total_timesteps=config.total_timesteps,
+        callback=callback,
+        reset_num_timesteps=not resumed,
+    )
 
     if should_stop() or callbacks.should_stop():
         manifest.status = "stopped"
@@ -495,7 +546,8 @@ def train_policy(
     manifest.clean_lap_rate = (sum(clean_rates) / len(clean_rates)) if clean_rates else 0.0
     save_manifest(manifest, root=root)
 
-    metrics_path = policy_dir(identity, root=root) / "training_metrics.json"
+    metrics_path = training_metrics_path(identity, root=root)
+    final_timesteps = int(getattr(model, "num_timesteps", 0))
     metrics_path.write_text(
         json.dumps(
             {
@@ -503,6 +555,9 @@ def train_policy(
                 "best_lap_s": best_lap,
                 "clean_lap_rate": manifest.clean_lap_rate,
                 "best_checkpoint_timestep": best_checkpoint_timestep,
+                "cumulative_timesteps": final_timesteps,
+                "session_timesteps": config.total_timesteps,
+                "resumed_from_timesteps": resumed_from_timesteps if resumed else 0,
             },
             indent=2,
         ),
@@ -518,6 +573,9 @@ def train_policy(
         plateau_reached=_plateau_reached(
             eval_history, config.plateau_evals, config.min_improvement_s
         ),
+        resumed=resumed,
+        resumed_from_timesteps=resumed_from_timesteps,
+        final_timesteps=final_timesteps,
     )
 
 

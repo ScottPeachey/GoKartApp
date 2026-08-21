@@ -30,6 +30,7 @@ class TrainingRunRequest:
     preview_freq: int = 10_000
     seed: int = 0
     setup: dict[str, Any] | None = None
+    resume_from_checkpoint: bool = True
 
 
 @dataclass
@@ -167,6 +168,7 @@ class TrainingController:
             record_training_episodes=True,
             seed=request.seed,
             setup=setup,
+            resume_from_checkpoint=request.resume_from_checkpoint,
         )
         try:
             hooks.on_progress(
@@ -179,8 +181,10 @@ class TrainingController:
             result = train_policy(config, hooks=hooks, stop_check=self._should_stop)
             hooks.on_progress(
                 TrainingProgress(
-                    timesteps=config.total_timesteps,
+                    timesteps=result.final_timesteps,
                     total_timesteps=config.total_timesteps,
+                    resumed_from_timesteps=result.resumed_from_timesteps,
+                    resume_enabled=result.resumed,
                     status=result.manifest.status,
                     policy_key=result.identity.policy_key,
                     best_lap_s=result.best_lap_s,
@@ -227,6 +231,8 @@ class _DashboardTrainingHooks:
         merged = TrainingProgress(
             timesteps=progress.timesteps,
             total_timesteps=progress.total_timesteps,
+            resumed_from_timesteps=progress.resumed_from_timesteps,
+            resume_enabled=progress.resume_enabled,
             status=progress.status,
             policy_key=progress.policy_key or self._controller.status.progress.policy_key,
             best_lap_s=progress.best_lap_s,

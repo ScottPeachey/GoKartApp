@@ -114,6 +114,7 @@ class RlTrainStartRequest(BaseModel):
     preview_freq: int = Field(default=10_000, ge=500, le=500_000)
     seed: int = 0
     setup: dict[str, Any] | None = None
+    resume_from_checkpoint: bool = True
 
 
 PHYSICS_REVISION = "tyre-v1"
@@ -499,6 +500,7 @@ def create_app(
                     preview_freq=request.preview_freq,
                     seed=request.seed,
                     setup=request.setup,
+                    resume_from_checkpoint=request.resume_from_checkpoint,
                 )
             )
         except RuntimeError as exc:
