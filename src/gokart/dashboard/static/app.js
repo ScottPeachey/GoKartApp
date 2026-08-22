@@ -806,6 +806,7 @@ function applyReplaySampleToUi(sample) {
   });
   updateTrackMapHud({
     speedKmh,
+    avgSpeedKmh: state.historyPathLayer?.avgSpeedKmh ?? null,
     episodeReward: resolveEpisodeReward(
       sample,
       state.historyReplaySamples,
@@ -1462,13 +1463,35 @@ function selectedSessionHasRlReward() {
   return label.includes("RL ") || label.includes("reward ");
 }
 
-function updateTrackMapHud({ speedKmh = null, episodeReward = null, showReward = false } = {}) {
+function averageSpeedKmh(samplesOrSpeeds) {
+  if (!samplesOrSpeeds?.length) return null;
+  const first = samplesOrSpeeds[0];
+  const speeds = typeof first === "number"
+    ? samplesOrSpeeds
+    : samplesOrSpeeds.map((sample) => Number(sample.speed_mps || 0) * 3.6);
+  if (!speeds.length) return null;
+  const total = speeds.reduce((sum, speed) => sum + speed, 0);
+  return total / speeds.length;
+}
+
+function updateTrackMapHud({
+  speedKmh = null,
+  avgSpeedKmh = null,
+  episodeReward = null,
+  showReward = false,
+} = {}) {
   const speedEl = document.getElementById("track-map-hud-speed");
+  const avgEl = document.getElementById("track-map-hud-avg-speed");
   const rewardEl = document.getElementById("track-map-hud-reward");
   if (speedEl) {
     speedEl.textContent = speedKmh != null && Number.isFinite(Number(speedKmh))
       ? `${Number(speedKmh).toFixed(1)} km/h`
       : "— km/h";
+  }
+  if (avgEl) {
+    avgEl.textContent = avgSpeedKmh != null && Number.isFinite(Number(avgSpeedKmh))
+      ? `avg ${Number(avgSpeedKmh).toFixed(1)} km/h`
+      : "avg — km/h";
   }
   if (!rewardEl) return;
   if (showReward && episodeReward != null && Number.isFinite(Number(episodeReward))) {
@@ -2001,8 +2024,11 @@ function redrawPathLayer() {
   const followLabel = state.pathFollowKart ? " · follow on" : "";
   const replayLabel = isHistoryReplayPinned() ? " · replay" : "";
   const trainLabel = state.trainingMetrics.preview_running ? " · RL preview" : "";
+  const avgLabel = layer.avgSpeedKmh != null && Number.isFinite(Number(layer.avgSpeedKmh))
+    ? ` · avg ${Number(layer.avgSpeedKmh).toFixed(1)} km/h`
+    : "";
   pathCtx.fillText(
-    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${trackLabel}${zoomLabel}${followLabel}${replayLabel}${trainLabel}`,
+    `Path trace — blue slow → red at ${layer.pathColorMaxKmh.toFixed(0)} km/h limit${avgLabel}${trackLabel}${zoomLabel}${followLabel}${replayLabel}${trainLabel}`,
     10,
     16,
   );
@@ -3037,6 +3063,7 @@ async function drawSessionChart(sessionId) {
     state.historyReplaySamples = [];
     state.historyReplayChartMeta = null;
     syncHistoryReplayScrubber([], 0);
+    updateTrackMapHud({ speedKmh: null, avgSpeedKmh: null, showReward: false });
     return;
   }
 
@@ -3054,6 +3081,7 @@ async function drawSessionChart(sessionId) {
   }
 
   const speeds = samples.map((s) => Number(s.speed_mps || 0) * 3.6);
+  const avgSpeedKmh = averageSpeedKmh(speeds);
   const steers = samples.map((s) => Number(s.steering_angle_deg || 0));
   const throttlePct = samples.map((s) => Math.max(0, Math.min(100, Number(s.throttle || 0) * 100)));
   const brakePct = samples.map((s) => Math.max(0, Math.min(100, Number(s.brake || 0) * 100)));
@@ -3098,6 +3126,7 @@ async function drawSessionChart(sessionId) {
   state.historyPathLayer = {
     marker,
     speeds,
+    avgSpeedKmh,
     pathColorMaxKmh,
     replayMarker: null,
   };
@@ -3141,6 +3170,14 @@ async function drawSessionChart(sessionId) {
 
   if (isLiveTelemetryDrivingHistory() && !isHistoryReplayPinned()) {
     updateHistoryMarkerFromLive();
+  } else {
+    const replaySample = samples[state.historyReplayIndex] ?? samples[samples.length - 1];
+    updateTrackMapHud({
+      speedKmh: Number(replaySample?.speed_mps || 0) * 3.6,
+      avgSpeedKmh,
+      episodeReward: resolveEpisodeReward(replaySample, samples, state.historyReplayIndex),
+      showReward: sampleHasRlReward(replaySample) || selectedSessionHasRlReward(),
+    });
   }
 }
 
@@ -3201,6 +3238,8 @@ function updateHistoryMarkerFromLive() {
     ys,
   };
   state.historyPathLayer.speeds = speeds;
+  const avgSpeedKmh = averageSpeedKmh(speeds);
+  state.historyPathLayer.avgSpeedKmh = avgSpeedKmh;
   if (moved) {
     schedulePathRedraw();
   } else if (state.pathFollowKart) {
@@ -3211,6 +3250,7 @@ function updateHistoryMarkerFromLive() {
   drawPathMarkerOverlay(liveX, liveY, liveHeading, state.historyVehicleDims);
   updateTrackMapHud({
     speedKmh: liveSpeedKmh,
+    avgSpeedKmh,
     episodeReward: resolveEpisodeReward(state.lastSample),
     showReward: sampleHasRlReward(state.lastSample) || selectedSessionHasRlReward(),
   });

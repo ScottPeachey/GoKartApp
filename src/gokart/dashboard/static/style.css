@@ -622,6 +622,7 @@ button.btn-path-follow {
 }
 
 .track-map-hud-speed,
+.track-map-hud-avg-speed,
 .track-map-hud-reward {
   padding: 0.28rem 0.55rem;
   border-radius: 6px;
@@ -637,6 +638,11 @@ button.btn-path-follow {
   font-size: 0.95rem;
   font-weight: 600;
   color: #3dd6c6;
+}
+
+.track-map-hud-avg-speed {
+  font-size: 0.78rem;
+  color: #9eb4cc;
 }
 
 .track-map-hud-reward {
