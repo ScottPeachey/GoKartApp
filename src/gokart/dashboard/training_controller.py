@@ -10,6 +10,7 @@ from gokart.config.hashing import content_hash
 from gokart.config.store import data_root, load_vehicle
 from gokart.rl.hooks import TrainingProgress
 from gokart.rl.trainer import TrainingConfig, train_policy
+from gokart.rl.session_summary import build_session_summary, persist_session_summary
 from gokart.rl.training_setup import training_setup_from_dict
 from gokart.telemetry.bus import TelemetryBus
 from gokart.telemetry.channels import validate_sample_row
@@ -179,6 +180,19 @@ class TrainingController:
                 )
             )
             result = train_policy(config, hooks=hooks, stop_check=self._should_stop)
+            summary = _build_and_persist_summary(
+                store=self.store,
+                hooks=hooks,
+                config=config,
+                status=result.manifest.status,
+                policy_key=result.identity.policy_key,
+                resumed_from_timesteps=result.resumed_from_timesteps,
+                final_timesteps=result.final_timesteps,
+                best_lap_s=result.best_lap_s,
+                clean_lap_rate=result.clean_lap_rate,
+                best_checkpoint_timestep=result.best_checkpoint_timestep,
+                identity=result.identity,
+            )
             hooks.on_progress(
                 TrainingProgress(
                     timesteps=result.final_timesteps,
@@ -192,15 +206,35 @@ class TrainingController:
                     preview_running=False,
                     preview_sessions=list(hooks.preview_sessions),
                     previews_completed=len(hooks.preview_sessions),
+                    session_summary=summary,
                 )
             )
         except Exception as exc:  # noqa: BLE001 - surface to dashboard
+            summary = None
+            try:
+                summary = _build_and_persist_summary(
+                    store=self.store,
+                    hooks=hooks,
+                    config=config,
+                    status="failed",
+                    policy_key=_policy_key_for(config),
+                    resumed_from_timesteps=hooks._controller.status.progress.resumed_from_timesteps,
+                    final_timesteps=hooks._controller.status.progress.timesteps,
+                    best_lap_s=hooks._controller.status.progress.best_lap_s,
+                    clean_lap_rate=hooks._controller.status.progress.clean_lap_rate,
+                    best_checkpoint_timestep=None,
+                    identity=None,
+                    error=str(exc),
+                )
+            except Exception:
+                summary = None
             progress = TrainingProgress(
                 status="failed",
                 total_timesteps=config.total_timesteps,
                 error=str(exc),
                 preview_sessions=list(hooks.preview_sessions),
                 previews_completed=len(hooks.preview_sessions),
+                session_summary=summary,
             )
             with self._lock:
                 if self.status.progress.policy_key:
@@ -248,6 +282,7 @@ class _DashboardTrainingHooks:
             test_running=self._controller._test_running,
             last_test_session_id=progress.last_test_session_id,
             error=progress.error,
+            session_summary=progress.session_summary,
         )
         self._controller._publish_progress(merged)
 
@@ -343,14 +378,75 @@ class _DashboardTrainingHooks:
             "timestep": timestep,
             "session_id": recorder.session_id,
             "episode_reward": episode_reward,
+            "kind": kind,
         }
         if kind == "episode":
             entry["episode"] = episode_index
         if kind == "test":
-            entry["kind"] = "test"
             self._controller._last_test_session_id = recorder.session_id
         self.preview_sessions.append(entry)
         return recorder.session_id
+
+
+def _build_and_persist_summary(
+    *,
+    store: TelemetryStore,
+    hooks: _DashboardTrainingHooks,
+    config: TrainingConfig,
+    status: str,
+    policy_key: str,
+    resumed_from_timesteps: int,
+    final_timesteps: int,
+    best_lap_s: float | None,
+    clean_lap_rate: float,
+    best_checkpoint_timestep: int | None,
+    identity: Any,
+    error: str | None = None,
+) -> dict[str, Any]:
+    from gokart.rl.policy_key import build_policy_identity
+    from gokart.rl.registry import load_training_metrics
+
+    if identity is None:
+        identity = build_policy_identity(
+            vehicle_name=config.vehicle_name,
+            vehicle_version=config.vehicle_version,
+            track_id=config.track_id,
+            drive_mode=config.drive_mode,
+            driver_profile=config.driver_profile,
+            objective=config.objective,  # type: ignore[arg-type]
+        )
+    prior_metrics = load_training_metrics(identity)
+    previous_summary = prior_metrics.get("last_session_summary")
+    if not isinstance(previous_summary, dict):
+        previous_summary = None
+    summary = build_session_summary(
+        store=store,
+        preview_sessions=list(hooks.preview_sessions),
+        status=status,
+        policy_key=policy_key,
+        resumed_from_timesteps=resumed_from_timesteps,
+        session_timesteps=config.total_timesteps,
+        final_timesteps=final_timesteps,
+        best_lap_s=best_lap_s,
+        clean_lap_rate=clean_lap_rate,
+        best_checkpoint_timestep=best_checkpoint_timestep,
+        previous_summary=previous_summary,
+        error=error,
+    )
+    persist_session_summary(
+        identity,
+        summary,
+        extra_metrics={
+            "eval_history": prior_metrics.get("eval_history", []),
+            "best_lap_s": summary.get("best_lap_s"),
+            "clean_lap_rate": clean_lap_rate,
+            "best_checkpoint_timestep": best_checkpoint_timestep,
+            "cumulative_timesteps": final_timesteps,
+            "session_timesteps": config.total_timesteps,
+            "resumed_from_timesteps": resumed_from_timesteps,
+        },
+    )
+    return summary
 
 
 def _policy_key_for(config: TrainingConfig) -> str:

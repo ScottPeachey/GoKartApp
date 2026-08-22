@@ -290,6 +290,55 @@
             <div class="rl-metric rl-metric-wide"><span class="rl-metric-label">Policy</span><span id="train-policy-key">—</span></div>
             <p id="train-error" class="config-hint train-error hidden"></p>
           </div>
+          <div id="train-session-summary" class="train-session-summary hidden" aria-live="polite">
+            <div class="train-summary-header">
+              <h4>Training session summary</h4>
+              <span id="train-summary-verdict" class="train-summary-verdict">—</span>
+            </div>
+            <div class="train-summary-grid">
+              <div class="train-summary-stat">
+                <span class="train-summary-label">Best lap</span>
+                <span id="train-summary-best-lap" class="train-summary-value">—</span>
+              </div>
+              <div class="train-summary-stat">
+                <span class="train-summary-label">Best preview</span>
+                <span id="train-summary-best-preview" class="train-summary-value">—</span>
+              </div>
+              <div class="train-summary-stat">
+                <span class="train-summary-label">Mean reward</span>
+                <span id="train-summary-mean-reward" class="train-summary-value">—</span>
+              </div>
+              <div class="train-summary-stat">
+                <span class="train-summary-label">Checkpoint</span>
+                <span id="train-summary-checkpoint" class="train-summary-value">—</span>
+              </div>
+            </div>
+            <div class="train-summary-charts">
+              <div class="train-summary-chart-wrap">
+                <div class="train-summary-chart-title">Reward progress this session</div>
+                <svg id="train-reward-chart" class="train-reward-chart" viewBox="0 0 640 180" role="img" aria-label="Reward progress chart"></svg>
+              </div>
+              <div id="train-summary-comparison-chart-wrap" class="train-summary-chart-wrap hidden">
+                <div class="train-summary-chart-title">Mean reward vs previous session</div>
+                <svg id="train-comparison-chart" class="train-reward-chart" viewBox="0 0 640 120" role="img" aria-label="Session comparison chart"></svg>
+              </div>
+            </div>
+            <div class="train-summary-columns">
+              <div class="train-summary-block">
+                <h5>Highlights</h5>
+                <ul id="train-summary-highlights" class="train-summary-list"></ul>
+              </div>
+              <div class="train-summary-block">
+                <h5>What went well</h5>
+                <ul id="train-summary-good" class="train-summary-list train-summary-good"></ul>
+              </div>
+              <div class="train-summary-block">
+                <h5>Issues</h5>
+                <ul id="train-summary-issues" class="train-summary-list train-summary-issues"></ul>
+              </div>
+            </div>
+            <p id="train-summary-comparison-text" class="config-hint train-summary-comparison"></p>
+          </div>
         </div>
       </div>
       <p id="effective-limits" class="config-hint">Effective max speed: —</p>

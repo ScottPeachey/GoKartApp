@@ -3434,6 +3434,289 @@ function updateSimModeUi() {
   updateFreeDriveGuide(state.lastSample.safety_state || "OFF");
 }
 
+function formatRewardDelta(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  const number = Number(value);
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${number.toFixed(0)}`;
+}
+
+function fillSummaryList(elementId, items, emptyText) {
+  const list = document.getElementById(elementId);
+  if (!list) return;
+  list.innerHTML = "";
+  const rows = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!rows.length) {
+    const li = document.createElement("li");
+    li.textContent = emptyText;
+    list.appendChild(li);
+    return;
+  }
+  for (const text of rows) {
+    const li = document.createElement("li");
+    li.textContent = text;
+    list.appendChild(li);
+  }
+}
+
+function drawRewardProgressChart(svg, series, options = {}) {
+  if (!svg) return;
+  const width = 640;
+  const height = 180;
+  const pad = { top: 16, right: 16, bottom: 28, left: 48 };
+  const points = (Array.isArray(series) ? series : []).filter((p) => Number.isFinite(p.reward));
+  svg.innerHTML = "";
+  if (!points.length) {
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", String(width / 2));
+    text.setAttribute("y", String(height / 2));
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("fill", "#8aa0b8");
+    text.setAttribute("font-size", "12");
+    text.textContent = "No reward samples recorded";
+    svg.appendChild(text);
+    return;
+  }
+
+  const xKey = options.xKey || "session_step";
+  const xValues = points.map((p) => Number(p[xKey] || 0));
+  const yValues = points.map((p) => Number(p.reward));
+  const xMin = Math.min(...xValues);
+  const xMax = Math.max(...xValues, xMin + 1);
+  const yMin = 0;
+  const yMax = Math.max(1200, Math.max(...yValues) * 1.05);
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const xScale = (value) => pad.left + ((value - xMin) / (xMax - xMin)) * plotW;
+  const yScale = (value) => pad.top + plotH - ((value - yMin) / (yMax - yMin)) * plotH;
+
+  const addLine = (y, color, dash) => {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", String(pad.left));
+    line.setAttribute("x2", String(width - pad.right));
+    line.setAttribute("y1", String(yScale(y)));
+    line.setAttribute("y2", String(yScale(y)));
+    line.setAttribute("stroke", color);
+    line.setAttribute("stroke-width", "1");
+    if (dash) line.setAttribute("stroke-dasharray", dash);
+    svg.appendChild(line);
+  };
+
+  addLine(400, "#5a4030", "4 4");
+  addLine(1100, "#2f6040", "4 4");
+
+  const axis = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  axis.setAttribute("d", `M ${pad.left} ${pad.top} V ${height - pad.bottom} H ${width - pad.right}`);
+  axis.setAttribute("stroke", "#3a4d63");
+  axis.setAttribute("fill", "none");
+  svg.appendChild(axis);
+
+  const sorted = [...points].sort((a, b) => Number(a[xKey]) - Number(b[xKey]));
+  const path = sorted.map((point, index) => {
+    const x = xScale(Number(point[xKey] || 0));
+    const y = yScale(Number(point.reward));
+    return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+  }).join(" ");
+  const trend = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  trend.setAttribute("d", path);
+  trend.setAttribute("stroke", "#5d9fe8");
+  trend.setAttribute("stroke-width", "2");
+  trend.setAttribute("fill", "none");
+  trend.setAttribute("opacity", "0.55");
+  svg.appendChild(trend);
+
+  for (const point of sorted) {
+    const x = xScale(Number(point[xKey] || 0));
+    const y = yScale(Number(point.reward));
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    const isPreview = point.kind === "preview";
+    dot.setAttribute("cx", String(x));
+    dot.setAttribute("cy", String(y));
+    dot.setAttribute("r", isPreview ? "4.5" : "3");
+    dot.setAttribute("fill", isPreview ? "#f0c060" : "#8ec5ff");
+    dot.setAttribute("stroke", "#0c121a");
+    dot.setAttribute("stroke-width", "1");
+    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+    title.textContent = `${point.kind || "sample"} @ ${Number(point.timestep || 0).toLocaleString()} steps: reward ${Number(point.reward).toFixed(0)}`;
+    dot.appendChild(title);
+    svg.appendChild(dot);
+  }
+
+  const yLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  yLabel.setAttribute("x", "8");
+  yLabel.setAttribute("y", String(pad.top + 4));
+  yLabel.setAttribute("fill", "#8aa0b8");
+  yLabel.setAttribute("font-size", "10");
+  yLabel.textContent = `${Math.round(yMax)}`;
+  svg.appendChild(yLabel);
+
+  const xLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  xLabel.setAttribute("x", String(width - pad.right));
+  xLabel.setAttribute("y", String(height - 6));
+  xLabel.setAttribute("text-anchor", "end");
+  xLabel.setAttribute("fill", "#8aa0b8");
+  xLabel.setAttribute("font-size", "10");
+  xLabel.textContent = options.xLabel || "Session steps";
+  svg.appendChild(xLabel);
+}
+
+function drawSessionComparisonChart(svg, current, previous) {
+  if (!svg) return;
+  svg.innerHTML = "";
+  const metrics = [
+    { key: "mean_reward", label: "Mean reward" },
+    { key: "best_preview_reward", label: "Best preview" },
+    { key: "best_lap_s", label: "Best lap (s)", invert: true },
+    { key: "best_preview_max_speed_kmh", label: "Top speed" },
+  ];
+  const rows = metrics
+    .map((metric) => ({
+      label: metric.label,
+      current: Number(current?.[metric.key]),
+      previous: Number(previous?.[metric.key]),
+      invert: Boolean(metric.invert),
+    }))
+    .filter((row) => Number.isFinite(row.current) || Number.isFinite(row.previous));
+  if (!rows.length) return;
+
+  const barH = 16;
+  const gap = 24;
+  let y = 18;
+  for (const row of rows) {
+    const cur = Number.isFinite(row.current) ? row.current : 0;
+    const prev = Number.isFinite(row.previous) ? row.previous : 0;
+    const max = Math.max(cur, prev, 1);
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", "8");
+    label.setAttribute("y", String(y + 11));
+    label.setAttribute("fill", "#9eb4cc");
+    label.setAttribute("font-size", "11");
+    label.textContent = row.label;
+    svg.appendChild(label);
+
+    const baseX = 150;
+    const barW = 460;
+    const prevW = (prev / max) * barW;
+    const curW = (cur / max) * barW;
+    const prevBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    prevBar.setAttribute("x", String(baseX));
+    prevBar.setAttribute("y", String(y));
+    prevBar.setAttribute("width", String(prevW));
+    prevBar.setAttribute("height", String(barH));
+    prevBar.setAttribute("fill", "#4a5f78");
+    svg.appendChild(prevBar);
+    const curBar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    curBar.setAttribute("x", String(baseX));
+    curBar.setAttribute("y", String(y + barH + 4));
+    curBar.setAttribute("width", String(curW));
+    curBar.setAttribute("height", String(barH));
+    curBar.setAttribute("fill", "#5d9fe8");
+    svg.appendChild(curBar);
+
+    const better = row.invert ? cur < prev : cur > prev;
+    const delta = cur - prev;
+    const value = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    value.setAttribute("x", String(baseX + barW + 8));
+    value.setAttribute("y", String(y + barH + 3));
+    value.setAttribute("fill", better ? "#8fd9a8" : "#efb0b0");
+    value.setAttribute("font-size", "10");
+    value.textContent = row.invert
+      ? `${cur.toFixed(1)}s (${delta <= 0 ? "" : "+"}${delta.toFixed(1)})`
+      : `${formatRewardDelta(delta)} → ${cur.toFixed(0)}`;
+    svg.appendChild(value);
+    y += barH * 2 + gap;
+  }
+}
+
+function renderTrainingSessionSummary(metrics) {
+  const panel = document.getElementById("train-session-summary");
+  const summary = metrics?.session_summary;
+  const show = Boolean(summary) && !metrics?.running;
+  panel?.classList.toggle("hidden", !show);
+  if (!show || !summary) return;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  const verdict = summary.comparison?.verdict || "complete";
+  const verdictEl = document.getElementById("train-summary-verdict");
+  if (verdictEl) {
+    verdictEl.textContent = verdict.replaceAll("_", " ");
+    verdictEl.className = `train-summary-verdict ${verdict}`;
+  }
+  setText(
+    "train-summary-best-lap",
+    summary.best_lap_s != null ? `${Number(summary.best_lap_s).toFixed(1)} s` : "No clean lap",
+  );
+  const bestPreview = summary.best_preview;
+  setText(
+    "train-summary-best-preview",
+    bestPreview?.reward != null
+      ? `${Number(bestPreview.reward).toFixed(0)} @ ${Number(bestPreview.timestep || 0).toLocaleString()}`
+      : "—",
+  );
+  setText(
+    "train-summary-mean-reward",
+    summary.mean_reward != null ? Number(summary.mean_reward).toFixed(0) : "—",
+  );
+  setText(
+    "train-summary-checkpoint",
+    summary.best_checkpoint_timestep != null
+      ? `${Number(summary.best_checkpoint_timestep).toLocaleString()} steps`
+      : "—",
+  );
+
+  drawRewardProgressChart(
+    document.getElementById("train-reward-chart"),
+    summary.reward_series,
+    { xKey: "session_step", xLabel: "Steps this session" },
+  );
+
+  const hasPrevious = summary.comparison?.verdict && summary.comparison.verdict !== "first_session";
+  const comparisonWrap = document.getElementById("train-summary-comparison-chart-wrap");
+  comparisonWrap?.classList.toggle("hidden", !hasPrevious);
+  if (hasPrevious) {
+    drawSessionComparisonChart(
+      document.getElementById("train-comparison-chart"),
+      summary,
+      {
+        mean_reward: summary.comparison?.previous_mean_reward,
+        best_preview_reward: summary.comparison?.previous_best_preview_reward,
+        best_lap_s: summary.comparison?.previous_best_lap_s,
+        best_preview_max_speed_kmh: summary.comparison?.previous_best_preview_max_speed_kmh,
+      },
+    );
+  }
+
+  fillSummaryList("train-summary-highlights", summary.highlights, "No standout highlights this session.");
+  fillSummaryList("train-summary-good", summary.good, "No clear wins yet — keep training.");
+  fillSummaryList("train-summary-issues", summary.issues, "No major issues flagged.");
+
+  const comparisonBits = [];
+  if (summary.comparison?.delta_mean_reward != null) {
+    comparisonBits.push(`Mean reward ${formatRewardDelta(summary.comparison.delta_mean_reward)} vs last session`);
+  }
+  if (summary.comparison?.delta_best_preview_reward != null) {
+    comparisonBits.push(`Best preview ${formatRewardDelta(summary.comparison.delta_best_preview_reward)}`);
+  }
+  if (summary.comparison?.delta_best_lap_s != null) {
+    const delta = Number(summary.comparison.delta_best_lap_s);
+    comparisonBits.push(`Best lap ${delta <= 0 ? "improved" : "slower"} by ${Math.abs(delta).toFixed(1)}s`);
+  }
+  if (summary.comparison?.delta_best_preview_max_speed_kmh != null) {
+    comparisonBits.push(
+      `Top preview speed ${formatRewardDelta(summary.comparison.delta_best_preview_max_speed_kmh)} km/h`,
+    );
+  }
+  const comparisonText = document.getElementById("train-summary-comparison-text");
+  if (comparisonText) {
+    comparisonText.textContent = comparisonBits.length
+      ? comparisonBits.join(" · ")
+      : "First tracked session for this policy — future runs will compare here.";
+  }
+}
+
 function applyTrainingMetrics(metrics) {
   const wasRunning = state.trainingRunning;
   const previousPreviews = Number(state.trainingMetrics?.previews_completed || 0);
@@ -3441,6 +3724,7 @@ function applyTrainingMetrics(metrics) {
   state.trainingMetrics = metrics;
   state.trainingRunning = Boolean(metrics.running);
   renderTrainingMetricsPanel(metrics);
+  renderTrainingSessionSummary(metrics);
   syncTrainingControlsState();
   ensureTrainingStatusPoll();
   if (Number(metrics.previews_completed || 0) > previousPreviews) {
@@ -3739,6 +4023,28 @@ async function refreshTrainingStatus() {
   try {
     const metrics = await api("/api/rl/train/status");
     applyTrainingMetrics(metrics);
+    if (!metrics.running && !metrics.session_summary) {
+      const vehicle = selectedVehicle();
+      const trackId = document.getElementById("sim-track-select")?.value;
+      const driveSettings = selectedDriveSettings();
+      const objective = document.getElementById("train-objective")?.value || "god";
+      if (trackId) {
+        const summaryPayload = await api(
+          `/api/rl/train/summary?vehicle_name=${encodeURIComponent(vehicle.vehicle_name)}`
+          + `&vehicle_version=${encodeURIComponent(vehicle.vehicle_version)}`
+          + `&track_id=${encodeURIComponent(trackId)}`
+          + `&drive_mode=${encodeURIComponent(driveSettings.drive_mode)}`
+          + `&driver_profile=${encodeURIComponent(driveSettings.driver_profile)}`
+          + `&objective=${encodeURIComponent(objective)}`,
+        );
+        if (summaryPayload.session_summary) {
+          applyTrainingMetrics({
+            ...metrics,
+            session_summary: summaryPayload.session_summary,
+          });
+        }
+      }
+    }
   } catch (_err) {
     /* training status optional */
   }

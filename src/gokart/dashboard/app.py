@@ -473,6 +473,33 @@ def create_app(
     def api_rl_train_status() -> dict[str, Any]:
         return training_controller.snapshot()
 
+    @app.get("/api/rl/train/summary")
+    def api_rl_train_summary(
+        vehicle_name: str,
+        vehicle_version: str,
+        track_id: str,
+        drive_mode: str = "default",
+        driver_profile: str = "owner",
+        objective: str = "god",
+    ) -> dict[str, Any]:
+        from gokart.rl.policy_key import build_policy_identity
+        from gokart.rl.registry import load_training_metrics
+
+        identity = build_policy_identity(
+            vehicle_name=vehicle_name,
+            vehicle_version=vehicle_version,
+            track_id=track_id,
+            drive_mode=drive_mode,
+            driver_profile=driver_profile,
+            objective=objective,  # type: ignore[arg-type]
+        )
+        metrics = load_training_metrics(identity)
+        return {
+            "policy_key": identity.policy_key,
+            "session_summary": metrics.get("last_session_summary"),
+            "previous_session_summary": metrics.get("previous_session_summary"),
+        }
+
     @app.get("/api/rl/train/defaults")
     def api_rl_train_defaults() -> dict[str, Any]:
         from gokart.rl.training_setup import training_setup_schema

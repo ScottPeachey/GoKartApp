@@ -27,6 +27,7 @@ class TrainingProgress:
     tests_completed: int = 0
     last_test_session_id: str = ""
     error: str | None = None
+    session_summary: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         session_done = max(0, self.timesteps - self.resumed_from_timesteps)
@@ -53,6 +54,7 @@ class TrainingProgress:
             "tests_completed": self.tests_completed,
             "last_test_session_id": self.last_test_session_id,
             "error": self.error,
+            "session_summary": self.session_summary,
         }
 
 
