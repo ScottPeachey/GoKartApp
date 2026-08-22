@@ -269,6 +269,7 @@ def step_ice_powertrain(
         engine_rpm,
         clutch_params,
         coupled_rpm=coupled_rpm,
+        clutch_latched=state.clutch_fully_out,
     )
     clutch_fully_out = _update_clutch_fully_out(
         state=state,
@@ -289,6 +290,7 @@ def step_ice_powertrain(
         engine_rpm,
         clutch_params,
         coupled_rpm=coupled_rpm,
+        clutch_latched=clutch_fully_out,
     )
 
     if engine_params.torque_map and engine_rpm > 0:

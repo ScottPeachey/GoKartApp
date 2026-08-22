@@ -6,8 +6,11 @@ from dataclasses import dataclass
 
 from gokart.config.schemas.components import Clutch
 
-# Engine and axle are rigidly coupled only when shoes are fully out AND slip is small.
+# Engine and axle are rigidly coupled only when shoes are out AND slip is small.
 SLIP_LOCK_RPM = 120.0
+
+# Once the clutch has locked while rolling, shoes stay engaged until throttle is released.
+LATCHED_ROLLING_COUPLED_RPM = 150.0
 
 # Slip torque rises with rpm delta — shoes bite harder as slip grows, capped by capacity.
 SLIP_TORQUE_NM_PER_RPM = 0.012
@@ -34,6 +37,20 @@ class ClutchOutputs:
     locked: bool
     transmitted_torque_nm: float
     slip_rpm: float = 0.0
+
+
+def effective_engagement_fraction(
+    engine_rpm: float,
+    coupled_rpm: float,
+    params: ClutchParams,
+    *,
+    clutch_latched: bool = False,
+) -> float:
+    """Engagement from crank speed, with latched shoes held out while rolling."""
+    engage_frac = engagement_fraction(engine_rpm, params)
+    if clutch_latched and coupled_rpm >= LATCHED_ROLLING_COUPLED_RPM:
+        return 1.0
+    return engage_frac
 
 
 def engagement_fraction(engine_rpm: float, params: ClutchParams) -> float:
@@ -72,9 +89,16 @@ def transmitted_drive_torque_nm(
     engine_rpm: float,
     coupled_rpm: float,
     params: ClutchParams,
+    *,
+    clutch_latched: bool = False,
 ) -> float:
     """Torque passed to the axle while the clutch slips or is locked."""
-    engage_frac = engagement_fraction(engine_rpm, params)
+    engage_frac = effective_engagement_fraction(
+        engine_rpm,
+        coupled_rpm,
+        params,
+        clutch_latched=clutch_latched,
+    )
     if engage_frac <= 0.0 or engine_torque_nm <= 0.0:
         return 0.0
 
@@ -97,9 +121,15 @@ def step_clutch(
     params: ClutchParams,
     *,
     coupled_rpm: float = 0.0,
+    clutch_latched: bool = False,
 ) -> ClutchOutputs:
     """Compute clutch torque and lock state for one physics tick."""
-    engage_frac = engagement_fraction(engine_rpm, params)
+    engage_frac = effective_engagement_fraction(
+        engine_rpm,
+        coupled_rpm,
+        params,
+        clutch_latched=clutch_latched,
+    )
     slip = slip_rpm(engine_rpm, coupled_rpm)
     locked = is_axle_locked(engine_rpm, coupled_rpm, params)
     transmitted = transmitted_drive_torque_nm(
@@ -107,6 +137,7 @@ def step_clutch(
         engine_rpm,
         coupled_rpm,
         params,
+        clutch_latched=clutch_latched,
     )
     return ClutchOutputs(
         engagement_fraction=engage_frac,

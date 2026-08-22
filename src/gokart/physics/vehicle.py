@@ -890,6 +890,7 @@ class VehicleModel:
             final_rpm,
             self.clutch_params,
             coupled_rpm=axle_rpm,
+            clutch_latched=engine_state.clutch_fully_out,
         )
         ice_out = IcePowertrainOutputs(
             engine_rpm=final_rpm,

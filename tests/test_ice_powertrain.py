@@ -96,6 +96,68 @@ def test_clutch_transmits_near_lock_with_small_slip() -> None:
     assert out.transmitted_torque_nm == pytest.approx(11.4)
 
 
+def test_latched_clutch_stays_engaged_while_rolling_at_low_crank_speed() -> None:
+    """After lock, corner scrub must not zero torque just because crank rpm dipped."""
+    params = ClutchParams(engagement_rpm=3500.0, lock_rpm=5200.0, max_torque_nm=30.0)
+    out = step_clutch(
+        15.0,
+        1226.0,
+        params,
+        coupled_rpm=1226.0,
+        clutch_latched=True,
+    )
+    assert out.engagement_fraction == 1.0
+    assert out.transmitted_torque_nm == pytest.approx(15.0)
+
+
+def test_ice_recovers_speed_after_corner_scrub(data_root: Path) -> None:
+    """Full throttle after a slow corner must rebuild speed, not stay stuck."""
+    model = load_validated_vehicle_model("Rotax 125", "V1.0", data_root=data_root)
+    state = model.initial_state()
+    dt = 0.01
+    for _ in range(3000):
+        state, _ = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+            ),
+            dt,
+        )
+    for _ in range(2000):
+        state, out = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+                steering=0.5,
+            ),
+            dt,
+        )
+    slow_speed = out.speed_mps
+    for _ in range(800):
+        state, out = model.step(
+            state,
+            VehicleStepInputs(
+                motor_torque_request_nm=20.0,
+                regen_torque_request_nm=0.0,
+                mechanical_brake=0.0,
+                environment=Environment(),
+                throttle=1.0,
+            ),
+            dt,
+        )
+    assert slow_speed < 5.0
+    assert out.speed_mps > slow_speed + 4.0
+    assert out.motor_torque_nm > 5.0
+
+
 def test_ice_powertrain_revs_and_moves(data_root: Path) -> None:
     model = load_validated_vehicle_model("Torini Clubmaxx 210", "V1.0", data_root=data_root)
     state = model.initial_state()
