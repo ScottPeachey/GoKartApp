@@ -41,6 +41,7 @@ const state = {
   channelCustomiseOpen: false,
   historySessionListKey: "",
   historyDeleteSelection: new Set(),
+  historyDeleteAnchorSessionId: null,
   playedSessionIds: new Set(),
   historyViewSessionId: "",
   historySamplesFingerprint: "",
@@ -1554,6 +1555,38 @@ function syncSessionListLabelStyle(labelBtn, sessionId) {
   labelBtn.classList.toggle("unplayed", !state.playedSessionIds.has(sessionId));
 }
 
+function getSessionListRows() {
+  return [...document.querySelectorAll("#session-list .session-list-item")];
+}
+
+function handleSessionCheckboxClick(event) {
+  const checkbox = event.currentTarget;
+  const row = checkbox.closest(".session-list-item");
+  const sessionId = row?.dataset.sessionId;
+  const rows = getSessionListRows();
+  const index = rows.indexOf(row);
+  if (index < 0 || !sessionId) return;
+
+  if (
+    event.shiftKey
+    && state.historyDeleteAnchorSessionId
+    && rows.some((item) => item.dataset.sessionId === state.historyDeleteAnchorSessionId)
+  ) {
+    const anchorIndex = rows.findIndex(
+      (item) => item.dataset.sessionId === state.historyDeleteAnchorSessionId,
+    );
+    const start = Math.min(anchorIndex, index);
+    const end = Math.max(anchorIndex, index);
+    const checked = checkbox.checked;
+    for (let i = start; i <= end; i += 1) {
+      const box = rows[i]?.querySelector(".session-list-check");
+      if (box) box.checked = checked;
+    }
+  }
+  state.historyDeleteAnchorSessionId = sessionId;
+  syncDeleteSelectionFromDom();
+}
+
 function scrollSessionListToBottom(listEl) {
   if (!listEl) return;
   listEl.scrollTop = listEl.scrollHeight;
@@ -1614,9 +1647,7 @@ function updateSessionSelect(sessions, select, previousSessionId) {
       checkbox.type = "checkbox";
       checkbox.className = "session-list-check";
       checkbox.checked = state.historyDeleteSelection.has(session.session_id);
-      checkbox.addEventListener("change", () => {
-        syncDeleteSelectionFromDom();
-      });
+      checkbox.addEventListener("click", handleSessionCheckboxClick);
 
       const labelBtn = document.createElement("button");
       labelBtn.type = "button";
@@ -1700,6 +1731,7 @@ function clearSessionDeleteSelection() {
   document.querySelectorAll(".session-list-check").forEach((checkbox) => {
     checkbox.checked = false;
   });
+  state.historyDeleteAnchorSessionId = null;
   syncDeleteSelectionFromDom();
 }
 
