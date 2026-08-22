@@ -43,7 +43,7 @@ class PreviewHighlight:
 def _session_stats(store: TelemetryStore | None, session_id: str) -> dict[str, Any]:
     if store is None or not session_id:
         return {}
-    samples = store.load_samples(session_id, limit=12_000, from_start=True)
+    samples = store.load_samples(session_id)
     if not samples:
         return {}
     speeds = [float(sample.get("speed_mps") or 0.0) for sample in samples]
@@ -145,6 +145,21 @@ def _pick_best_lap_preview(
     return min(highlights, key=lambda item: item.best_lap_s or 1e9)
 
 
+def _pick_fastest_preview(
+    previews: list[dict[str, Any]],
+    *,
+    store: TelemetryStore | None,
+) -> PreviewHighlight | None:
+    highlights = [
+        item
+        for item in (_highlight_from_entry(entry, store=store) for entry in previews)
+        if item.max_speed_kmh is not None and item.max_speed_kmh > 0
+    ]
+    if not highlights:
+        return None
+    return max(highlights, key=lambda item: item.max_speed_kmh or 0.0)
+
+
 def _reward_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
     rewards = [
         float(entry["episode_reward"])
@@ -172,6 +187,14 @@ def _reward_stats(entries: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _previous_top_speed(previous: dict[str, Any]) -> float | None:
+    value = previous.get("session_top_speed_kmh")
+    if value is not None:
+        return float(value)
+    legacy = previous.get("best_preview_max_speed_kmh")
+    return float(legacy) if legacy is not None else None
+
+
 def _compare_sessions(
     current: dict[str, Any],
     previous: dict[str, Any] | None,
@@ -189,7 +212,13 @@ def _compare_sessions(
     delta_mean = _delta("mean_reward")
     delta_best_preview = _delta("best_preview_reward")
     delta_best_lap = _delta("best_lap_s")
-    delta_max_speed = _delta("best_preview_max_speed_kmh")
+    cur_top_speed = current.get("session_top_speed_kmh")
+    prev_top_speed = _previous_top_speed(previous)
+    delta_max_speed = (
+        float(cur_top_speed) - float(prev_top_speed)
+        if cur_top_speed is not None and prev_top_speed is not None
+        else None
+    )
     delta_final = _delta("final_timesteps")
 
     improved = 0
@@ -222,11 +251,11 @@ def _compare_sessions(
         "previous_mean_reward": previous.get("mean_reward"),
         "previous_best_preview_reward": previous.get("best_preview_reward"),
         "previous_best_lap_s": previous.get("best_lap_s"),
-        "previous_best_preview_max_speed_kmh": previous.get("best_preview_max_speed_kmh"),
+        "previous_session_top_speed_kmh": _previous_top_speed(previous),
         "delta_mean_reward": delta_mean,
         "delta_best_preview_reward": delta_best_preview,
         "delta_best_lap_s": delta_best_lap,
-        "delta_best_preview_max_speed_kmh": delta_max_speed,
+        "delta_session_top_speed_kmh": delta_max_speed,
         "delta_final_timesteps": delta_final,
     }
 
@@ -235,6 +264,7 @@ def _build_highlights(
     *,
     best_preview: PreviewHighlight | None,
     best_lap_preview: PreviewHighlight | None,
+    fastest_preview: PreviewHighlight | None,
     reward_stats: dict[str, Any],
     best_lap_s: float | None,
     best_checkpoint_timestep: int | None,
@@ -250,8 +280,11 @@ def _build_highlights(
             f"Fastest preview lap {best_lap_preview.best_lap_s:.1f}s at "
             f"{best_lap_preview.timestep:,} steps"
         )
-    if best_preview and best_preview.max_speed_kmh is not None:
-        lines.append(f"Top preview speed {best_preview.max_speed_kmh:.1f} km/h")
+    if fastest_preview and fastest_preview.max_speed_kmh is not None:
+        lines.append(
+            f"Top preview speed {fastest_preview.max_speed_kmh:.1f} km/h at "
+            f"{fastest_preview.timestep:,} steps"
+        )
     if best_lap_s is not None:
         lines.append(f"Best recorded lap {best_lap_s:.1f}s")
     if best_checkpoint_timestep is not None:
@@ -280,7 +313,7 @@ def _build_good_points(
         points.append("Several high-reward episodes show the policy can drive cleanly.")
     if clean_lap_rate > 0:
         points.append(f"Clean eval lap rate reached {clean_lap_rate * 100:.0f}%.")
-    delta_speed = comparison.get("delta_best_preview_max_speed_kmh")
+    delta_speed = comparison.get("delta_session_top_speed_kmh")
     if delta_speed is not None and delta_speed > 2:
         points.append(f"Preview top speed up {delta_speed:.1f} km/h from last session.")
     delta_lap = comparison.get("delta_best_lap_s")
@@ -377,6 +410,10 @@ def build_session_summary(
 
     best_preview = _pick_best_preview(previews, store=store)
     best_lap_preview = _pick_best_lap_preview(previews, store=store)
+    fastest_preview = _pick_fastest_preview(previews, store=store)
+    session_top_speed_kmh = (
+        fastest_preview.max_speed_kmh if fastest_preview else None
+    )
     session_best_lap = best_lap_s
     if session_best_lap is None and best_lap_preview is not None:
         session_best_lap = best_lap_preview.best_lap_s
@@ -402,9 +439,11 @@ def build_session_summary(
         "preview_mean_reward": preview_stats["mean_reward"],
         "episode_mean_reward": episode_stats["mean_reward"],
         "best_preview_reward": best_preview.reward if best_preview else None,
-        "best_preview_max_speed_kmh": best_preview.max_speed_kmh if best_preview else None,
+        "session_top_speed_kmh": session_top_speed_kmh,
+        "best_preview_max_speed_kmh": session_top_speed_kmh,
         "best_preview": best_preview.to_dict() if best_preview else None,
         "best_lap_preview": best_lap_preview.to_dict() if best_lap_preview else None,
+        "fastest_preview": fastest_preview.to_dict() if fastest_preview else None,
     }
     comparison = _compare_sessions(summary_core, previous_summary)
     reward_series = _build_reward_series(
@@ -424,6 +463,7 @@ def build_session_summary(
         "highlights": _build_highlights(
             best_preview=best_preview,
             best_lap_preview=best_lap_preview,
+            fastest_preview=fastest_preview,
             reward_stats=combined_stats,
             best_lap_s=session_best_lap,
             best_checkpoint_timestep=best_checkpoint_timestep,

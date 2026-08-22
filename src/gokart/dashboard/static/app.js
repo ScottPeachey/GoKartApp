@@ -3567,13 +3567,13 @@ function drawSessionComparisonChart(svg, current, previous) {
     { key: "mean_reward", label: "Mean reward" },
     { key: "best_preview_reward", label: "Best preview" },
     { key: "best_lap_s", label: "Best lap (s)", invert: true },
-    { key: "best_preview_max_speed_kmh", label: "Top speed" },
+    { key: "session_top_speed_kmh", label: "Top speed", fallbackKey: "best_preview_max_speed_kmh" },
   ];
   const rows = metrics
     .map((metric) => ({
       label: metric.label,
-      current: Number(current?.[metric.key]),
-      previous: Number(previous?.[metric.key]),
+      current: Number(current?.[metric.key] ?? current?.[metric.fallbackKey]),
+      previous: Number(previous?.[metric.key] ?? previous?.[metric.fallbackKey]),
       invert: Boolean(metric.invert),
     }))
     .filter((row) => Number.isFinite(row.current) || Number.isFinite(row.previous));
@@ -3684,7 +3684,12 @@ function renderTrainingSessionSummary(metrics) {
         mean_reward: summary.comparison?.previous_mean_reward,
         best_preview_reward: summary.comparison?.previous_best_preview_reward,
         best_lap_s: summary.comparison?.previous_best_lap_s,
-        best_preview_max_speed_kmh: summary.comparison?.previous_best_preview_max_speed_kmh,
+        session_top_speed_kmh:
+          summary.comparison?.previous_session_top_speed_kmh ??
+          summary.comparison?.previous_best_preview_max_speed_kmh,
+        best_preview_max_speed_kmh:
+          summary.comparison?.previous_session_top_speed_kmh ??
+          summary.comparison?.previous_best_preview_max_speed_kmh,
       },
     );
   }
@@ -3704,10 +3709,11 @@ function renderTrainingSessionSummary(metrics) {
     const delta = Number(summary.comparison.delta_best_lap_s);
     comparisonBits.push(`Best lap ${delta <= 0 ? "improved" : "slower"} by ${Math.abs(delta).toFixed(1)}s`);
   }
-  if (summary.comparison?.delta_best_preview_max_speed_kmh != null) {
-    comparisonBits.push(
-      `Top preview speed ${formatRewardDelta(summary.comparison.delta_best_preview_max_speed_kmh)} km/h`,
-    );
+  const speedDelta =
+    summary.comparison?.delta_session_top_speed_kmh ??
+    summary.comparison?.delta_best_preview_max_speed_kmh;
+  if (speedDelta != null) {
+    comparisonBits.push(`Top preview speed ${formatRewardDelta(speedDelta)} km/h`);
   }
   const comparisonText = document.getElementById("train-summary-comparison-text");
   if (comparisonText) {

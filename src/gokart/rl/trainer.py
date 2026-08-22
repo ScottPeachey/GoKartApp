@@ -101,6 +101,7 @@ class TrainingResult:
     resumed: bool = False
     resumed_from_timesteps: int = 0
     final_timesteps: int = 0
+    best_checkpoint_timestep: int | None = None
 
 
 def run_preview_episode(
@@ -576,6 +577,7 @@ def train_policy(
         resumed=resumed,
         resumed_from_timesteps=resumed_from_timesteps,
         final_timesteps=final_timesteps,
+        best_checkpoint_timestep=best_checkpoint_timestep,
     )
 
 

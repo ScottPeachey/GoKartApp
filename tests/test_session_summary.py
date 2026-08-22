@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 from gokart.rl.session_summary import build_session_summary
+
+
+def _store_with_speeds(speeds_by_session: dict[str, list[float]]) -> MagicMock:
+    store = MagicMock()
+
+    def load_samples(session_id: str, **kwargs):
+        mps_values = speeds_by_session.get(session_id, [])
+        return [{"speed_mps": value} for value in mps_values]
+
+    store.load_samples.side_effect = load_samples
+    store.list_laps.return_value = []
+    return store
 
 
 def test_build_session_summary_includes_reward_series() -> None:
@@ -57,3 +71,42 @@ def test_build_session_summary_compares_to_previous() -> None:
     assert summary["comparison"]["delta_mean_reward"] is not None
     assert summary["previous_reward_series"] == previous["reward_series"]
     assert any("improved" in point.lower() for point in summary["good"])
+
+
+def test_session_top_speed_uses_fastest_preview_not_best_reward() -> None:
+    store = _store_with_speeds(
+        {
+            "fast": [15.0, 16.0],
+            "reward": [12.0, 13.0],
+        }
+    )
+    summary = build_session_summary(
+        store=store,
+        preview_sessions=[
+            {
+                "timestep": 800_000,
+                "episode_reward": 1235.0,
+                "kind": "preview",
+                "session_id": "reward",
+            },
+            {
+                "timestep": 1_200_000,
+                "episode_reward": 1229.0,
+                "kind": "preview",
+                "session_id": "fast",
+            },
+        ],
+        status="stopped",
+        policy_key="abc123",
+        resumed_from_timesteps=700_000,
+        session_timesteps=500_000,
+        final_timesteps=1_200_000,
+        best_lap_s=115.5,
+        clean_lap_rate=0.0,
+        best_checkpoint_timestep=800_000,
+    )
+    assert summary["best_preview_reward"] == 1235.0
+    assert summary["session_top_speed_kmh"] == 16.0 * 3.6
+    assert summary["best_preview"]["max_speed_kmh"] == 13.0 * 3.6
+    assert summary["fastest_preview"]["timestep"] == 1_200_000
+    assert any("Top preview speed" in line for line in summary["highlights"])
