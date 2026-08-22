@@ -21,6 +21,11 @@ LATCHED_COUPLE_RATE_PER_S = 55.0
 CRAWL_CLUTCH_SLIP_RPM = 150.0
 COAST_RATE_PER_S = 6.0
 REV_LIMITER_DROP_RPM = 350.0
+# Keep clutch latched through brief throttle lifts while the kart is still rolling.
+LATCH_RELEASE_COUPLED_RPM = 400.0
+# Straight-line exit: rev the crank when scrub left axle speed below engagement.
+LATCH_RECOVERY_COUPLED_FRACTION = 0.85
+LATCH_RECOVERY_STEER_ABS = 0.12
 
 
 @dataclass(frozen=True)
@@ -116,12 +121,28 @@ def _update_clutch_fully_out(
     state: EngineState,
     clutch_out: ClutchOutputs,
     throttle: float,
+    coupled_rpm: float = 0.0,
 ) -> bool:
     """Stay coupled to the axle once the clutch has locked at least once."""
     latched = state.clutch_fully_out or clutch_out.locked
-    if throttle <= 0.02:
+    if throttle <= 0.02 and coupled_rpm < LATCH_RELEASE_COUPLED_RPM:
         latched = False
     return latched
+
+
+def _latched_straight_recovery(
+    *,
+    throttle: float,
+    coupled_rpm: float,
+    clutch_engagement_rpm: float,
+    steering_abs: float,
+) -> bool:
+    """Rev for power on corner exit, but keep axle-following while still turning."""
+    if throttle <= 0.02 or clutch_engagement_rpm <= 0.0:
+        return False
+    if steering_abs >= LATCH_RECOVERY_STEER_ABS:
+        return False
+    return coupled_rpm < clutch_engagement_rpm * LATCH_RECOVERY_COUPLED_FRACTION
 
 
 def _latched_drive_target_rpm(
@@ -169,12 +190,18 @@ def advance_engine_rpm(
     dt: float,
     clutch_engagement_rpm: float = 0.0,
     clutch_lock_rpm: float = 0.0,
+    steering_abs: float = 0.0,
 ) -> float:
     _ = clutch_lock_rpm
     couple_step = min(1.0, dt * COUPLE_RATE_PER_S)
     latched_step = min(1.0, dt * LATCHED_COUPLE_RATE_PER_S)
 
-    if clutch_fully_out:
+    if clutch_fully_out and not _latched_straight_recovery(
+        throttle=throttle,
+        coupled_rpm=coupled_rpm,
+        clutch_engagement_rpm=clutch_engagement_rpm,
+        steering_abs=steering_abs,
+    ):
         target_rpm = _latched_drive_target_rpm(
             coupled_rpm,
             throttle=throttle,
@@ -275,6 +302,7 @@ def step_ice_powertrain(
         state=state,
         clutch_out=clutch_out,
         throttle=throttle,
+        coupled_rpm=coupled_rpm,
     )
 
     engine_rpm = max(0.0, min(engine_rpm, engine_params.max_rpm))

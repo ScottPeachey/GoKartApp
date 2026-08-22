@@ -871,6 +871,7 @@ class VehicleModel:
             dt=dt,
             clutch_engagement_rpm=self.clutch_params.engagement_rpm,
             clutch_lock_rpm=self.clutch_params.lock_rpm,
+            steering_abs=abs(inputs.steering),
         )
         engine_state = EngineState(
             rpm=final_rpm,

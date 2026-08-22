@@ -141,7 +141,7 @@ def test_ice_recovers_speed_after_corner_scrub(data_root: Path) -> None:
             dt,
         )
     slow_speed = out.speed_mps
-    for _ in range(800):
+    for i in range(300):
         state, out = model.step(
             state,
             VehicleStepInputs(
@@ -154,8 +154,9 @@ def test_ice_recovers_speed_after_corner_scrub(data_root: Path) -> None:
             dt,
         )
     assert slow_speed < 5.0
-    assert out.speed_mps > slow_speed + 4.0
-    assert out.motor_torque_nm > 5.0
+    assert out.speed_mps > slow_speed + 6.0
+    assert out.engine_rpm > 5000.0
+    assert out.motor_torque_nm > 8.0
 
 
 def test_ice_powertrain_revs_and_moves(data_root: Path) -> None:
